@@ -20,7 +20,7 @@ export default function Nav() {
     <AppBar
       elevation={0}
       sx={{
-        top: 3,
+        top: 0,
         bgcolor: scrolled ? 'rgba(255,255,255,.8)' : 'transparent',
         backdropFilter: scrolled ? 'saturate(180%) blur(16px)' : 'none',
         borderBottom: '1px solid',

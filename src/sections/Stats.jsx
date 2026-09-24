@@ -22,10 +22,10 @@ export default function Stats() {
       component={motion.div}
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 1.3, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ delay: 0.8, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       sx={{
         display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, rowGap: 3, py: { xs: 3, md: 3.5 },
-        bgcolor: 'rgba(255,255,255,.75)', backdropFilter: 'blur(14px)', borderRadius: 4,
+        bgcolor: 'rgba(255,255,255,.94)', borderRadius: 4,
         border: '1px solid rgba(18,40,74,.08)', boxShadow: '0 24px 48px -32px rgba(18,40,74,.35)',
       }}
     >

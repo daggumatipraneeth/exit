@@ -31,7 +31,7 @@ function PortfolioCard() {
         style={{ rotateX: rx, rotateY: ry }}
         initial={{ opacity: 0, y: 60, scale: 0.94 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 1.2, delay: 0.6, ease }}
+        transition={{ duration: 0.9, delay: 0.4, ease }}
         sx={{
           position: 'relative', p: { xs: 3, md: 4 }, borderRadius: 5, color: '#fff',
           background: `linear-gradient(145deg, ${navy} 0%, ${ink} 100%)`,
@@ -95,11 +95,11 @@ function PortfolioCard() {
       <Box
         component={motion.div}
         initial={{ opacity: 0, x: -30 }}
-        animate={{ opacity: 1, x: 0, y: [0, -8, 0] }}
-        transition={{ opacity: { delay: 1.6 }, x: { delay: 1.6, duration: 0.8 }, y: { repeat: Infinity, duration: 5, ease: 'easeInOut' } }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 1.2, duration: 0.6, ease }}
         sx={{
           position: 'absolute', left: { xs: 12, md: -40 }, bottom: { xs: -36, md: -44 }, px: 2, py: 1.5, borderRadius: 3,
-          bgcolor: 'rgba(255,255,255,.85)', backdropFilter: 'blur(12px)', boxShadow: '0 20px 40px -20px rgba(10,24,48,.35)',
+          bgcolor: '#fff', boxShadow: '0 20px 40px -20px rgba(10,24,48,.35)',
           display: 'flex', gap: 1.5, alignItems: 'center',
         }}
       >
@@ -118,7 +118,7 @@ export default function Hero() {
   return (
     <Box id="top" component="section" sx={{ position: 'relative', overflow: 'hidden', bgcolor: bg, minHeight: '100svh', display: 'flex', flexDirection: 'column', pt: { xs: 13, md: 14 }, pb: { xs: 4, md: 5 } }}>
       <Box sx={{ position: 'absolute', inset: 0, background: `radial-gradient(60% 50% at 85% 20%, ${accentSoft}55, transparent 70%), radial-gradient(50% 50% at 0% 100%, #D9E2F0, transparent 70%)` }} />
-      <Box sx={{ position: 'absolute', inset: 0, maskImage: 'linear-gradient(180deg, transparent 30%, #000 75%)' }}>
+      <Box sx={{ position: 'absolute', top: '30%', left: 0, right: 0, bottom: 0, maskImage: 'linear-gradient(180deg, transparent, #000 65%)' }}>
         <Box sx={{ position: 'absolute', inset: 0, maskImage: { xs: 'none', md: 'linear-gradient(90deg, rgba(0,0,0,.25) 20%, #000 65%)' } }}>
           <MarketCanvas />
         </Box>
@@ -133,18 +133,18 @@ export default function Hero() {
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease }}
               icon={<Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'success.main', ml: '10px !important', boxShadow: '0 0 0 4px rgba(15,157,107,.18)' }} />}
               label="SEBI-registered advisory · Guntur & Hyderabad"
-              sx={{ bgcolor: 'rgba(255,255,255,.7)', border: '1px solid rgba(18,40,74,.1)', backdropFilter: 'blur(8px)', fontWeight: 500, mb: 3, height: 34 }}
+              sx={{ bgcolor: '#fff', border: '1px solid rgba(18,40,74,.1)', fontWeight: 500, mb: 3, height: 34 }}
             />
             <Typography variant="h1" component="h1" sx={{ fontSize: { xs: '2.9rem', sm: '3.8rem', md: '4.6rem' } }}>
               {headline.map((line, li) => (
                 <Box key={li} component="span" sx={{ display: 'block' }}>
                   {line.map((w) => {
-                    const d = 0.15 + wi++ * 0.08;
+                    const d = 0.1 + wi++ * 0.05;
                     return (
                       <Box key={w} component="span" sx={{ display: 'inline-block', overflow: 'hidden', verticalAlign: 'top', mr: '0.22em', pb: '0.08em' }}>
                         <Box
                           component={motion.span}
-                          initial={{ y: '110%' }} animate={{ y: 0 }} transition={{ duration: 0.9, delay: d, ease }}
+                          initial={{ y: '110%' }} animate={{ y: 0 }} transition={{ duration: 0.7, delay: d, ease }}
                           sx={{ display: 'inline-block', ...(highlight.has(w) && { color: accent, background: `linear-gradient(100deg, ${accent}, #0B7A53 60%, ${accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }) }}
                         >
                           {w}
@@ -157,14 +157,14 @@ export default function Hero() {
             </Typography>
             <Typography
               component={motion.p}
-              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9, duration: 0.8, ease }}
+              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.6, ease }}
               sx={{ mt: 3, maxWidth: 540, color: 'text.secondary', fontSize: { xs: '1.05rem', md: '1.2rem' }, lineHeight: 1.7 }}
             >
               Research-backed stock advisory, mutual fund planning and complete wealth management — from people who know your city, your goals and your family.
             </Typography>
             <Stack
               component={motion.div}
-              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.05, duration: 0.8, ease }}
+              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6, duration: 0.6, ease }}
               direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 5 }}
             >
               <Button size="large" variant="contained" href="#contact" endIcon={<ArrowForwardIcon />}

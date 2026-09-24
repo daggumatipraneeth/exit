@@ -9,7 +9,8 @@ export default function MarketCanvas() {
     const ctx = canvas.getContext('2d');
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const STEP = 18;
-    let w = 0, h = 0, raf = 0, offset = 0, reveal = 0;
+    let w = 0, h = 0, raf = 0, offset = 0, reveal = 0, frame = 0, running = false;
+    let small = false; // phones: fewer pixels, 30fps
     let pts = [];
 
     const next = (last) => last + (Math.random() - 0.4) * 0.05; // gentle upward drift
@@ -19,8 +20,9 @@ export default function MarketCanvas() {
       for (let i = 1; i < n; i++) pts.push(next(pts[i - 1]));
     };
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
       w = canvas.clientWidth; h = canvas.clientHeight;
+      small = w < 768;
+      const dpr = Math.min(window.devicePixelRatio || 1, small ? 1.5 : 2);
       canvas.width = w * dpr; canvas.height = h * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       seed();
@@ -57,9 +59,8 @@ export default function MarketCanvas() {
       ctx.beginPath();
       ctx.moveTo(x(0), y(pts[0]));
       for (let i = 1; i < shown; i++) ctx.lineTo(x(i), y(pts[i]));
-      ctx.strokeStyle = '#0F9D6B'; ctx.lineWidth = 2;
-      ctx.shadowColor = 'rgba(15,157,107,.6)'; ctx.shadowBlur = 12;
-      ctx.stroke(); ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'rgba(15,157,107,.18)'; ctx.lineWidth = 8; ctx.stroke(); // cheap glow (shadowBlur is slow on phones)
+      ctx.strokeStyle = '#0F9D6B'; ctx.lineWidth = 2; ctx.stroke();
 
       // live dot
       const lx = x(shown - 1), ly = y(pts[shown - 1]);
@@ -71,20 +72,29 @@ export default function MarketCanvas() {
     };
 
     const tick = () => {
-      if (reveal < 1) reveal = Math.min(1, reveal + 0.008);
+      raf = requestAnimationFrame(tick);
+      if (small && frame++ % 2) return;
+      const k = small ? 2 : 1; // same speed at 30fps
+      if (reveal < 1) reveal = Math.min(1, reveal + 0.008 * k);
       else {
-        offset += 0.35;
+        offset += 0.35 * k;
         if (offset >= STEP) { offset -= STEP; pts.shift(); pts.push(next(pts[pts.length - 1])); }
       }
       draw();
-      raf = requestAnimationFrame(tick);
     };
+    const start = () => { if (!running && !reduce) { running = true; raf = requestAnimationFrame(tick); } };
+    const stop = () => { running = false; cancelAnimationFrame(raf); };
+    let onScreen = true;
+    const sync = () => (onScreen && !document.hidden ? start() : stop());
 
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(canvas);
-    if (reduce) { reveal = 1; draw(); } else tick();
-    return () => { cancelAnimationFrame(raf); ro.disconnect(); };
+    const io = new IntersectionObserver(([e]) => { onScreen = e.isIntersecting; sync(); });
+    io.observe(canvas);
+    document.addEventListener('visibilitychange', sync);
+    if (reduce) { reveal = 1; draw(); } else start();
+    return () => { stop(); ro.disconnect(); io.disconnect(); document.removeEventListener('visibilitychange', sync); };
   }, []);
 
   return <canvas ref={ref} aria-hidden style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />;

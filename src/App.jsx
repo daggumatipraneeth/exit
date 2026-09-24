@@ -20,7 +20,7 @@ export default function App() {
       <Box
         component={motion.div}
         style={{ scaleX }}
-        sx={{ position: 'fixed', top: 0, left: 0, right: 0, height: 3, bgcolor: accent, transformOrigin: '0%', zIndex: 2000 }}
+        sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 3, bgcolor: accent, transformOrigin: '0%', zIndex: 2000 }}
       />
       <Nav />
       <main>

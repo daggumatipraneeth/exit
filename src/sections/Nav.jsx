@@ -21,16 +21,15 @@ export default function Nav() {
       elevation={0}
       sx={{
         top: 0,
-        bgcolor: scrolled ? 'rgba(255,255,255,.8)' : 'transparent',
-        backdropFilter: scrolled ? 'saturate(180%) blur(16px)' : 'none',
+        bgcolor: scrolled ? '#fff' : 'transparent', // no backdrop blur: it re-blurs every scroll frame on phones
         borderBottom: '1px solid',
         borderColor: scrolled ? 'rgba(18,40,74,.08)' : 'transparent',
-        transition: 'all .4s ease',
+        transition: 'background-color .3s ease, border-color .3s ease',
         color: ink,
       }}
     >
       <Container maxWidth="lg">
-        <Toolbar disableGutters sx={{ height: scrolled ? 68 : 84, transition: 'height .4s ease' }}>
+        <Toolbar disableGutters sx={{ height: { xs: 64, md: 76 } }}>
           <Box component="a" href="#top" sx={{ display: 'flex' }} aria-label="Exit home">
             <Box component="img" src="media/Exit256.png" alt="Exit" sx={{ height: { xs: 36, md: 42 } }} />
           </Box>
@@ -63,6 +62,15 @@ export default function Nav() {
           </IconButton>
         </Toolbar>
       </Container>
+      {/* Scroll progress along the header's bottom edge: native scroll-driven animation, off the main thread. Hidden where unsupported. */}
+      <Box
+        aria-hidden
+        sx={{
+          display: 'none', position: 'absolute', left: 0, right: 0, bottom: -1, height: 3, bgcolor: accent, transformOrigin: '0 50%',
+          '@supports (animation-timeline: scroll())': { display: 'block', animation: 'grow linear both', animationTimeline: 'scroll(root)' },
+          '@keyframes grow': { from: { transform: 'scaleX(0)' }, to: { transform: 'scaleX(1)' } },
+        }}
+      />
 
       <Drawer anchor="right" open={open} onClose={() => setOpen(false)} PaperProps={{ sx: { width: '82vw', maxWidth: 340, bgcolor: ink, color: '#fff' } }}>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1.5 }}>

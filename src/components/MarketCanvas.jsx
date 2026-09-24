@@ -11,6 +11,7 @@ export default function MarketCanvas() {
     const STEP = 18;
     let w = 0, h = 0, raf = 0, offset = 0, reveal = 0, frame = 0, running = false;
     let small = false; // phones: fewer pixels, 30fps
+    let area, glow, line; // gradients, built on resize (fade done here instead of CSS masks)
     let pts = [];
 
     const next = (last) => last + (Math.random() - 0.4) * 0.05; // gentle upward drift
@@ -25,6 +26,18 @@ export default function MarketCanvas() {
       const dpr = Math.min(window.devicePixelRatio || 1, small ? 1.5 : 2);
       canvas.width = w * dpr; canvas.height = h * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      area = ctx.createLinearGradient(0, 0, 0, h);
+      area.addColorStop(0, 'rgba(15,157,107,.18)');
+      area.addColorStop(1, 'rgba(15,157,107,0)');
+      // desktop: fade in from the left so the headline stays clean; phones: softer overall
+      const fade = (a) => {
+        if (small) return `rgba(15,157,107,${a * 0.5})`;
+        const g = ctx.createLinearGradient(0, 0, w, 0);
+        g.addColorStop(0.2, `rgba(15,157,107,${a * 0.25})`);
+        g.addColorStop(0.65, `rgba(15,157,107,${a})`);
+        return g;
+      };
+      glow = fade(0.18); line = fade(1);
       seed();
     };
 
@@ -46,21 +59,18 @@ export default function MarketCanvas() {
       if (shown < 2) return;
 
       // area
-      const grad = ctx.createLinearGradient(0, 0, 0, h);
-      grad.addColorStop(0, 'rgba(15,157,107,.22)');
-      grad.addColorStop(1, 'rgba(15,157,107,0)');
       ctx.beginPath();
       ctx.moveTo(x(0), y(pts[0]));
       for (let i = 1; i < shown; i++) ctx.lineTo(x(i), y(pts[i]));
       ctx.lineTo(x(shown - 1), h); ctx.lineTo(x(0), h); ctx.closePath();
-      ctx.fillStyle = grad; ctx.fill();
+      ctx.fillStyle = area; ctx.fill();
 
       // line
       ctx.beginPath();
       ctx.moveTo(x(0), y(pts[0]));
       for (let i = 1; i < shown; i++) ctx.lineTo(x(i), y(pts[i]));
-      ctx.strokeStyle = 'rgba(15,157,107,.18)'; ctx.lineWidth = 8; ctx.stroke(); // cheap glow (shadowBlur is slow on phones)
-      ctx.strokeStyle = '#0F9D6B'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.strokeStyle = glow; ctx.lineWidth = 8; ctx.stroke(); // cheap glow (shadowBlur is slow on phones)
+      ctx.strokeStyle = line; ctx.lineWidth = 2; ctx.stroke();
 
       // live dot
       const lx = x(shown - 1), ly = y(pts[shown - 1]);

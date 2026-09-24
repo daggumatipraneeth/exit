@@ -118,10 +118,8 @@ export default function Hero() {
   return (
     <Box id="top" component="section" sx={{ position: 'relative', overflow: 'hidden', bgcolor: bg, minHeight: '100svh', display: 'flex', flexDirection: 'column', pt: { xs: 13, md: 14 }, pb: { xs: 4, md: 5 } }}>
       <Box sx={{ position: 'absolute', inset: 0, background: `radial-gradient(60% 50% at 85% 20%, ${accentSoft}55, transparent 70%), radial-gradient(50% 50% at 0% 100%, #D9E2F0, transparent 70%)` }} />
-      <Box sx={{ position: 'absolute', top: '30%', left: 0, right: 0, bottom: 0, maskImage: 'linear-gradient(180deg, transparent, #000 65%)' }}>
-        <Box sx={{ position: 'absolute', inset: 0, maskImage: { xs: 'none', md: 'linear-gradient(90deg, rgba(0,0,0,.25) 20%, #000 65%)' } }}>
-          <MarketCanvas />
-        </Box>
+      <Box sx={{ position: 'absolute', top: '30%', left: 0, right: 0, bottom: 0 }}>
+        <MarketCanvas />
       </Box>
       <Box sx={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(18,40,74,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(18,40,74,.04) 1px, transparent 1px)', backgroundSize: '64px 64px', maskImage: 'radial-gradient(ellipse at center, #000 20%, transparent 75%)' }} />
 

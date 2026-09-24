@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Box, Typography } from '@mui/material';
 import { animate, motion, useInView } from 'framer-motion';
 import { stats } from '../config';
@@ -6,13 +6,14 @@ import { stats } from '../config';
 function CountUp({ value, prefix = '', suffix = '' }) {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true });
-  const [n, setN] = useState(0);
+  const fmt = (v) => `${prefix}${Math.round(v).toLocaleString('en-IN')}${suffix}`;
   useEffect(() => {
     if (!inView) return;
-    const c = animate(0, value, { duration: 2, ease: [0.22, 1, 0.36, 1], onUpdate: (v) => setN(Math.round(v)) });
+    // write text directly instead of re-rendering React every frame
+    const c = animate(0, value, { duration: 1.6, ease: [0.22, 1, 0.36, 1], onUpdate: (v) => { ref.current.textContent = fmt(v); } });
     return () => c.stop();
   }, [inView, value]);
-  return <span ref={ref}>{prefix}{n.toLocaleString('en-IN')}{suffix}</span>;
+  return <span ref={ref}>{fmt(0)}</span>;
 }
 
 // Highlights bar shown at the bottom of the hero.

@@ -50,7 +50,7 @@ export default function Why() {
         </Box>
 
         <Reveal delay={0.2}>
-          <Box sx={{ mt: { xs: 8, md: 12 }, p: { xs: 3, md: 5 }, borderRadius: 5, border: '1px solid rgba(52,211,153,.3)', background: 'rgba(255,255,255,.03)', backdropFilter: 'blur(6px)' }}>
+          <Box sx={{ mt: { xs: 8, md: 12 }, p: { xs: 3, md: 5 }, borderRadius: 5, border: '1px solid rgba(52,211,153,.3)', background: 'rgba(255,255,255,.03)' }}>
             <Typography variant="overline" sx={{ color: accentBright }}>Our process</Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 3, mt: 2, position: 'relative' }}>
               {steps.map((s, i) => (

@@ -15,10 +15,10 @@ export const offices = [
   {
     city: 'Guntur',
     tag: 'Head Office',
-    address: '1st Floor, Stub Towers, Lakshmipuram Main Road, Guntur, Andhra Pradesh 522007', // STUB
+    address: '2nd Floor, 6/12 Green Sport Road, Brodipet, Guntur, Andhra Pradesh',
     phone: '+91 90000 00001', // STUB
     hours: 'Mon – Sat · 9:00 AM – 6:30 PM',
-    mapQuery: 'Lakshmipuram, Guntur, Andhra Pradesh',
+    mapQuery: '6/12 Green Sport Road, Brodipet, Guntur, Andhra Pradesh',
   },
   {
     city: 'Hyderabad',

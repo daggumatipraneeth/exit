@@ -6,6 +6,10 @@ export const accent = '#0F9D6B';
 export const accentSoft = '#A7E3C9';
 export const accentBright = '#34D399'; // accent on dark backgrounds
 export const bg = '#FFFFFF';
+// Partner portal
+export const page = '#F3F6F9';
+export const line = '#DCE3EC';
+export const loss = '#C0392B';
 
 
 export default responsiveFontSizes(

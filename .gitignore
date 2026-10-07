@@ -3,6 +3,7 @@ dist
 .DS_Store
 *.psd
 .playwright-mcp
+.env.local
 
 # Atlas scratch — orchestrator-managed, do not edit by hand
 .claude/commands/atlas-*

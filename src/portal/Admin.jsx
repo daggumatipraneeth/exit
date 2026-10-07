@@ -1,12 +1,12 @@
 // Admin-only pages: month close, agreement template, activity log.
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Box, Typography, Button, Alert, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Chip, MenuItem, Stack, InputAdornment,
+  Box, Typography, Button, Alert, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, Stack, InputAdornment,
 } from '@mui/material';
 import { supabase, fetchAll } from './supabase';
 import { money } from '../finance';
 import { line } from '../theme';
-import { today, monthName, shortDate, Panel, PageTitle, Signed, Pairs, errText } from './ui';
+import { today, monthName, shortDate, Panel, PageTitle, Signed, Pairs, errText, Pill } from './ui';
 import { AgreementFrame } from './Sign';
 
 export function Months() {
@@ -70,8 +70,8 @@ export function Months() {
                 </Box>
                 <Pairs items={[['To customers', <Signed value={r.customers} />], ['Partners', <Signed value={r.partners} signed={false} />], ['Exit earned', money(r.exit)]]} />
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', justifyContent: 'flex-end', borderTop: { xs: `1px solid ${line}`, md: 'none' }, pt: { xs: 1.5, md: 0 } }}>
-                  {isClosed && <Chip size="small" label={`Closed ${shortDate(closedAt[r.month].slice(0, 10))}`} />}
-                  {!isClosed && r.month === thisMonth ? <Chip size="small" variant="outlined" label="In progress" /> : (
+                  {isClosed && <Pill tone="good" label={`Closed ${shortDate(closedAt[r.month].slice(0, 10))}`} />}
+                  {!isClosed && r.month === thisMonth ? <Pill tone="progress" label="In progress" /> : (
                     <Button size="small" variant={isClosed ? 'text' : 'outlined'} onClick={() => setConfirm({ month: r.month, close: !isClosed })}>
                       {isClosed ? 'Reopen' : 'Close month'}
                     </Button>
@@ -179,7 +179,8 @@ const tableNames = {
   consultation_requests: 'Call-back request',
 };
 const verbs = { INSERT: 'added', UPDATE: 'changed', DELETE: 'removed', PASSWORD: 'password reset' };
-const quiet = new Set(['entered_at', 'uploaded_at', 'created_at', 'rendered_html_enc', 'signature_png', 'html_sha256', 'body', 'sign_token', 'pan_hash']);
+const quiet = new Set(['entered_at', 'uploaded_at', 'created_at', 'rendered_html_enc', 'signature_png', 'html_sha256', 'body', 'sign_token', 'pan_hash',
+  'handled_at', 'handled_by', 'source_ip', 'path', 'mime', 'note', 'uploaded_by']);
 // Encrypted values are never shown; a change is reported by name only.
 const secret = { pan_enc: 'PAN updated', aadhaar_enc: 'Aadhaar updated' };
 const PAGE = 50;
@@ -223,7 +224,11 @@ export function Activity() {
     let detail = '';
     if (r.op === 'UPDATE') {
       detail = Object.keys(r.new).filter((k) => !quiet.has(k) && JSON.stringify(r.new[k]) !== JSON.stringify(r.old[k]))
-        .map((k) => secret[k] ?? `${k.replace(/_/g, ' ')}: ${r.old[k] ?? '–'} → ${r.new[k] ?? '–'}`).join('; ');
+        .map((k) => {
+          if (secret[k]) return secret[k];
+          const show = (v) => (v == null ? '–' : k === 'franchisee_id' ? names.partners[v] ?? 'a removed partner' : v);
+          return `${k === 'franchisee_id' ? (r.table_name === 'consultation_requests' ? 'allocated to' : 'partner') : k.replace(/_/g, ' ')}: ${show(r.old[k])} → ${show(r.new[k])}`;
+        }).join('; ');
     } else if (r.table_name === 'daily_entries') {
       detail = `${row.trade_date}, ${money(row.amount, true)}`;
     } else if (r.table_name === 'customer_capital') {

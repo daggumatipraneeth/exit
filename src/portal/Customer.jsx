@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Box, Typography, Alert, Link, Button } from '@mui/material';
-import ArrowBack from '@mui/icons-material/ArrowBack';
+import { Box, Typography, Alert, Button } from '@mui/material';
 import { supabase } from './supabase';
 import { money } from '../finance';
 import { ink, line } from '../theme';
-import { today, fmtDate, shortDate, monthName, sum, Signed, Panel, Field, CapMeter, StatusChip, Figures } from './ui';
+import { today, fmtDate, shortDate, monthName, sum, Signed, Panel, Field, CapMeter, StatusChip, Figures, BackLink, tableHead } from './ui';
 import { OnboardingSteps, Documents, EditDetailsDialog, CapitalDialog, AgreementDialog, canEdit, latestSigned } from './Onboarding';
 
 const cols = { xs: '1fr auto', md: '1.2fr 1fr 1fr' };
@@ -59,9 +58,7 @@ export default function Customer({ profile, id }) {
 
   return (
     <>
-      <Link href="#/customers" underline="hover" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minHeight: 40, mb: 1, fontWeight: 500 }}>
-        <ArrowBack fontSize="small" /> All customers
-      </Link>
+      <BackLink href="#/customers">All customers</BackLink>
       <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.5, mb: 3 }}>
         <Typography variant="h4" component="h1" sx={{ fontWeight: 700, letterSpacing: '-0.02em', fontSize: { xs: '1.6rem', md: '2.1rem' } }}>
           {c.full_name}
@@ -120,8 +117,7 @@ export default function Customer({ profile, id }) {
                 <Box
                   aria-hidden
                   sx={{
-                    display: { xs: 'none', md: 'grid' }, gridTemplateColumns: cols.md, columnGap: 2, px: 3, py: 1.25,
-                    color: 'text.secondary', fontSize: 13, borderBottom: `1px solid ${line}`, '& > :not(:first-of-type)': { textAlign: 'right' },
+                    ...tableHead, gridTemplateColumns: cols.md, columnGap: 2, '& > :not(:first-of-type)': { textAlign: 'right' },
                   }}
                 >
                   <span>Date</span><span>Credited</span><span>Bucket after</span>

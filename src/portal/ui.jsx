@@ -1,5 +1,6 @@
 // Small pieces shared by portal pages.
-import { Box, Typography, Chip, Button } from '@mui/material';
+import { Box, Typography, Chip, Button, Link } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { money } from '../finance';
 import { accent, line, loss, navy } from '../theme';
 
@@ -53,16 +54,34 @@ export function Field({ label, children }) {
   );
 }
 
+// Status pills: one shape everywhere, colour by meaning. good = done/healthy, attention = needs someone,
+// progress = under way, neutral = nothing to do, bad = stopped.
+const tones = {
+  good: ['#E3F5EC', '#0B6E4B'],
+  attention: ['#FFF1DB', '#8A4B00'],
+  progress: ['#E6EEFA', '#1F4E8C'],
+  neutral: ['#EDF1F5', '#4A5670'],
+  bad: ['#FBE6E4', '#9B2C20'],
+};
+export function Pill({ label, tone = 'neutral' }) {
+  const [bg, fg] = tones[tone];
+  return (
+    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', height: 24, px: 1.25, borderRadius: 999, bgcolor: bg, color: fg, fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
+      {label}
+    </Box>
+  );
+}
+
 const statusLook = {
-  draft: ['Draft', 'default'],
-  awaiting_signature: ['Awaiting signature', 'warning'],
-  pending_approval: ['Pending approval', 'info'],
-  active: ['Active', 'success'],
-  rejected: ['Rejected', 'error'],
+  draft: ['Draft', 'neutral'],
+  awaiting_signature: ['Awaiting signature', 'attention'],
+  pending_approval: ['Pending approval', 'attention'],
+  active: ['Active', 'good'],
+  rejected: ['Rejected', 'bad'],
 };
 export function StatusChip({ status }) {
-  const [label, color] = statusLook[status];
-  return <Chip size="small" label={label} color={color} variant={status === 'active' ? 'filled' : 'outlined'} />;
+  const [label, tone] = statusLook[status];
+  return <Pill label={label} tone={tone} />;
 }
 
 export function CapMeter({ covered, cap, thick }) {
@@ -81,7 +100,7 @@ export function CapMeter({ covered, cap, thick }) {
       >
         <Box sx={{ height: 1, width: `${fill * 100}%`, bgcolor: full ? accent : navy, borderRadius: 5 }} />
       </Box>
-      <Typography variant="caption" sx={{ display: 'block', mt: 0.75, color: c < 0 ? loss : 'text.secondary' }}>
+      <Typography variant="caption" sx={{ display: 'block', mt: 0.5, lineHeight: 1.4, color: c < 0 ? loss : 'text.secondary' }}>
         {full ? `Cap of ${money(cap)} reached` : c < 0 ? `${money(c)} this month, cap ${money(cap)}` : `${money(c)} of ${money(cap)} cap`}
       </Typography>
     </Box>
@@ -117,6 +136,25 @@ export function Figures({ items }) {
   );
 }
 
+// Secondary details separated by dots; on narrow screens they wrap between items, never mid-item.
+export function Inline({ items, empty, sx }) {
+  return (
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 1, color: 'text.secondary', fontSize: 14, ...sx }}>
+      {items.length === 0 && empty}
+      {items.map((t, i) => (
+        <Box component="span" key={t} sx={{ overflowWrap: 'anywhere', '&::after': i < items.length - 1 ? { content: '"·"', ml: 1 } : undefined }}>{t}</Box>
+      ))}
+    </Box>
+  );
+}
+
+// Every table: a shaded column-header strip and compact rows with the same padding.
+export const tableHead = {
+  display: { xs: 'none', md: 'grid' }, px: 3, py: 1, bgcolor: '#F7F9FB', color: 'text.secondary',
+  fontSize: 12.5, fontWeight: 500, borderBottom: `1px solid ${line}`,
+};
+export const tableRow = { px: { xs: 2, md: 3 }, py: { xs: 1.5, md: 1.25 } };
+
 export const rowLink = {
   display: 'grid', alignItems: 'center', color: 'inherit', textDecoration: 'none',
   '&:hover': { bgcolor: '#F8FAFC' },
@@ -138,6 +176,15 @@ export function PageTitle({ children, action }) {
 export const errText = (e) => e?.message ?? String(e);
 
 // Centered column for form pages, so they don't hang off the left on wide screens.
+// "← All customers" style link above a page title.
+export function BackLink({ href, children }) {
+  return (
+    <Link href={href} underline="hover" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minHeight: 40, mb: 1, fontWeight: 500 }}>
+      <ArrowBackIcon fontSize="small" /> {children}
+    </Link>
+  );
+}
+
 export function FormPage({ children, width = 880 }) {
   return <Box sx={{ maxWidth: width, mx: 'auto' }}>{children}</Box>;
 }

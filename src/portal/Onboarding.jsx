@@ -12,7 +12,7 @@ import UploadIcon from '@mui/icons-material/FileUploadOutlined';
 import { supabase, fetchAll, kycUpload, kycObjectUrl } from './supabase';
 import { money } from '../finance';
 import { accent, line } from '../theme';
-import { today, shortDate, Panel, PageTitle, FormPage, errText } from './ui';
+import { today, shortDate, Panel, PageTitle, FormPage, BackLink, errText } from './ui';
 import { AgreementFrame } from './Sign';
 
 export const docKinds = [
@@ -122,7 +122,7 @@ export function NewCustomer({ profile }) {
 
   return (
     <FormPage>
-      <Link href="#/customers" underline="hover" sx={{ display: 'inline-flex', alignItems: 'center', minHeight: 40, mb: 1, fontWeight: 500 }}>Back to customers</Link>
+      <BackLink href="#/customers">All customers</BackLink>
       <PageTitle>Add customer</PageTitle>
       <Panel>
         <Box component="form" onSubmit={save} sx={{ px: { xs: 2, md: 3 }, py: 3, display: 'grid', gap: 2 }}>

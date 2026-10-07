@@ -5,10 +5,10 @@ import ChevronRight from '@mui/icons-material/ChevronRight';
 import { supabase, fetchAll } from './supabase';
 import { money } from '../finance';
 import { ink, line } from '../theme';
-import { today, shift, fmtDate, monthName, sum, Signed, Panel, CapMeter, Figures, Pairs, ShowMore, PAGE_ROWS, rowLink } from './ui';
+import { today, shift, fmtDate, monthName, sum, Signed, Panel, CapMeter, Figures, Pairs, ShowMore, PAGE_ROWS, rowLink, tableHead, tableRow } from './ui';
 
 const cols = { xs: '1fr auto', md: '1.3fr 0.8fr 1.9fr 0.8fr' };
-const head = { display: { xs: 'none', md: 'grid' }, columnGap: 4, px: 3, py: 1.25, color: 'text.secondary', fontSize: 13, borderBottom: `1px solid ${line}` };
+const head = { ...tableHead, columnGap: 4 };
 const bold = { fontWeight: 700 };
 
 // The hidden charge Exit took on profitable days (entered amount minus what the partner sees). Staff only.
@@ -125,7 +125,7 @@ export default function Dashboard({ profile }) {
                       component="li"
                       key={d.franchisee_id}
                       sx={{
-                        display: 'grid', columnGap: 4, rowGap: 0.5, px: { xs: 2, md: 3 }, py: 1.75, alignItems: 'baseline',
+                        display: 'grid', columnGap: 4, rowGap: 0.5, ...tableRow, alignItems: 'baseline',
                         gridTemplateColumns: { xs: '1fr auto', md: '1.4fr repeat(4, 1fr)' },
                         '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` },
                       }}
@@ -159,7 +159,7 @@ export default function Dashboard({ profile }) {
                     sx={{
                       ...rowLink, columnGap: { xs: 2, md: 4 }, rowGap: 1.25, gridTemplateColumns: cols,
                       gridTemplateAreas: { xs: '"name day" "cap cap"', md: '"name day cap capital"' },
-                      px: { xs: 2, md: 3 }, py: 2,
+                      ...tableRow,
                     }}
                   >
                     <Box sx={{ gridArea: 'name', minWidth: 0 }}>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Box, Typography, TextField, Button, Alert } from '@mui/material';
 import { supabase } from './supabase';
 import { company } from '../config';
-import { Panel, Field, PageTitle, FormPage } from './ui';
+import { Panel, Field, PageTitle } from './ui';
 
 const roleName = { admin: 'Exit admin', employee: 'Exit staff', franchisee: 'Franchise partner' };
 
@@ -23,7 +23,7 @@ export default function Account({ profile, email }) {
   }
 
   return (
-    <FormPage width={1100}>
+    <>
       <PageTitle>Account</PageTitle>
       <Box sx={{ display: 'grid', gap: { xs: 3, md: 4 }, gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '1fr 1fr' }, alignItems: 'start' }}>
         <Box sx={{ display: 'grid', gap: { xs: 3, md: 4 } }}>
@@ -70,6 +70,6 @@ export default function Account({ profile, email }) {
           </Box>
         </Panel>
       </Box>
-    </FormPage>
+    </>
   );
 }

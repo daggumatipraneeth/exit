@@ -5,7 +5,7 @@ import AddIcon from '@mui/icons-material/Add';
 import { supabase, fetchAll } from './supabase';
 import { money } from '../finance';
 import { line } from '../theme';
-import { today, monthName, Panel, PageTitle, CapMeter, StatusChip, FilterChips, ShowMore, PAGE_ROWS, rowLink } from './ui';
+import { today, monthName, Panel, PageTitle, CapMeter, StatusChip, FilterChips, ShowMore, PAGE_ROWS, rowLink, tableHead, tableRow, Inline } from './ui';
 
 const cols = { xs: '1fr auto', md: '1.4fr 0.8fr 0.9fr 1.6fr' };
 const onboarding = ['draft', 'awaiting_signature', 'pending_approval'];
@@ -78,7 +78,7 @@ export default function Customers({ profile }) {
       <Panel title={`${list.length} of ${customers.length} customers`}>
         <Box
           aria-hidden
-          sx={{ display: { xs: 'none', md: 'grid' }, gridTemplateColumns: cols.md, columnGap: 4, px: 3, py: 1.25, color: 'text.secondary', fontSize: 13, borderBottom: `1px solid ${line}` }}
+          sx={{ ...tableHead, gridTemplateColumns: cols.md, columnGap: 4 }}
         >
           <span>Customer</span><span>Status</span><Box sx={{ textAlign: 'right' }}>Capital</Box><span>{monthName(month)} cap</span>
         </Box>
@@ -94,22 +94,20 @@ export default function Customers({ profile }) {
                 component="a"
                 href={`#/customers/${c.id}`}
                 sx={{
-                  ...rowLink, columnGap: { xs: 2, md: 4 }, rowGap: 1, gridTemplateColumns: cols,
-                  gridTemplateAreas: { xs: '"name status" "capital capital" "cap cap"', md: '"name status capital cap"' },
-                  px: { xs: 2, md: 3 }, py: 2,
+                  ...rowLink, columnGap: { xs: 2, md: 4 }, rowGap: { xs: 0.5, md: 1 }, gridTemplateColumns: cols,
+                  gridTemplateAreas: { xs: '"name capital" "name status" "cap cap"', md: '"name status capital cap"' },
+                  ...tableRow,
                 }}
               >
                 <Box sx={{ gridArea: 'name', minWidth: 0 }}>
                   <Typography sx={{ fontWeight: 600 }} noWrap>{c.full_name}</Typography>
-                  <Typography variant="body2" color="text.secondary" noWrap>{c.phone}</Typography>
-                  {staff && <Typography variant="body2" color="text.secondary" noWrap>{c.franchisees.name}</Typography>}
+                  <Inline items={staff ? [c.phone, c.franchisees.name] : [c.phone]} />
                 </Box>
-                <Box sx={{ gridArea: 'status', justifySelf: { xs: 'end', md: 'start' } }}><StatusChip status={c.status} /></Box>
-                <Box sx={{ gridArea: 'capital', display: 'flex', justifyContent: { xs: 'space-between', md: 'flex-end' }, fontWeight: 500 }}>
-                  <Box component="span" sx={{ display: { md: 'none' }, color: 'text.secondary', fontWeight: 400 }}>Capital</Box>
+                <Box sx={{ gridArea: 'status', justifySelf: { xs: 'end', md: 'start' }, alignSelf: { xs: 'start', md: 'center' } }}><StatusChip status={c.status} /></Box>
+                <Box sx={{ gridArea: 'capital', textAlign: 'right', fontWeight: 500, alignSelf: { xs: 'end', md: 'center' } }}>
                   {c.capital ? money(c.capital) : '–'}
                 </Box>
-                <Box sx={{ gridArea: 'cap' }}>
+                <Box sx={{ gridArea: 'cap', mt: { xs: 0.75, md: 0 } }}>
                   {c.progress ? <CapMeter covered={c.progress.covered} cap={c.progress.cap} /> : (
                     <Typography variant="body2" color="text.secondary">No trades this month</Typography>
                   )}

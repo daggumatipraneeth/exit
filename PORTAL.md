@@ -12,7 +12,7 @@ All money maths runs inside the database (`supabase/migrations/*_calc.sql`). The
 
 ## Payout rules
 
-Each day Exit enters **one profit/loss figure per partner**, after broker charges. Then, for that partner:
+Each day Exit enters **one profit/loss figure per partner**, after broker charges. Or use **Split a total** on Daily entry: type the day's total once and each partner's figure is filled in, in proportion to their customers' capital on that day (counted the same way payouts count it). Check the figures, then save. Then, for each partner:
 
 1. **Hidden charge.** On a profitable day Exit takes the partner's hidden charge, for example 20%. The partner sees only what's left: ₹1,00,000 shows as ₹80,000. Losses carry no charge. Partners can never read the entered figure or the charge %.
 2. **Customer buckets.** Each customer has a monthly bucket of cap % × capital (default 6%). The partner's amount is shared among the customers in proportion to their capital until the buckets are full. If one bucket fills early, its extra goes to the customers who still have room.
@@ -117,7 +117,7 @@ Anyone can change their own password from their Account page. An admin can't rem
 
 The website's contact form saves each request to the portal's **Requests** page for the office the visitor chose. Admins see every office. Staff see the office set on their login (Partners page → logins → Office); staff with "All offices" see everything. Partners see only the requests allocated to them.
 
-Staff can call or WhatsApp from the request, add a note, and mark it contacted, closed or reopened. **Allocated to** passes a request to a partner: that partner then sees it on their own Requests page and can add notes and change its status, but can't pass it on. Exit still sees it. Requests are never deleted. The form has a hidden bot trap and limits repeats: 3 an hour from one phone number, and 5 every 10 minutes from one network. The office list is `offices` in `src/config.js` plus `office_names()` in the database; change both together.
+Staff can call or WhatsApp from the request, add a note, and mark it contacted, closed or reopened. **Add request** logs one that came in by phone or at the office. **Allocated to** passes a request to a partner: that partner then sees it on their own Requests page and can add notes and change its status, but can't pass it on. Exit still sees it. Requests are never deleted. The form has a hidden bot trap and limits repeats: 3 an hour from one phone number, and 5 every 10 minutes from one network. The office list is `offices` in `src/config.js` plus `office_names()` in the database; change both together.
 
 ## Encryption
 

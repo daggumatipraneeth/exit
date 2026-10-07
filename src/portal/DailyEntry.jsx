@@ -6,7 +6,7 @@ import UploadIcon from '@mui/icons-material/UploadFile';
 import DownloadIcon from '@mui/icons-material/Download';
 import Papa from 'papaparse';
 import { supabase } from './supabase';
-import { money } from '../finance';
+import { money, splitByWeight } from '../finance';
 import { ink, line, loss } from '../theme';
 import { today, shift, fmtDate, Panel, PageTitle, Signed, FilterChips, errText } from './ui';
 
@@ -23,6 +23,8 @@ function HandEntry({ date, partners, closed }) {
   const [results, setResults] = useState({});
   const [msg, setMsg] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [total, setTotal] = useState('');
+  const [shares, setShares] = useState(null); // capital and % by partner, after a split
 
   // Inputs stay hidden until this date's figures arrive, so a slow response can't wipe what someone typed.
   function load(isLive = () => true) {
@@ -43,6 +45,7 @@ function HandEntry({ date, partners, closed }) {
     let live = true;
     setMsg(null);
     setSaved(null);
+    setShares(null);
     load(() => live);
     return () => { live = false; };
   }, [date, partners]);
@@ -94,7 +97,24 @@ function HandEntry({ date, partners, closed }) {
       return setMsg(['warning', `Someone else saved ${conflicts.map((p) => p.name).join(', ')} for this day while you were editing, so your change there wasn't applied. Their figure is shown now; change it and save again if needed.`]);
     }
     const n = inserts.length + updates.length;
-    setMsg(['success', `Saved ${n} ${n === 1 ? 'partner' : 'partners'}${deletes.length ? `, removed ${deletes.length}` : ''}. Customer shares are recalculated.`]);
+    const parts = [n && `Saved ${n} ${n === 1 ? 'partner' : 'partners'}`, deletes.length && `${n ? 'removed' : 'Removed'} ${deletes.length}`].filter(Boolean);
+    setMsg(['success', `${parts.join(', ')}. Customer shares are recalculated.`]);
+  }
+
+  // One figure for the whole day, split across partners by their customers' capital (as payouts count it).
+  async function split() {
+    const t = toAmount(total);
+    if (t === null || !Number.isFinite(t)) return setMsg(['error', 'Enter the total, like 100000 or -25000.']);
+    const { data, error } = await supabase.rpc('partner_capital_on', { p_date: date });
+    if (error) return setMsg(['error', errText(error)]);
+    const cap = Object.fromEntries(data.map((r) => [r.franchisee_id, Number(r.capital)]));
+    const weights = partners.map((p) => cap[p.id] ?? 0);
+    const sum = weights.reduce((a, w) => a + w, 0);
+    if (!sum) return setMsg(['error', `No partner has active customers with capital on ${fmtDate(date, { day: 'numeric', month: 'long' })}, so there is nothing to split by.`]);
+    const parts = splitByWeight(t, weights);
+    setForm(Object.fromEntries(partners.map((p, i) => [p.id, weights[i] ? String(parts[i]) : (saved[p.id] ?? '')])));
+    setShares(Object.fromEntries(partners.map((p, i) => [p.id, { capital: weights[i], pct: (weights[i] / sum) * 100 }])));
+    setMsg(['info', `${money(t, true)} split across ${weights.filter(Boolean).length} partners by their customers' capital. Check the figures, then save.`]);
   }
 
   const saveButton = (
@@ -106,6 +126,17 @@ function HandEntry({ date, partners, closed }) {
   return (
     <>
       {msg && <Alert severity={msg[0]} sx={{ mb: 2 }}>{msg[1]}</Alert>}
+      <Panel title="Split a total" sx={{ mb: 3 }}>
+        <Box component="form" onSubmit={(e) => { e.preventDefault(); split(); }} sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 1.5, px: { xs: 2, md: 3 }, py: 2 }}>
+          <TextField
+            size="small" label="Total profit / loss for the day" value={total} onChange={(e) => setTotal(e.target.value)} disabled={closed}
+            helperText="Each partner gets a share in proportion to their customers' capital."
+            sx={{ flex: '1 1 260px', maxWidth: 420 }}
+            slotProps={{ htmlInput: { inputMode: 'decimal' }, input: { startAdornment: <InputAdornment position="start">₹</InputAdornment> } }}
+          />
+          <Button type="submit" variant="outlined" disabled={closed || !total.trim()}>Split by capital</Button>
+        </Box>
+      </Panel>
       <Panel title={`${partners.length} active partners`} action={saveButton}>
         <Box aria-hidden sx={{ display: { xs: 'none', md: 'grid' }, gridTemplateColumns: cols.md, columnGap: 3, px: 3, py: 1.25, color: 'text.secondary', fontSize: 13, borderBottom: `1px solid ${line}` }}>
           <span>Partner</span><span>Profit / loss after broker charges</span><span>Result</span>
@@ -126,9 +157,14 @@ function HandEntry({ date, partners, closed }) {
               >
                 <Box sx={{ minWidth: 0 }}>
                   <Typography sx={{ fontWeight: 600 }}>{p.name}</Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="text.secondary" component="div">
                     Hidden charge {Number(p.franchisee_terms?.hidden_charge_pct ?? 0)}%, partner keeps {Number(p.profit_share_pct)}% above buckets
                   </Typography>
+                  {shares && (
+                    <Typography variant="caption" color="text.secondary" component="div">
+                      {shares[p.id].capital ? `Capital ${money(shares[p.id].capital)} · ${shares[p.id].pct.toFixed(1)}% of the total` : 'No customer capital on this day, so no share'}
+                    </Typography>
+                  )}
                 </Box>
                 <TextField
                   size="small"

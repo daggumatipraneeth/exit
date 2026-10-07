@@ -12,7 +12,7 @@ All money maths runs inside the database (`supabase/migrations/*_calc.sql`). The
 
 ## Payout rules
 
-Each day Exit enters **one profit/loss figure per partner**, after broker charges. Then, for that partner:
+Each day Exit enters **one profit/loss figure per partner**, after broker charges. Or use **Split a total** on Daily entry: type the day's total once and each partner's figure is filled in, in proportion to their customers' capital on that day (counted the same way payouts count it). Check the figures, then save. Then, for each partner:
 
 1. **Hidden charge.** On a profitable day Exit takes the partner's hidden charge, for example 20%. The partner sees only what's left: ₹1,00,000 shows as ₹80,000. Losses carry no charge. Partners can never read the entered figure or the charge %.
 2. **Customer buckets.** Each customer has a monthly bucket of cap % × capital (default 6%). The partner's amount is shared among the customers in proportion to their capital until the buckets are full. If one bucket fills early, its extra goes to the customers who still have room.

@@ -19,10 +19,16 @@ export default function Customer({ profile, id }) {
 
   function load() {
     supabase.from('customers')
-      .select('*, franchisees(name), customer_capital(effective_from, amount), customer_documents(kind, path, uploaded_at), agreements(*)')
+      .select('id, franchisee_id, full_name, phone, email, dob, address, cap_pct, status, created_at, franchisees(name), customer_capital(effective_from, amount), customer_documents(kind, path, mime, uploaded_at), agreements(id, sign_token, token_expires_at, signed_at, signer_name)')
       .eq('id', id)
       .maybeSingle()
-      .then(({ data, error }) => (error ? setError(error.message) : data ? setC(data) : setError('This customer does not exist or is not yours.')));
+      .then(async ({ data, error }) => {
+        if (error) return setError(error.message);
+        if (!data) return setError('This customer does not exist or is not yours.');
+        // PAN and Aadhaar are encrypted; this function decrypts them only for permitted viewers.
+        const { data: pii } = await supabase.rpc('customer_pii', { p_customer: id });
+        setC({ ...data, pan: pii?.[0]?.pan ?? null, aadhaar_last4: pii?.[0]?.aadhaar_last4 ?? null });
+      });
   }
   useEffect(load, [id]);
   const reload = () => { setDialog(null); load(); };
@@ -196,7 +202,7 @@ export default function Customer({ profile, id }) {
 
       {dialog === 'edit' && <EditDetailsDialog customer={c} profile={profile} onClose={() => setDialog(null)} onSaved={reload} />}
       {dialog === 'capital' && <CapitalDialog customer={c} onClose={() => setDialog(null)} onSaved={reload} />}
-      {dialog === 'agreement' && <AgreementDialog agreement={signed} onClose={() => setDialog(null)} />}
+      {dialog === 'agreement' && <AgreementDialog customerId={c.id} onClose={() => setDialog(null)} />}
     </>
   );
 }

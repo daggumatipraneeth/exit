@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Nightly backup: the whole database and every KYC file, copied to separate storage.
 # Never deletes or overwrites anything at the destination, so a mistake (or an attacker) at the source can't erase the backup.
+# PAN, Aadhaar, agreements and KYC files are already encrypted; the key (in Vault) is deliberately not included.
 #
 # Needs:
 #   SUPABASE_DB_URL   Postgres connection string (Dashboard → Project Settings → Database → Connection string, session pooler)

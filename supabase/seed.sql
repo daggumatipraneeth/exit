@@ -48,14 +48,15 @@ its partner <strong>{{franchisee}}</strong> ("Partner"), and <strong>{{full_name
 $html$);
 
 -- 10 customers, 5 per franchisee, active, with capital from the start of last month.
-insert into customers (id, franchisee_id, full_name, phone, pan, aadhaar_last4, status)
+insert into customers (id, franchisee_id, full_name, phone, pan_enc, pan_hash, aadhaar_enc, status)
 select ('20000000-0000-0000-0000-0000000000' || lpad(i::text, 2, '0'))::uuid,
        case when i <= 5 then '10000000-0000-0000-0000-000000000001'::uuid else '10000000-0000-0000-0000-000000000002'::uuid end,
        (array['Anil Varma','Bhavani Rao','Chandra Sekhar','Divya Teja','Eshwar Naidu',
               'Farhan Ali','Gayatri Devi','Harish Goud','Indira Reddy','Jagan Mohan'])[i],
        '+91 98480 ' || lpad((10000 + i)::text, 5, '0'),
-       'ABCDE' || lpad((1000 + i)::text, 4, '0') || 'F',
-       lpad((1000 + i * 37)::text, 4, '0'),
+       pii_encrypt('ABCDE' || lpad((1000 + i)::text, 4, '0') || 'F'),
+       pii_hash('ABCDE' || lpad((1000 + i)::text, 4, '0') || 'F'),
+       pii_encrypt(lpad((1000 + i * 37)::text, 4, '0')),
        'active'
 from generate_series(1, 10) i;
 
@@ -65,8 +66,8 @@ select id, (date_trunc('month', current_date) - interval '1 month')::date,
 from customers;
 
 -- Seeded customers count as signed, so later edits by admin pass the approval rule.
-insert into agreements (customer_id, template_version, rendered_html, signer_name, signed_at)
-select id, 1, '<p>Seeded test agreement</p>', full_name, now() from customers;
+insert into agreements (customer_id, template_version, rendered_html_enc, signer_name, signed_at)
+select id, 1, pii_encrypt('<p>Seeded test agreement</p>'), full_name, now() from customers;
 
 -- One customer mid-onboarding for Ravi.
 insert into customers (franchisee_id, full_name, phone, email, status)

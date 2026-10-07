@@ -25,11 +25,11 @@ select throws_ok($$delete from customers where id = 'c2000000-0000-0000-0000-000
 -- Unsigned links can be replaced; signed agreements are frozen.
 insert into agreements (id, customer_id, template_version) values ('a2000000-0000-0000-0000-000000000001', 'c2000000-0000-0000-0000-000000000001', 1);
 select lives_ok($$delete from agreements where id = 'a2000000-0000-0000-0000-000000000001'$$, 'an unsigned link can be removed');
-insert into agreements (id, customer_id, template_version, rendered_html, signed_at, signer_name)
-values ('a2000000-0000-0000-0000-000000000002', 'c2000000-0000-0000-0000-000000000001', 1, '<p>Signed text</p>', now(), 'Kept');
+insert into agreements (id, customer_id, template_version, rendered_html_enc, signed_at, signer_name)
+values ('a2000000-0000-0000-0000-000000000002', 'c2000000-0000-0000-0000-000000000001', 1, pii_encrypt('<p>Signed text</p>'), now(), 'Kept');
 select throws_ok($$delete from agreements where id = 'a2000000-0000-0000-0000-000000000002'$$,
   'P0001', 'Signed agreements are kept permanently and cannot be changed.', 'signed agreement cannot be deleted');
-select throws_ok($$update agreements set rendered_html = '<p>Changed</p>' where id = 'a2000000-0000-0000-0000-000000000002'$$,
+select throws_ok($$update agreements set signer_name = 'Changed' where id = 'a2000000-0000-0000-0000-000000000002'$$,
   'P0001', 'Signed agreements are kept permanently and cannot be changed.', 'signed agreement cannot be edited');
 
 -- KYC files in storage cannot be deleted.

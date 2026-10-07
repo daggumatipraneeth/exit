@@ -55,7 +55,7 @@ Other local addresses:
 Other commands:
 
 ```bash
-npm run db:test         # 49 database tests: payouts, security, onboarding, record keeping
+npm run db:test         # 65 database tests: payouts, security, onboarding, record keeping, encryption
 npm run db:reset        # wipe and reload test data
 node src/finance.check.js
 ```
@@ -69,7 +69,9 @@ node src/finance.check.js
    npx supabase link --project-ref <project-ref>
    npx supabase db push                                # migrations only; test data is never pushed
    npx supabase functions deploy admin-create-user
+   npx supabase functions deploy kyc-file
    ```
+   **Then save the encryption key** (see "Encryption" below) before anyone enters a real customer.
 3. **Auth settings** (Dashboard → Authentication):
    - Turn **off** "Allow new users to sign up". Only admins create logins.
    - Set **Site URL** to the live portal, e.g. `https://<user>.github.io/exit/portal.html`, and add it to **Redirect URLs**. This is needed for password-reset emails.
@@ -89,6 +91,24 @@ node src/finance.check.js
    The next push to `main` deploys the portal. Without these variables the portal page says it isn't set up yet, and the landing page still works.
 
 **Staging:** create a second Supabase project and repeat steps 1–6 against it. Use `npx supabase link` to switch between the two.
+
+## Encryption
+
+PAN numbers, Aadhaar digits, signed agreement text and KYC photos are encrypted with AES-256.
+
+- **The key** is created inside the database when it's first set up and kept in Supabase Vault. It's not in this code, in Git, or in backups.
+- **PAN and Aadhaar numbers** are only decrypted by database functions that first check the viewer is Exit staff or the customer's own partner. The encrypted columns can't be read or written from the website at all, not even by an admin.
+- **Duplicate PANs** are caught by comparing keyed fingerprints, never the PAN itself.
+- **KYC photos** pass through the `kyc-file` server function. It encrypts each photo before storing it and decrypts it only for permitted viewers. Storage and its backups only ever hold scrambled bytes.
+- **The activity log** records that a PAN or Aadhaar changed, never the value.
+
+**Save the key once, right after going live**, and keep it safe. Without it, a backup can't be read after restoring to a new project. In the Supabase SQL editor:
+
+```sql
+select decrypted_secret from vault.decrypted_secrets where name = 'pii_key';
+```
+
+Store the result in a password manager that two trusted people can access. Never put it in email, chat or Git, and never next to the backups.
 
 ## Records are never deleted
 
@@ -124,16 +144,18 @@ Set it up once:
      - `BACKUP_S3_ENDPOINT`, `BACKUP_S3_REGION`
 4. Actions → Nightly backup → Run workflow, and check the files appear. Until `BACKUP_PATH` is set, the job is skipped.
 
-**Restore** (tested locally: a wiped database came back with every record, login and file):
-1. Create a fresh Supabase project and run `npx supabase db push`. This creates the tables and the `kyc` bucket.
-2. Restore the data: `psql "<new SUPABASE_DB_URL>" -v ON_ERROR_STOP=1 -f db/<date-time>/data.sql`
-3. Copy the files back: `rclone copy dst:<BACKUP_PATH>/kyc src:kyc`, with `src` pointing at the new project.
+**Restore** (tested locally with encryption on: a wiped database came back identical, every record, login, decrypted PAN and KYC file):
+1. Create a fresh Supabase project, run `npx supabase db push`, and deploy both functions. This creates the tables and the `kyc` bucket.
+2. Put the saved encryption key back, replacing the one the new project generated (SQL editor):
+   `select vault.update_secret(id, '<saved key>') from vault.secrets where name = 'pii_key';`
+3. Restore the data: `psql "<new SUPABASE_DB_URL>" -v ON_ERROR_STOP=1 -f db/<date-time>/data.sql`
+4. Copy the files back: `rclone copy dst:<BACKUP_PATH>/kyc src:kyc`, with `src` pointing at the new project.
 
 Restore into a new project rather than over a damaged one, check it, then switch the website's `VITE_SUPABASE_*` variables to it.
 
 ## Compliance notes
 
 - **Aadhaar:** only the last 4 digits are stored. Ask customers to upload *masked* Aadhaar copies (UIDAI rules).
-- **KYC files:** these sit in a private storage bucket. They are shown only through links that expire after 10 minutes, and only to Exit staff and the customer's own partner.
+- **KYC files and PAN:** encrypted at rest (see "Encryption"). They are decrypted only for Exit staff and the customer's own partner.
 - **Signing record:** each signature stores the exact agreement text the customer saw, a SHA-256 fingerprint of it, the drawn signature, the typed name, the time, the IP address and the device. For stronger legal standing, an Aadhaar eSign provider (Digio, Leegality) can be added later.
 - **Audit trail:** every change to customers, KYC, capital, entries, partners, logins and months is recorded in the activity log, with who made it.

@@ -9,7 +9,7 @@ import RadioUnchecked from '@mui/icons-material/RadioButtonUnchecked';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import CopyIcon from '@mui/icons-material/ContentCopy';
 import UploadIcon from '@mui/icons-material/FileUploadOutlined';
-import { supabase, fetchAll } from './supabase';
+import { supabase, fetchAll, kycUpload, kycObjectUrl } from './supabase';
 import { money } from '../finance';
 import { accent, line } from '../theme';
 import { today, shortDate, Panel, PageTitle, FormPage, errText } from './ui';
@@ -70,14 +70,17 @@ const detailsValid = (f, profile) =>
 const toRow = (f, profile) => {
   const row = {
     full_name: f.full_name.trim(), phone: f.phone.trim(), email: f.email || null, dob: f.dob || null,
-    address: f.address || null, pan: f.pan || null, aadhaar_last4: f.aadhaar_last4 || null,
+    address: f.address || null,
     franchisee_id: profile.role === 'franchisee' ? profile.franchisee_id : f.franchisee_id,
   };
   if (profile.role !== 'franchisee') row.cap_pct = Number(f.cap_pct);
   return row;
 };
 
-const friendly = (e) => (/customers_pan_key/.test(errText(e)) ? 'Another customer already has this PAN.' : errText(e));
+const friendly = (e) => errText(e);
+
+// PAN and Aadhaar are stored encrypted, through a permission-checked database function.
+const savePii = (id, f) => supabase.rpc('set_customer_pii', { p_customer: id, p_pan: f.pan || null, p_aadhaar_last4: f.aadhaar_last4 || null });
 
 // null while loading. Includes inactive partners so a customer's current partner always shows;
 // those can't be newly chosen.
@@ -100,8 +103,16 @@ export function NewCustomer({ profile }) {
   async function save(e) {
     e.preventDefault();
     setBusy(true);
+    if (f.pan) {
+      const { data: free } = await supabase.rpc('pan_available', { p_pan: f.pan });
+      if (!free) { setBusy(false); return setError('Another customer already has this PAN.'); }
+    }
     const { data, error } = await supabase.from('customers').insert({ ...toRow(f, profile), status: 'draft' }).select('id').single();
     if (error) { setBusy(false); return setError(friendly(error)); }
+    if (f.pan || f.aadhaar_last4) {
+      const { error } = await savePii(data.id, f);
+      if (error) { setBusy(false); return setError(friendly(error)); }
+    }
     if (Number(capital) > 0) {
       const { error } = await supabase.from('customer_capital').insert({ customer_id: data.id, effective_from: capitalFrom || today(), amount: Number(capital) });
       if (error) { setBusy(false); return setError(errText(error)); }
@@ -148,6 +159,10 @@ export function EditDetailsDialog({ customer, profile, onClose, onSaved }) {
   async function save() {
     const { error } = await supabase.from('customers').update(toRow(f, profile)).eq('id', customer.id);
     if (error) return setError(friendly(error));
+    if ((f.pan || '') !== (customer.pan || '') || (f.aadhaar_last4 || '') !== (customer.aadhaar_last4 || '')) {
+      const { error } = await savePii(customer.id, f);
+      if (error) return setError(friendly(error));
+    }
     onSaved();
   }
 
@@ -220,16 +235,17 @@ async function shrink(file) {
 }
 
 export function Documents({ customer, docs, edit, onChanged }) {
-  const [urls, setUrls] = useState({});
+  const [urls, setUrls] = useState({}); // decrypted, in-browser links for the current version of each document
   const [busy, setBusy] = useState(null);
   const [error, setError] = useState('');
-  const [notImage, setNotImage] = useState({}); // PDFs can't preview as <img>
+  const latest = (kind) => docs.filter((x) => x.kind === kind).sort((a, b) => b.uploaded_at.localeCompare(a.uploaded_at));
 
   useEffect(() => {
-    if (!docs.length) return setUrls({});
-    supabase.storage.from('kyc').createSignedUrls(docs.map((d) => d.path), 600).then(({ data }) => {
-      setUrls(Object.fromEntries((data ?? []).map((u) => [u.path, u.signedUrl])));
-    });
+    let live = true;
+    const made = [];
+    Promise.all(docKinds.map(([k]) => latest(k)[0]).filter(Boolean).map(async (d) => [d.path, await kycObjectUrl(d.path)]))
+      .then((pairs) => { pairs.forEach(([, u]) => u && made.push(u)); if (live) setUrls(Object.fromEntries(pairs)); });
+    return () => { live = false; made.forEach((u) => URL.revokeObjectURL(u)); };
   }, [docs]);
 
   async function upload(kind, file) {
@@ -238,13 +254,17 @@ export function Documents({ customer, docs, edit, onChanged }) {
     setError('');
     const blob = await shrink(file);
     if (blob.size > 5 * 1024 * 1024) { setBusy(null); return setError('That file is over 5 MB. Take a smaller photo or compress the PDF.'); }
-    // Every upload is a new file; earlier versions are kept (the database refuses deletes and overwrites).
-    const path = `${customer.id}/${kind}-${Date.now()}`;
-    const up = await supabase.storage.from('kyc').upload(path, blob, { contentType: blob.type || file.type });
-    const row = up.error ? up : await supabase.from('customer_documents').insert({ customer_id: customer.id, kind, path });
+    const { error } = await kycUpload(customer.id, kind, blob.type ? blob : new Blob([blob], { type: file.type }));
     setBusy(null);
-    if (row.error) return setError(errText(row.error));
+    if (error) return setError(errText(error));
     onChanged();
+  }
+
+  // Earlier versions are decrypted only when asked for. The tab opens first so pop-up blockers allow it.
+  async function openVersion(path) {
+    const w = window.open('', '_blank');
+    const u = await kycObjectUrl(path);
+    if (w && u) w.location = u; else w?.close();
   }
 
   return (
@@ -252,9 +272,10 @@ export function Documents({ customer, docs, edit, onChanged }) {
       {error && <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(4, minmax(0, 1fr))' }, gap: 2, p: { xs: 2, md: 3 } }}>
         {docKinds.map(([kind, label, required]) => {
-          const versions = docs.filter((x) => x.kind === kind).sort((a, b) => b.uploaded_at.localeCompare(a.uploaded_at));
+          const versions = latest(kind);
           const d = versions[0];
           const url = d && urls[d.path];
+          const isImage = d?.mime?.startsWith('image/');
           return (
             <Box key={kind} sx={{ minWidth: 0 }}>
               <Box
@@ -268,9 +289,9 @@ export function Documents({ customer, docs, edit, onChanged }) {
                   border: d ? `1px solid ${line}` : '1px dashed #9AA8BC', bgcolor: '#F8FAFC', color: 'text.secondary', textDecoration: 'none',
                 }}
               >
-                {busy === kind ? <CircularProgress size={24} aria-label="Uploading" /> : url && !notImage[url] ? (
-                  <Box component="img" src={url} alt={label} sx={{ width: 1, height: 1, objectFit: 'cover' }} onError={() => setNotImage({ ...notImage, [url]: true })} />
-                ) : <Typography variant="body2">{url ? 'Open file' : d ? 'Loading…' : required ? 'Required' : 'Optional'}</Typography>}
+                {busy === kind ? <CircularProgress size={24} aria-label="Uploading" /> : url && isImage ? (
+                  <Box component="img" src={url} alt={label} sx={{ width: 1, height: 1, objectFit: 'cover' }} />
+                ) : <Typography variant="body2">{url ? 'Open PDF' : d ? 'Loading…' : required ? 'Required' : 'Optional'}</Typography>}
               </Box>
               <Typography variant="body2" sx={{ mt: 0.75, fontWeight: 500 }}>{label}</Typography>
               {versions.length > 1 && (
@@ -279,7 +300,9 @@ export function Documents({ customer, docs, edit, onChanged }) {
                   {versions.slice(1).map((v, i) => (
                     <span key={v.path}>
                       {i > 0 && ', '}
-                      <Link href={urls[v.path]} target="_blank" rel="noreferrer">{shortDate(v.uploaded_at.slice(0, 10))}</Link>
+                      <Link component="button" type="button" sx={{ fontSize: 'inherit', verticalAlign: 'baseline' }} onClick={() => openVersion(v.path)}>
+                        {shortDate(v.uploaded_at.slice(0, 10))}
+                      </Link>
                     </span>
                   ))}
                 </Typography>
@@ -298,18 +321,29 @@ export function Documents({ customer, docs, edit, onChanged }) {
   );
 }
 
-export function AgreementDialog({ agreement, onClose }) {
+export function AgreementDialog({ customerId, onClose }) {
+  const [agreement, setAgreement] = useState(null);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    supabase.rpc('signed_agreement', { p_customer: customerId }).then(({ data, error }) => (error ? setError(errText(error)) : setAgreement(data)));
+  }, [customerId]);
   return (
     <Dialog open onClose={onClose} fullWidth maxWidth="md">
       <DialogTitle>Signed agreement</DialogTitle>
       <DialogContent dividers>
-        <AgreementFrame html={agreement.rendered_html} />
-        {agreement.signature_png && <Box component="img" src={agreement.signature_png} alt="Customer's signature" sx={{ maxWidth: 320, width: '100%', mt: 2, borderBottom: `1px solid ${line}` }} />}
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
-          Signed by {agreement.signer_name} on {new Date(agreement.signed_at).toLocaleString('en-IN')}
-          {agreement.signer_ip && ` from IP ${agreement.signer_ip}`}.
-        </Typography>
-        {agreement.html_sha256 && <Typography variant="caption" color="text.secondary" sx={{ overflowWrap: 'anywhere', display: 'block', mt: 0.5 }}>Fingerprint (SHA-256): {agreement.html_sha256}</Typography>}
+        {error && <Alert severity="error">{error}</Alert>}
+        {!agreement && !error && <CircularProgress aria-label="Loading" />}
+        {agreement && (
+          <>
+            <AgreementFrame html={agreement.html} />
+            {agreement.signature_png && <Box component="img" src={agreement.signature_png} alt="Customer's signature" sx={{ maxWidth: 320, width: '100%', mt: 2, borderBottom: `1px solid ${line}` }} />}
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+              Signed by {agreement.signer_name} on {new Date(agreement.signed_at).toLocaleString('en-IN')}
+              {agreement.signer_ip && ` from IP ${agreement.signer_ip}`}.
+            </Typography>
+            {agreement.html_sha256 && <Typography variant="caption" color="text.secondary" sx={{ overflowWrap: 'anywhere', display: 'block', mt: 0.5 }}>Fingerprint (SHA-256): {agreement.html_sha256}</Typography>}
+          </>
+        )}
       </DialogContent>
       <DialogActions><Button onClick={onClose}>Close</Button></DialogActions>
     </Dialog>

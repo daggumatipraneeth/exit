@@ -178,7 +178,9 @@ const tableNames = {
   agreements: 'Agreement', franchisees: 'Partner', profiles: 'Login', closed_months: 'Month', agreement_templates: 'Agreement template',
 };
 const verbs = { INSERT: 'added', UPDATE: 'changed', DELETE: 'removed' };
-const quiet = new Set(['entered_at', 'uploaded_at', 'created_at', 'rendered_html', 'signature_png', 'html_sha256', 'body', 'sign_token']);
+const quiet = new Set(['entered_at', 'uploaded_at', 'created_at', 'rendered_html_enc', 'signature_png', 'html_sha256', 'body', 'sign_token', 'pan_hash']);
+// Encrypted values are never shown; a change is reported by name only.
+const secret = { pan_enc: 'PAN updated', aadhaar_enc: 'Aadhaar updated' };
 const PAGE = 50;
 
 export function Activity() {
@@ -214,7 +216,7 @@ export function Activity() {
     let detail = '';
     if (r.op === 'UPDATE') {
       detail = Object.keys(r.new).filter((k) => !quiet.has(k) && JSON.stringify(r.new[k]) !== JSON.stringify(r.old[k]))
-        .map((k) => `${k.replace(/_/g, ' ')}: ${r.old[k] ?? '–'} → ${r.new[k] ?? '–'}`).join('; ');
+        .map((k) => secret[k] ?? `${k.replace(/_/g, ' ')}: ${r.old[k] ?? '–'} → ${r.new[k] ?? '–'}`).join('; ');
     } else if (r.table_name === 'daily_entries') {
       detail = `${row.trade_date}, ${money(row.amount, true)}`;
     } else if (r.table_name === 'customer_capital') {

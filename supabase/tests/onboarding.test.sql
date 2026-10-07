@@ -18,7 +18,7 @@ set local request.jwt.claims = '{"sub":"b1000000-0000-0000-0000-000000000001"}';
 select throws_like($$select create_signing_link('c1000000-0000-0000-0000-000000000001')$$,
   '%PAN number, Aadhaar last 4 digits, capital, PAN card photo, Aadhaar front photo, Aadhaar back photo%', 'link needs complete KYC');
 
-update customers set pan = 'ABCDE9999Z', aadhaar_last4 = '4321' where id = 'c1000000-0000-0000-0000-000000000001';
+select set_customer_pii('c1000000-0000-0000-0000-000000000001', 'ABCDE9999Z', '4321');
 insert into customer_capital values ('c1000000-0000-0000-0000-000000000001', '2026-01-01', 250000);
 insert into customer_documents (customer_id, kind, path) values
   ('c1000000-0000-0000-0000-000000000001', 'pan', 'c1000000-0000-0000-0000-000000000001/pan'),

@@ -19,3 +19,23 @@ export async function fetchAll(build, size = 1000) {
   const failed = rest.find((r) => r.error);
   return failed ?? { data: first.data.concat(...rest.map((r) => r.data)), error: null };
 }
+
+// KYC files go through the kyc-file server function, which encrypts on upload and decrypts for permitted viewers.
+const kycUrl = `${url}/functions/v1/kyc-file`;
+async function authHeaders() {
+  const { data } = await supabase.auth.getSession();
+  return { apikey: key, Authorization: `Bearer ${data.session?.access_token}` };
+}
+export async function kycUpload(customerId, kind, blob) {
+  const r = await fetch(`${kycUrl}?customer=${customerId}&kind=${kind}`, {
+    method: 'POST', headers: { ...(await authHeaders()), 'Content-Type': blob.type }, body: blob,
+  });
+  if (r.ok) return { error: null };
+  const body = await r.json().catch(() => ({}));
+  return { error: { message: body.error ?? `Upload failed (${r.status})` } };
+}
+// A temporary in-browser link to the decrypted file; revoke it with URL.revokeObjectURL when done.
+export async function kycObjectUrl(path) {
+  const r = await fetch(`${kycUrl}?path=${encodeURIComponent(path)}`, { headers: await authHeaders() });
+  return r.ok ? URL.createObjectURL(await r.blob()) : null;
+}

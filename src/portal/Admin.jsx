@@ -176,6 +176,7 @@ export function Templates() {
 const tableNames = {
   customers: 'Customer', daily_entries: 'Daily entry', franchisee_terms: 'Hidden charge', customer_capital: 'Capital', customer_documents: 'KYC document',
   agreements: 'Agreement', franchisees: 'Partner', profiles: 'Login', closed_months: 'Month', agreement_templates: 'Agreement template',
+  consultation_requests: 'Call-back request',
 };
 const verbs = { INSERT: 'added', UPDATE: 'changed', DELETE: 'removed', PASSWORD: 'password reset' };
 const quiet = new Set(['entered_at', 'uploaded_at', 'created_at', 'rendered_html_enc', 'signature_png', 'html_sha256', 'body', 'sign_token', 'pan_hash']);

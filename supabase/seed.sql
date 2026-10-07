@@ -83,3 +83,9 @@ cross join lateral (select sum(k.amount) capital from customer_capital k join cu
 cross join generate_series(date_trunc('month', current_date) - interval '1 month', current_date, interval '1 day') d
 where extract(isodow from d) < 6
 order by d, f.id;
+
+-- Website call-back requests
+insert into consultation_requests (name, phone, email, interest, office, message, status, created_at) values
+  ('Lakshmi Prasad', '+919848012345', 'lakshmi@example.com', 'Stock Advisory', 'Guntur', 'Looking to open an account for my father too.', 'new', now() - interval '2 hours'),
+  ('Arjun Reddy', '+919000054321', null, 'Portfolio Management', 'Hyderabad', 'I run an insurance office in Kukatpally.', 'new', now() - interval '1 day'),
+  ('Meena K', '+919391122334', null, 'Mutual Funds / SIP', 'Guntur', null, 'contacted', now() - interval '3 days');

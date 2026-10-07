@@ -8,6 +8,7 @@ import HandshakeIcon from '@mui/icons-material/HandshakeOutlined';
 import EventIcon from '@mui/icons-material/EventAvailableOutlined';
 import ArticleIcon from '@mui/icons-material/ArticleOutlined';
 import HistoryIcon from '@mui/icons-material/HistoryOutlined';
+import PhoneIcon from '@mui/icons-material/PhoneInTalkOutlined';
 import { supabase } from './supabase';
 import Login from './Login';
 import Layout from './Layout';
@@ -18,6 +19,7 @@ import Account from './Account';
 import DailyEntry from './DailyEntry';
 import Partners from './Partners';
 import Sign from './Sign';
+import Requests from './Requests';
 import { NewCustomer } from './Onboarding';
 import { Months, Templates, Activity } from './Admin';
 
@@ -30,6 +32,7 @@ const pages = [
   { path: 'today', label: 'Today', icon: TodayIcon, roles: everyone, Page: Dashboard },
   { path: 'entry', label: 'Daily entry', short: 'Entry', icon: EditNoteIcon, roles: staff, Page: DailyEntry },
   { path: 'customers', label: 'Customers', icon: PeopleIcon, roles: everyone, Page: Customers, Detail: Customer },
+  { path: 'requests', label: 'Requests', icon: PhoneIcon, roles: staff, Page: Requests },
   { path: 'partners', label: 'Partners', icon: HandshakeIcon, roles: admin, Page: Partners },
   { path: 'months', label: 'Months', icon: EventIcon, roles: admin, Page: Months },
   { path: 'agreement', label: 'Agreement', icon: ArticleIcon, roles: admin, Page: Templates },
@@ -73,7 +76,7 @@ function Portal() {
     if (!session) return setProfile(undefined);
     supabase
       .from('profiles')
-      .select('full_name, role, franchisee_id, franchisees(name, phone, email, profit_share_pct, active)')
+      .select('full_name, role, franchisee_id, office, franchisees(name, phone, email, profit_share_pct, active)')
       .eq('id', session.user.id)
       .maybeSingle()
       .then(({ data }) => setProfile(data ?? null));

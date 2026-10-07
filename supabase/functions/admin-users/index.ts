@@ -1,5 +1,5 @@
 // Admin-only login management. The browser can't do these itself because they need the service-role key.
-//   { action: 'create', email, password, full_name, role, franchisee_id? }
+//   { action: 'create', email, password, full_name, role, franchisee_id?, office? }  → office: staff tied to one office's requests
 //   { action: 'set_password', user_id, password }      → the admin shares the new temporary password
 //   { action: 'delete_login', user_id }
 //   { action: 'delete_partner', franchisee_id }       → only a partner with no customers and no results
@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
 
   switch (body.action) {
     case 'create': {
-      const { email, password, full_name, role: newRole, franchisee_id } = body;
+      const { email, password, full_name, role: newRole, franchisee_id, office } = body;
       if (!/^\S+@\S+\.\S+$/.test(email ?? '')) return json({ error: 'Enter a valid email.' }, 400);
       if (!passwordOk(password)) return json({ error: 'Password must be at least 8 characters.' }, 400);
       if (!(full_name ?? '').trim()) return json({ error: 'Enter a name.' }, 400);
@@ -49,6 +49,7 @@ Deno.serve(async (req) => {
       if (error) return json({ error: /already/i.test(error.message) ? 'A login with this email already exists.' : error.message }, 400);
       const { error: profileError } = await admin.from('profiles').insert({
         id: data.user.id, email, full_name: full_name.trim(), role: newRole, franchisee_id: franchisee_id ?? null,
+        office: newRole === 'employee' ? office || null : null, // the database checks it's a real office
       });
       if (profileError) {
         await admin.auth.admin.deleteUser(data.user.id); // don't leave a login without a profile

@@ -113,6 +113,12 @@ There's no "forgot password" email. Exit admins manage every login on the **Part
 
 Anyone can change their own password from their Account page. An admin can't remove their own login, or the last admin.
 
+## Call-back requests
+
+The website's contact form saves each request to the portal's **Requests** page for the office the visitor chose. Admins see every office. Staff see the office set on their login (Partners page → logins → Office); staff with "All offices" see everything. Partners don't see requests.
+
+Staff can call or WhatsApp from the request, add a note, and mark it contacted, closed or reopened. Requests are never deleted. The form has a hidden bot trap and limits repeats: 3 an hour from one phone number, and 5 every 10 minutes from one network. The office list is `offices` in `src/config.js` plus `office_names()` in the database; change both together.
+
 ## Encryption
 
 PAN numbers, Aadhaar digits, signed agreement text and KYC photos are encrypted with AES-256.

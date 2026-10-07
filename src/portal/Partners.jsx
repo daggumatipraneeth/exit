@@ -6,6 +6,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import { supabase, fetchAll } from './supabase';
 import { line } from '../theme';
+import { offices } from '../config';
 import { Panel, PageTitle, Field } from './ui';
 
 const blankPartner = { name: '', phone: '', email: '', hidden_charge_pct: '', profit_share_pct: 70, active: true };
@@ -161,8 +162,18 @@ function ConfirmDialog({ title, children, action, run, onClose, onDone }) {
   );
 }
 
+// Staff tied to an office see only that office's call-back requests; blank = all offices.
+function OfficeSelect({ value, onChange, ...rest }) {
+  return (
+    <TextField select label="Office" value={value ?? ''} onChange={onChange} helperText="Which website call-back requests they see." {...rest}>
+      <MenuItem value="">All offices</MenuItem>
+      {offices.map((o) => <MenuItem key={o.city} value={o.city}>{o.city}</MenuItem>)}
+    </TextField>
+  );
+}
+
 function LoginDialog({ partner, onClose, onSaved }) {
-  const [f, setF] = useState({ full_name: '', email: partner?.email ?? '', password: tempPassword(), role: partner ? 'franchisee' : 'employee' });
+  const [f, setF] = useState({ full_name: '', email: partner?.email ?? '', password: tempPassword(), role: partner ? 'franchisee' : 'employee', office: '' });
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -198,6 +209,7 @@ function LoginDialog({ partner, onClose, onSaved }) {
                 <MenuItem value="admin">Exit admin</MenuItem>
               </TextField>
             )}
+            {f.role === 'employee' && <OfficeSelect value={f.office} onChange={set('office')} />}
           </Stack>
         )}
       </DialogContent>
@@ -227,7 +239,7 @@ export default function Partners({ email: myEmail }) {
   function load() {
     Promise.all([
       fetchAll((o) => supabase.from('franchisees').select('*, franchisee_terms(hidden_charge_pct)', o).order('name').order('id')),
-      fetchAll((o) => supabase.from('profiles').select('id, full_name, email, role, franchisee_id', o).order('full_name').order('id')),
+      fetchAll((o) => supabase.from('profiles').select('id, full_name, email, role, franchisee_id, office', o).order('full_name').order('id')),
       supabase.from('partner_customer_counts').select('*'),
     ]).then(([f, p, c]) => {
       const err = f.error ?? p.error ?? c.error;
@@ -311,6 +323,15 @@ export default function Partners({ email: myEmail }) {
                 <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>{p.email}</Typography>
               </Box>
               <Chip size="small" variant="outlined" label={loginLabel(p)} sx={{ maxWidth: 220 }} />
+              {p.role === 'employee' && (
+                <OfficeSelect
+                  size="small" value={p.office} helperText={null} sx={{ width: 150 }}
+                  onChange={async (e) => {
+                    const { error } = await supabase.from('profiles').update({ office: e.target.value || null }).eq('id', p.id);
+                    if (error) setError(error.message); else load();
+                  }}
+                />
+              )}
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Button size="small" variant="outlined" onClick={() => setPasswordFor(p)}>Reset password</Button>
                 {p.email !== myEmail && <Button size="small" color="error" onClick={() => setRemoving(p)}>Remove</Button>}

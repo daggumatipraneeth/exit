@@ -50,7 +50,6 @@ Test logins all use the password `password123`:
 Other local addresses:
 
 - Database admin (Studio): http://127.0.0.1:54323
-- Emails that would have been sent, such as password resets: http://127.0.0.1:54324
 
 Other commands:
 
@@ -70,7 +69,6 @@ node src/finance.check.js
 | Login settings | Public sign-up off; reset links go to exitstocks.com (`[remotes.production]` in `supabase/config.toml`, applied with `npx supabase config push`) |
 
 **Free plan limits to know:**
-- **Password-reset emails** use Supabase's default email, which works only when the link is opened in the same browser that asked. The built-in sender also allows just a few emails an hour. Adding your own email provider (Authentication → SMTP) lifts both limits and allows the custom template in `supabase/templates/recovery.html`; then remove the template override in `config.toml` and run `config push` again.
 - **No daily database backups** on Free. Set up the nightly backup below, or upgrade to Pro.
 - **The project pauses** after a week without use.
 
@@ -88,23 +86,32 @@ node src/finance.check.js
    **Then save the encryption key** (see "Encryption" below) before anyone enters a real customer.
 3. **Auth settings** (Dashboard → Authentication):
    - Turn **off** "Allow new users to sign up". Only admins create logins.
-   - Set **Site URL** to the live portal, e.g. `https://<user>.github.io/exit/portal.html`, and add it to **Redirect URLs**. This is needed for password-reset emails.
-   - Set up custom SMTP so reset emails come from your domain. The built-in sender is heavily rate-limited.
-4. **Password-reset email.** In Dashboard → Authentication → Email Templates → Reset Password, paste the contents of `supabase/templates/recovery.html`. This makes reset links work on any device.
-5. **Create the first admin.** Go to Dashboard → Authentication → Add user, enter your email and a password, and tick auto-confirm. Then in the SQL editor:
+   - Set **Site URL** to the live portal, e.g. `https://exitstocks.com/portal.html`.
+4. **Create the first admin.** Go to Dashboard → Authentication → Add user, enter your email and a password, and tick auto-confirm. Then in the SQL editor:
    ```sql
    insert into profiles (id, full_name, email, role)
    select id, 'Your Name', email, 'admin' from auth.users where email = 'you@example.com';
    ```
    After that, create every other login from the portal's Partners page.
-6. **Write the agreement.** As admin, open More → Agreement and publish version 1. Have a lawyer review the text first.
-7. **Connect the website** (GitHub → Settings → Secrets and variables → Actions → Variables). Add these two values from Dashboard → Project Settings → API:
+5. **Write the agreement.** As admin, open More → Agreement and publish version 1. Have a lawyer review the text first.
+6. **Connect the website** (GitHub → Settings → Secrets and variables → Actions → Variables). Add these two values from Dashboard → Project Settings → API:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY` (the publishable or anon key, never the service key)
 
    The next push to `main` deploys the portal. Without these variables the portal page says it isn't set up yet, and the landing page still works.
 
-**Staging:** create a second Supabase project and repeat steps 1–6 against it. Use `npx supabase link` to switch between the two.
+**Staging:** create a second Supabase project and repeat steps 1–5 against it. Use `npx supabase link` to switch between the two.
+
+## Logins and passwords
+
+There's no "forgot password" email. Exit admins manage every login on the **Partners** page:
+
+- **Add login:** creates a partner or staff login with a temporary password to share privately.
+- **Reset password:** sets a new temporary password; the old one stops working straight away.
+- **Remove:** deletes a login, for example one created with a typo. Customers, results and activity they created stay.
+- **Delete partner:** only for a partner added by mistake, with no customers or results yet. Its logins go too. Otherwise mark the partner inactive.
+
+Anyone can change their own password from their Account page. An admin can't remove their own login, or the last admin.
 
 ## Encryption
 

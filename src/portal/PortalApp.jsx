@@ -60,27 +60,12 @@ export default function PortalApp() {
 
 function Portal() {
   const [session, setSession] = useState(undefined); // undefined = still loading
-  const [recovering, setRecovering] = useState(false);
   const [profile, setProfile] = useState(undefined);
   const [path, id] = useRoute();
 
-  const [linkError, setLinkError] = useState('');
-
   useEffect(() => {
-    // Password reset link: ?token_hash=...&type=recovery (see supabase/templates/recovery.html)
-    const q = new URLSearchParams(window.location.search);
-    if (q.get('type') === 'recovery' && q.get('token_hash')) {
-      window.history.replaceState(null, '', window.location.pathname + window.location.hash);
-      supabase.auth.verifyOtp({ token_hash: q.get('token_hash'), type: 'recovery' }).then(({ error }) => {
-        if (error) setLinkError('This reset link has expired or was already used. Ask for a new one below.');
-        else setRecovering(true);
-      });
-    }
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data } = supabase.auth.onAuthStateChange((event, s) => {
-      if (event === 'PASSWORD_RECOVERY') setRecovering(true);
-      setSession(s);
-    });
+    const { data } = supabase.auth.onAuthStateChange((event, s) => setSession(s));
     return () => data.subscription.unsubscribe();
   }, []);
 
@@ -96,10 +81,10 @@ function Portal() {
 
   if (path === 'sign') return <Sign key={id} token={id} />; // public: customers sign without a login; fresh state per link
 
-  if (session === undefined || (session && profile === undefined && !recovering)) {
+  if (session === undefined || (session && profile === undefined)) {
     return <Centered><CircularProgress aria-label="Loading" /></Centered>;
   }
-  if (!session || recovering) return <Login key={`${recovering}${linkError}`} recovering={recovering} linkError={linkError} onRecovered={() => setRecovering(false)} />;
+  if (!session) return <Login />;
   if (!profile) {
     return (
       <Centered>

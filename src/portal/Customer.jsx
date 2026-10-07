@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Box, Typography, Alert, Link } from '@mui/material';
+import { Box, Typography, Alert, Link, Button } from '@mui/material';
 import ArrowBack from '@mui/icons-material/ArrowBack';
 import { supabase } from './supabase';
 import { money } from '../finance';
 import { ink, line } from '../theme';
 import { today, fmtDate, shortDate, monthName, sum, Signed, Panel, Field, CapMeter, StatusChip, Figures } from './ui';
+import { OnboardingSteps, Documents, EditDetailsDialog, CapitalDialog, AgreementDialog, canEdit } from './Onboarding';
 
 const cols = { xs: '1fr auto', md: '1.1fr 0.5fr 0.9fr 0.9fr 0.9fr 0.9fr 1fr' };
 
@@ -14,14 +15,17 @@ export default function Customer({ profile, id }) {
   const [month, setMonth] = useState(today().slice(0, 7));
   const [days, setDays] = useState(null);
   const [error, setError] = useState('');
+  const [dialog, setDialog] = useState(null); // 'edit' | 'capital' | 'agreement'
 
-  useEffect(() => {
+  function load() {
     supabase.from('customers')
-      .select('*, franchisees(name), customer_capital(effective_from, amount)')
+      .select('*, franchisees(name), customer_capital(effective_from, amount), customer_documents(kind, path, uploaded_at), agreements(*)')
       .eq('id', id)
       .maybeSingle()
       .then(({ data, error }) => (error ? setError(error.message) : data ? setC(data) : setError('This customer does not exist or is not yours.')));
-  }, [id]);
+  }
+  useEffect(load, [id]);
+  const reload = () => { setDialog(null); load(); };
 
   useEffect(() => {
     const start = `${month}-01`;
@@ -41,6 +45,10 @@ export default function Customer({ profile, id }) {
   const capital = c.customer_capital.toSorted((a, b) => b.effective_from.localeCompare(a.effective_from));
   const latest = days[0];
   const earnedLabel = staff ? 'Partner earned' : 'You earned';
+  const active = c.status === 'active';
+  const edit = canEdit(profile, c);
+  const signed = c.agreements.find((a) => a.signed_at);
+  const documents = <Documents customer={c} docs={c.customer_documents} edit={edit} onChanged={load} />;
 
   return (
     <>
@@ -56,6 +64,16 @@ export default function Customer({ profile, id }) {
 
       <Box sx={{ display: 'grid', gap: { xs: 3, md: 4 }, gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 1fr) 340px' }, alignItems: 'start' }}>
         <Box sx={{ display: 'grid', gap: { xs: 3, md: 4 }, minWidth: 0 }}>
+          {!active && (
+            <>
+              <OnboardingSteps
+                customer={c} profile={profile} capital={capital} docs={c.customer_documents} agreements={c.agreements}
+                onEdit={() => setDialog('edit')} onCapital={() => setDialog('capital')} onChanged={load}
+              />
+              {documents}
+            </>
+          )}
+          {active && <>
           <Figures
             items={[
               { label: `Customer, ${monthName(`${month}-01`)}`, value: <Signed value={sum(days, 'customer_today')} sx={{ fontWeight: 700 }} /> },
@@ -138,10 +156,12 @@ export default function Customer({ profile, id }) {
               </>
             )}
           </Panel>
+          {documents}
+          </>}
         </Box>
 
         <Box sx={{ display: 'grid', gap: { xs: 3, md: 4 } }}>
-          <Panel title="Details">
+          <Panel title="Details" action={edit && <Button size="small" onClick={() => setDialog('edit')}>Edit</Button>}>
             <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr 1fr', lg: '1fr' }, px: { xs: 2, md: 3 }, py: 2.5 }}>
               <Field label="Phone">{c.phone}</Field>
               <Field label="Email">{c.email}</Field>
@@ -154,7 +174,7 @@ export default function Customer({ profile, id }) {
             </Box>
           </Panel>
 
-          <Panel title="Capital and cap">
+          <Panel title="Capital and cap" action={edit && <Button size="small" onClick={() => setDialog('capital')}>Change</Button>}>
             <Box sx={{ px: { xs: 2, md: 3 }, py: 2.5, display: 'grid', gap: 2 }}>
               <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
                 <Field label="Current capital">{capital[0] && money(capital[0].amount)}</Field>
@@ -173,8 +193,20 @@ export default function Customer({ profile, id }) {
               )}
             </Box>
           </Panel>
+
+          {signed && (
+            <Panel title="Agreement" action={<Button size="small" onClick={() => setDialog('agreement')}>View</Button>}>
+              <Typography variant="body2" color="text.secondary" sx={{ px: { xs: 2, md: 3 }, py: 2 }}>
+                Signed by {signed.signer_name} on {shortDate(signed.signed_at.slice(0, 10))}.
+              </Typography>
+            </Panel>
+          )}
         </Box>
       </Box>
+
+      {dialog === 'edit' && <EditDetailsDialog customer={c} profile={profile} onClose={() => setDialog(null)} onSaved={reload} />}
+      {dialog === 'capital' && <CapitalDialog customer={c} onClose={() => setDialog(null)} onSaved={reload} />}
+      {dialog === 'agreement' && <AgreementDialog agreement={signed} onClose={() => setDialog(null)} />}
     </>
   );
 }

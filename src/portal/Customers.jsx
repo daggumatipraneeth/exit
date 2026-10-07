@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Box, Typography, TextField, InputAdornment, Alert, ToggleButtonGroup, ToggleButton } from '@mui/material';
+import { Box, Typography, TextField, InputAdornment, Alert, ToggleButtonGroup, ToggleButton, Button } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import AddIcon from '@mui/icons-material/Add';
 import { supabase } from './supabase';
 import { money } from '../finance';
 import { line } from '../theme';
-import { today, monthName, Panel, CapMeter, StatusChip, rowLink } from './ui';
+import { today, monthName, Panel, PageTitle, CapMeter, StatusChip, rowLink } from './ui';
 
 const cols = { xs: '1fr auto', md: '1.4fr 0.8fr 0.9fr 1.6fr' };
 const onboarding = ['draft', 'awaiting_signature', 'pending_approval'];
@@ -47,9 +48,9 @@ export default function Customers({ profile }) {
 
   return (
     <>
-      <Typography variant="h4" component="h1" sx={{ fontWeight: 700, letterSpacing: '-0.02em', fontSize: { xs: '1.6rem', md: '2.1rem' }, mb: 3 }}>
+      <PageTitle action={<Button variant="contained" startIcon={<AddIcon />} href="#/customers/new">Add customer</Button>}>
         Customers
-      </Typography>
+      </PageTitle>
 
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mb: 2.5 }}>
         <TextField
@@ -64,6 +65,7 @@ export default function Customers({ profile }) {
           <ToggleButton value="all">All</ToggleButton>
           <ToggleButton value="active">Active</ToggleButton>
           <ToggleButton value="onboarding">Onboarding</ToggleButton>
+          {staff && <ToggleButton value="pending_approval">To approve ({customers.filter((c) => c.status === 'pending_approval').length})</ToggleButton>}
           <ToggleButton value="rejected">Rejected</ToggleButton>
         </ToggleButtonGroup>
       </Box>

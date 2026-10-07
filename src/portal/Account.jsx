@@ -56,6 +56,7 @@ export default function Account({ profile, email }) {
         <Panel title="Change password">
           <Box component="form" onSubmit={save} sx={{ display: 'grid', gap: 2, px: { xs: 2, md: 3 }, py: 2.5 }}>
             {msg && <Alert severity={msg[0]}>{msg[1]}</Alert>}
+            <input type="text" name="username" autoComplete="username" value={email} readOnly hidden />
             <TextField
               label="New password" type="password" autoComplete="new-password" value={pw.next}
               onChange={(e) => setPw({ ...pw, next: e.target.value })} helperText="At least 8 characters."

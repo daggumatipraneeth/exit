@@ -117,3 +117,17 @@ export const rowLink = {
   '&:hover': { bgcolor: '#F8FAFC' },
   '&:focus-visible': { outline: `2px solid ${accent}`, outlineOffset: -2 },
 };
+
+export function PageTitle({ children, action }) {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2, mb: 3 }}>
+      <Typography variant="h4" component="h1" sx={{ fontWeight: 700, letterSpacing: '-0.02em', fontSize: { xs: '1.6rem', md: '2.1rem' }, flex: '1 1 auto' }}>
+        {children}
+      </Typography>
+      {action}
+    </Box>
+  );
+}
+
+// Supabase errors carry the Postgres message; show just that.
+export const errText = (e) => e?.message ?? String(e);

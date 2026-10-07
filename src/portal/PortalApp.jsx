@@ -3,6 +3,11 @@ import { Box, Button, CircularProgress, Typography } from '@mui/material';
 import TodayIcon from '@mui/icons-material/TodayOutlined';
 import PeopleIcon from '@mui/icons-material/PeopleAltOutlined';
 import PersonIcon from '@mui/icons-material/AccountCircleOutlined';
+import EditNoteIcon from '@mui/icons-material/EditNoteOutlined';
+import HandshakeIcon from '@mui/icons-material/HandshakeOutlined';
+import EventIcon from '@mui/icons-material/EventAvailableOutlined';
+import ArticleIcon from '@mui/icons-material/ArticleOutlined';
+import HistoryIcon from '@mui/icons-material/HistoryOutlined';
 import { supabase } from './supabase';
 import Login from './Login';
 import Layout from './Layout';
@@ -10,12 +15,25 @@ import Dashboard from './Dashboard';
 import Customers from './Customers';
 import Customer from './Customer';
 import Account from './Account';
+import DailyEntry from './DailyEntry';
+import Partners from './Partners';
+import Sign from './Sign';
+import { NewCustomer } from './Onboarding';
+import { Months, Templates, Activity } from './Admin';
 
 const everyone = ['admin', 'employee', 'franchisee'];
-// Pages by hash route (#/today). roles: who sees it in the nav. #/customers/<id> opens one customer.
+const staff = ['admin', 'employee'];
+const admin = ['admin'];
+// Pages by hash route (#/today), in nav order. roles: who can open it. #/customers/<id> opens one customer.
+// Row-level security in the database is the real guard; this only decides what each role is shown.
 const pages = [
   { path: 'today', label: 'Today', icon: TodayIcon, roles: everyone, Page: Dashboard },
+  { path: 'entry', label: 'Daily entry', short: 'Entry', icon: EditNoteIcon, roles: staff, Page: DailyEntry },
   { path: 'customers', label: 'Customers', icon: PeopleIcon, roles: everyone, Page: Customers, Detail: Customer },
+  { path: 'partners', label: 'Partners', icon: HandshakeIcon, roles: admin, Page: Partners },
+  { path: 'months', label: 'Months', icon: EventIcon, roles: admin, Page: Months },
+  { path: 'agreement', label: 'Agreement', icon: ArticleIcon, roles: admin, Page: Templates },
+  { path: 'activity', label: 'Activity', icon: HistoryIcon, roles: admin, Page: Activity },
   { path: 'account', label: 'Account', icon: PersonIcon, roles: everyone, Page: Account },
 ];
 
@@ -34,6 +52,13 @@ function Centered({ children }) {
 }
 
 export default function PortalApp() {
+  if (!supabase) {
+    return <Centered><Typography color="text.secondary">The partner portal isn't set up on this site yet.</Typography></Centered>;
+  }
+  return <Portal />;
+}
+
+function Portal() {
   const [session, setSession] = useState(undefined); // undefined = still loading
   const [recovering, setRecovering] = useState(false);
   const [profile, setProfile] = useState(undefined);
@@ -58,6 +83,8 @@ export default function PortalApp() {
       .then(({ data }) => setProfile(data ?? null));
   }, [session?.user.id]);
 
+  if (path === 'sign') return <Sign token={id} />; // public: customers sign without a login
+
   if (session === undefined || (session && profile === undefined && !recovering)) {
     return <Centered><CircularProgress aria-label="Loading" /></Centered>;
   }
@@ -78,7 +105,7 @@ export default function PortalApp() {
 
   const nav = pages.filter((p) => p.roles.includes(profile.role));
   const current = nav.find((p) => p.path === path) ?? nav[0];
-  const Page = (id && current.Detail) || current.Page;
+  const Page = id === 'new' && current.path === 'customers' ? NewCustomer : (id && current.Detail) || current.Page;
   return (
     <Layout profile={profile} nav={nav} current={current.path}>
       <Page key={id} profile={profile} id={id} email={session.user.email} />

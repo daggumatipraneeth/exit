@@ -75,14 +75,14 @@ export default function Nav() {
         }}
       />
 
-      <Drawer anchor="right" open={open} onClose={() => setOpen(false)} PaperProps={{ sx: { width: '82vw', maxWidth: 340, bgcolor: ink, color: '#fff' } }}>
+      <Drawer anchor="right" open={open} onClose={() => setOpen(false)} slotProps={{ paper: { sx: { width: '82vw', maxWidth: 340, bgcolor: ink, color: '#fff' } } }}>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1.5 }}>
           <IconButton onClick={() => setOpen(false)} sx={{ color: '#fff' }} aria-label="Close menu"><CloseIcon /></IconButton>
         </Box>
         <List sx={{ px: 2 }}>
           {[...links, ['Contact', '#contact']].map(([label, href]) => (
             <ListItemButton key={href} component="a" href={href} onClick={() => setOpen(false)} sx={{ borderBottom: '1px solid rgba(255,255,255,.08)', py: 2 }}>
-              <ListItemText primary={label} primaryTypographyProps={{ fontSize: 22 }} />
+              <ListItemText primary={label} slotProps={{ primary: { sx: { fontSize: 22 } } }} />
             </ListItemButton>
           ))}
         </List>
@@ -90,7 +90,7 @@ export default function Nav() {
           <Button fullWidth variant="contained" color="secondary" href="#contact" onClick={() => setOpen(false)}>
             Book consultation
           </Button>
-          <Button fullWidth href="portal.html" sx={{ mt: 1.5, color: '#fff' }}>
+          <Button fullWidth variant="outlined" href="portal.html" sx={{ mt: 1.5, color: '#fff', borderColor: 'rgba(255,255,255,.5)', '&:hover': { borderColor: '#fff' } }}>
             Partner login
           </Button>
         </Box>

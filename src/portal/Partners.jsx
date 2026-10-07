@@ -6,6 +6,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import { supabase, fetchAll } from './supabase';
 import { line } from '../theme';
+import { offices } from '../config';
 import { Panel, PageTitle, Field } from './ui';
 
 const blankPartner = { name: '', phone: '', email: '', hidden_charge_pct: '', profit_share_pct: 70, active: true };
@@ -66,8 +67,113 @@ function PartnerDialog({ partner, onClose, onSaved }) {
   );
 }
 
+// Calls the admin-users server function; returns an error message, or null on success.
+async function adminUsers(body) {
+  const { data, error } = await supabase.functions.invoke('admin-users', { body });
+  // functions.invoke puts the JSON body of non-2xx replies on error.context
+  if (error) return (await error.context?.json?.().catch(() => null))?.error ?? error.message;
+  return data?.error ?? null;
+}
+
+// Login details to hand over privately, with a one-tap copy.
+function ShareDetails({ email, password }) {
+  const [copied, setCopied] = useState(false);
+  const text = `Exit partner portal\n${window.location.href.split('#')[0]}\nEmail: ${email}\nTemporary password: ${password}`;
+  return (
+    <Box sx={{ border: `1px solid ${line}`, borderRadius: 1.5, p: 2 }}>
+      <Typography sx={{ overflowWrap: 'anywhere' }}>Login page: {window.location.href.split('#')[0]}</Typography>
+      <Typography sx={{ overflowWrap: 'anywhere' }}>Email: {email}</Typography>
+      <Typography>Temporary password: <strong>{password}</strong></Typography>
+      <Button size="small" variant="outlined" sx={{ mt: 1.5 }} onClick={async () => { await navigator.clipboard.writeText(text); setCopied(true); }}>
+        {copied ? 'Copied' : 'Copy details'}
+      </Button>
+    </Box>
+  );
+}
+
+function PasswordDialog({ login, onClose }) {
+  const [password, setPassword] = useState(tempPassword());
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  async function save() {
+    setBusy(true);
+    const problem = await adminUsers({ action: 'set_password', user_id: login.id, password });
+    setBusy(false);
+    if (problem) return setError(problem);
+    setDone(true);
+  }
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="xs">
+      <DialogTitle>Set a new password for {login.full_name}</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ pt: 1 }}>
+          {done ? (
+            <>
+              <Alert severity="success">Password changed. Share these details privately; they can change it again from their Account page.</Alert>
+              <ShareDetails email={login.email} password={password} />
+            </>
+          ) : (
+            <>
+              {error && <Alert severity="error">{error}</Alert>}
+              <Typography color="text.secondary">Their old password stops working straight away.</Typography>
+              <TextField label="New temporary password" value={password} onChange={(e) => setPassword(e.target.value)} helperText="At least 8 characters." autoFocus />
+            </>
+          )}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        {done ? <Button variant="contained" onClick={onClose}>Done</Button> : (
+          <>
+            <Button onClick={onClose}>Cancel</Button>
+            <Button variant="contained" disabled={busy || password.length < 8} onClick={save}>Set password</Button>
+          </>
+        )}
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+// Confirms a removal; `run` returns an error message or null.
+function ConfirmDialog({ title, children, action, run, onClose, onDone }) {
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  async function confirm() {
+    setBusy(true);
+    const problem = await run();
+    setBusy(false);
+    if (problem) return setError(problem);
+    onDone();
+  }
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="xs">
+      <DialogTitle>{title}</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ pt: 1 }}>
+          {error && <Alert severity="error">{error}</Alert>}
+          <Typography>{children}</Typography>
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="contained" color="error" disabled={busy} onClick={confirm}>{action}</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+// Staff tied to an office see only that office's call-back requests; blank = all offices.
+function OfficeSelect({ value, onChange, ...rest }) {
+  return (
+    <TextField select label="Office" value={value ?? ''} onChange={onChange} helperText="Which website call-back requests they see." {...rest}>
+      <MenuItem value="">All offices</MenuItem>
+      {offices.map((o) => <MenuItem key={o.city} value={o.city}>{o.city}</MenuItem>)}
+    </TextField>
+  );
+}
+
 function LoginDialog({ partner, onClose, onSaved }) {
-  const [f, setF] = useState({ full_name: '', email: partner?.email ?? '', password: tempPassword(), role: partner ? 'franchisee' : 'employee' });
+  const [f, setF] = useState({ full_name: '', email: partner?.email ?? '', password: tempPassword(), role: partner ? 'franchisee' : 'employee', office: '' });
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -75,11 +181,9 @@ function LoginDialog({ partner, onClose, onSaved }) {
 
   async function save() {
     setBusy(true);
-    const { data, error } = await supabase.functions.invoke('admin-create-user', { body: { ...f, franchisee_id: partner?.id } });
+    const problem = await adminUsers({ action: 'create', ...f, franchisee_id: partner?.id });
     setBusy(false);
-    // functions.invoke puts the JSON body of non-2xx replies on error.context
-    if (error) return setError((await error.context?.json?.().catch(() => null))?.error ?? error.message);
-    if (data?.error) return setError(data.error);
+    if (problem) return setError(problem);
     setDone(true);
     onSaved();
   }
@@ -91,11 +195,7 @@ function LoginDialog({ partner, onClose, onSaved }) {
         {done ? (
           <Stack spacing={2} sx={{ pt: 1 }}>
             <Alert severity="success">Login created. Share these details privately; they can change the password from their Account page.</Alert>
-            <Box sx={{ border: `1px solid ${line}`, borderRadius: 1.5, p: 2, fontFeatureSettings: '"tnum"' }}>
-              <Typography>Login page: {window.location.href.split('#')[0]}</Typography>
-              <Typography>Email: {f.email}</Typography>
-              <Typography>Temporary password: <strong>{f.password}</strong></Typography>
-            </Box>
+            <ShareDetails email={f.email} password={f.password} />
           </Stack>
         ) : (
           <Stack spacing={2} sx={{ pt: 1 }}>
@@ -109,6 +209,7 @@ function LoginDialog({ partner, onClose, onSaved }) {
                 <MenuItem value="admin">Exit admin</MenuItem>
               </TextField>
             )}
+            {f.role === 'employee' && <OfficeSelect value={f.office} onChange={set('office')} />}
           </Stack>
         )}
       </DialogContent>
@@ -124,18 +225,21 @@ function LoginDialog({ partner, onClose, onSaved }) {
   );
 }
 
-export default function Partners() {
+export default function Partners({ email: myEmail }) {
   const [partners, setPartners] = useState(null);
   const [people, setPeople] = useState([]);
   const [counts, setCounts] = useState({});
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(null); // partner object, {} for new
   const [loginFor, setLoginFor] = useState(null); // partner, or 'staff'
+  const [passwordFor, setPasswordFor] = useState(null); // login
+  const [removing, setRemoving] = useState(null); // login
+  const [deleting, setDeleting] = useState(null); // partner
 
   function load() {
     Promise.all([
       fetchAll((o) => supabase.from('franchisees').select('*, franchisee_terms(hidden_charge_pct)', o).order('name').order('id')),
-      fetchAll((o) => supabase.from('profiles').select('id, full_name, email, role, franchisee_id', o).order('full_name').order('id')),
+      fetchAll((o) => supabase.from('profiles').select('id, full_name, email, role, franchisee_id, office', o).order('full_name').order('id')),
       supabase.from('partner_customer_counts').select('*'),
     ]).then(([f, p, c]) => {
       const err = f.error ?? p.error ?? c.error;
@@ -149,7 +253,8 @@ export default function Partners() {
 
   if (error) return <Alert severity="error">{error}</Alert>;
   if (!partners) return null;
-  const staff = people.filter((p) => p.role !== 'franchisee');
+  const partnerName = Object.fromEntries(partners.map((f) => [f.id, f.name]));
+  const loginLabel = (p) => (p.role === 'franchisee' ? partnerName[p.franchisee_id] : p.role === 'admin' ? 'Exit admin' : 'Exit staff');
 
   return (
     <>
@@ -190,6 +295,7 @@ export default function Partners() {
                 <Box sx={{ display: 'flex', gap: 1, justifyContent: { md: 'flex-end' } }}>
                   <Button size="small" variant="outlined" onClick={() => setEditing(f)}>Edit</Button>
                   <Button size="small" variant="outlined" onClick={() => setLoginFor(f)}>Add login</Button>
+                  {!counts[f.id] && <Button size="small" color="error" onClick={() => setDeleting(f)}>Delete</Button>}
                 </Box>
               </Box>
             );
@@ -198,18 +304,38 @@ export default function Partners() {
       </Panel>
 
       <Panel
-        title="Exit staff logins"
+        title={`${people.length} logins`}
         action={<Button size="small" startIcon={<AddIcon />} onClick={() => setLoginFor('staff')}>Add staff login</Button>}
         sx={{ mt: 4 }}
       >
         <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
-          {staff.map((p) => (
-            <Box component="li" key={p.id} sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 1, px: { xs: 2, md: 3 }, py: 1.5, '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` } }}>
-              <Box sx={{ minWidth: 0 }}>
-                <Typography sx={{ fontWeight: 500 }}>{p.full_name}</Typography>
+          {people.map((p) => (
+            <Box
+              component="li"
+              key={p.id}
+              sx={{
+                display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', columnGap: 2, rowGap: 1,
+                px: { xs: 2, md: 3 }, py: 1.5, '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` },
+              }}
+            >
+              <Box sx={{ minWidth: 0, flex: '1 1 220px' }}>
+                <Typography sx={{ fontWeight: 500 }}>{p.full_name}{p.email === myEmail && ' (you)'}</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>{p.email}</Typography>
               </Box>
-              <Chip size="small" variant="outlined" label={p.role === 'admin' ? 'Admin' : 'Staff'} />
+              <Chip size="small" variant="outlined" label={loginLabel(p)} sx={{ maxWidth: 220 }} />
+              {p.role === 'employee' && (
+                <OfficeSelect
+                  size="small" value={p.office} helperText={null} sx={{ width: 150 }}
+                  onChange={async (e) => {
+                    const { error } = await supabase.from('profiles').update({ office: e.target.value || null }).eq('id', p.id);
+                    if (error) setError(error.message); else load();
+                  }}
+                />
+              )}
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button size="small" variant="outlined" onClick={() => setPasswordFor(p)}>Reset password</Button>
+                {p.email !== myEmail && <Button size="small" color="error" onClick={() => setRemoving(p)}>Remove</Button>}
+              </Box>
             </Box>
           ))}
         </Box>
@@ -217,6 +343,29 @@ export default function Partners() {
 
       {editing && <PartnerDialog partner={editing.id ? editing : null} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
       {loginFor && <LoginDialog partner={loginFor === 'staff' ? null : loginFor} onClose={() => setLoginFor(null)} onSaved={load} />}
+      {passwordFor && <PasswordDialog login={passwordFor} onClose={() => setPasswordFor(null)} />}
+      {removing && (
+        <ConfirmDialog
+          title={`Remove ${removing.full_name}'s login?`}
+          action="Remove login"
+          run={() => adminUsers({ action: 'delete_login', user_id: removing.id })}
+          onClose={() => setRemoving(null)}
+          onDone={() => { setRemoving(null); load(); }}
+        >
+          {removing.email} will no longer be able to log in. Customers, results and the activity log they created stay as they are.
+        </ConfirmDialog>
+      )}
+      {deleting && (
+        <ConfirmDialog
+          title={`Delete ${deleting.name}?`}
+          action="Delete partner"
+          run={() => adminUsers({ action: 'delete_partner', franchisee_id: deleting.id })}
+          onClose={() => setDeleting(null)}
+          onDone={() => { setDeleting(null); load(); }}
+        >
+          Use this for a partner added by mistake. Its logins are removed too. A partner that already has customers or results can't be deleted; mark it inactive instead.
+        </ConfirmDialog>
+      )}
     </>
   );
 }

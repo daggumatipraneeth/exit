@@ -244,12 +244,6 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
-# Reset links carry a token hash the portal verifies itself, so they work in any browser
-# (PKCE links only work in the browser that asked). Copy this template to the hosted project too.
-[auth.email.template.recovery]
-subject = "Reset your Exit partner portal password"
-content_path = "./supabase/templates/recovery.html"
-
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"
@@ -437,9 +431,3 @@ otp_length = 8
 [remotes.production.auth.mfa.totp]
 enroll_enabled = true
 verify_enabled = true
-
-# Free plan without custom SMTP can't change email templates; keep Supabase's default reset email there
-# (reset links then work in the same browser that asked). Remove this once SMTP is set up.
-[remotes.production.auth.email.template.recovery]
-subject = "Reset your password"
-content_path = ""

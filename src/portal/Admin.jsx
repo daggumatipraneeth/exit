@@ -176,8 +176,9 @@ export function Templates() {
 const tableNames = {
   customers: 'Customer', daily_entries: 'Daily entry', franchisee_terms: 'Hidden charge', customer_capital: 'Capital', customer_documents: 'KYC document',
   agreements: 'Agreement', franchisees: 'Partner', profiles: 'Login', closed_months: 'Month', agreement_templates: 'Agreement template',
+  consultation_requests: 'Call-back request',
 };
-const verbs = { INSERT: 'added', UPDATE: 'changed', DELETE: 'removed' };
+const verbs = { INSERT: 'added', UPDATE: 'changed', DELETE: 'removed', PASSWORD: 'password reset' };
 const quiet = new Set(['entered_at', 'uploaded_at', 'created_at', 'rendered_html_enc', 'signature_png', 'html_sha256', 'body', 'sign_token', 'pan_hash']);
 // Encrypted values are never shown; a change is reported by name only.
 const secret = { pan_enc: 'PAN updated', aadhaar_enc: 'Aadhaar updated' };
@@ -196,7 +197,13 @@ export function Activity() {
       fetchAll((o) => supabase.from('profiles').select('id, full_name', o).order('id')),
       fetchAll((o) => supabase.from('customers').select('id, full_name', o).order('id')),
       fetchAll((o) => supabase.from('franchisees').select('id, name', o).order('id')),
-    ]).then(([p, c, f]) => setNames({ people: byId(p.data, 'full_name'), customers: byId(c.data, 'full_name'), partners: byId(f.data, 'name') }));
+      // People whose logins were removed are still named from the log of that removal.
+      supabase.from('audit_log').select('old').eq('table_name', 'profiles').eq('op', 'DELETE'),
+    ]).then(([p, c, f, gone]) => setNames({
+      people: { ...Object.fromEntries((gone.data ?? []).map((r) => [r.old.id, `${r.old.full_name} (removed)`])), ...byId(p.data, 'full_name') },
+      customers: byId(c.data, 'full_name'),
+      partners: byId(f.data, 'name'),
+    }));
   }, []);
 
   function load(from = 0) {

@@ -21,6 +21,7 @@
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^9.4.0",
     "@mui/material": "^9.4.0",
+    "@supabase/supabase-js": "^2.117.2",
     "framer-motion": "^13.4.3",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"

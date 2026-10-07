@@ -15,3 +15,8 @@ export function inr(v) {
   if (v >= 1e5) return `₹${(v / 1e5).toFixed(2)} L`;
   return `₹${Math.round(v).toLocaleString('en-IN')}`;
 }
+
+// Exact rupee amount for ledgers, e.g. ₹3,045.99. signed: '+₹5,000.00' / '-₹1,000.00'.
+const rupees = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
+const signedRupees = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', signDisplay: 'exceptZero' });
+export const money = (v, signed = false) => (signed ? signedRupees : rupees).format(Number(v) || 0);

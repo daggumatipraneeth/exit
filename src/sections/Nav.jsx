@@ -54,6 +54,9 @@ export default function Nav() {
               </Button>
             ))}
           </Box>
+          <Button color="inherit" href="portal.html" sx={{ display: { xs: 'none', sm: 'inline-flex' }, mr: 1, fontWeight: 500 }}>
+            Partner login
+          </Button>
           <Button variant="contained" href="#contact" sx={{ display: { xs: 'none', sm: 'inline-flex' } }}>
             Book consultation
           </Button>
@@ -86,6 +89,9 @@ export default function Nav() {
         <Box sx={{ p: 3, mt: 'auto' }}>
           <Button fullWidth variant="contained" color="secondary" href="#contact" onClick={() => setOpen(false)}>
             Book consultation
+          </Button>
+          <Button fullWidth href="portal.html" sx={{ mt: 1.5, color: '#fff' }}>
+            Partner login
           </Button>
         </Box>
       </Drawer>

@@ -106,7 +106,8 @@ create table daily_results (
   customer_today numeric(14,2) not null,    -- change in covered today
   franchisee_income numeric(14,2) not null, -- overflow above the cap today
   primary key (customer_id, trade_date),
-  foreign key (customer_id, trade_date) references daily_entries on delete cascade on update cascade
+  foreign key (customer_id, trade_date) references daily_entries on delete cascade on update cascade,
+  foreign key (customer_id) references customers
 );
 create index on daily_results (franchisee_id, trade_date);
 

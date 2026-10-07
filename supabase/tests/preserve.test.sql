@@ -46,7 +46,7 @@ update storage.objects set metadata = '{"x":1}' where bucket_id = 'kyc';
 reset role;
 select is((select metadata from storage.objects where bucket_id = 'kyc' and name = 'c2000000-0000-0000-0000-000000000001/pan-1'), null::jsonb,
   'admins cannot overwrite a KYC file');
-select is((select count(*) from storage.objects where bucket_id = 'kyc'), 1::bigint, 'file still there');
+select is((select count(*) from storage.objects where bucket_id = 'kyc' and name = 'c2000000-0000-0000-0000-000000000001/pan-1'), 1::bigint, 'file still there');
 
 select * from finish();
 rollback;

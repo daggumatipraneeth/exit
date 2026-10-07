@@ -162,6 +162,22 @@ function ConfirmDialog({ title, children, action, run, onClose, onDone }) {
   );
 }
 
+// One partner login, shown under its partner.
+function LoginLine({ p, onReset, onRemove }) {
+  return (
+    <Box component="li" sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 2, rowGap: 1, pt: 1.5 }}>
+      <Box sx={{ minWidth: 0, flex: '1 1 220px' }}>
+        <Typography variant="body2" sx={{ fontWeight: 500 }}>{p.full_name}</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>{p.email}</Typography>
+      </Box>
+      <Box sx={{ display: 'flex', gap: 1 }}>
+        <Button size="small" variant="outlined" onClick={() => onReset(p)}>Reset password</Button>
+        <Button size="small" color="error" onClick={() => onRemove(p)}>Remove login</Button>
+      </Box>
+    </Box>
+  );
+}
+
 // Staff tied to an office see only that office's call-back requests; blank = all offices.
 function OfficeSelect({ value, onChange, ...rest }) {
   return (
@@ -254,6 +270,7 @@ export default function Partners({ email: myEmail }) {
   if (error) return <Alert severity="error">{error}</Alert>;
   if (!partners) return null;
   const partnerName = Object.fromEntries(partners.map((f) => [f.id, f.name]));
+  const staffLogins = people.filter((p) => p.role !== 'franchisee');
   const loginLabel = (p) => (p.role === 'franchisee' ? partnerName[p.franchisee_id] : p.role === 'admin' ? 'Exit admin' : 'Exit staff');
 
   return (
@@ -290,13 +307,18 @@ export default function Partners({ email: myEmail }) {
                   <Field label="Hidden charge">{f.hidden_charge_pct === '' ? 'Not set' : `${Number(f.hidden_charge_pct)}%`}</Field>
                   <Field label="Profit split">{`${Number(f.profit_share_pct)} / ${100 - Number(f.profit_share_pct)}`}</Field>
                   <Field label="Active customers">{String(counts[f.id] ?? 0)}</Field>
-                  <Field label="Logins">{logins.map((l) => l.email ?? l.full_name).join(', ') || 'None yet'}</Field>
+                  <Field label="Logins">{String(logins.length)}</Field>
                 </Box>
                 <Box sx={{ display: 'flex', gap: 1, justifyContent: { md: 'flex-end' } }}>
                   <Button size="small" variant="outlined" onClick={() => setEditing(f)}>Edit</Button>
                   <Button size="small" variant="outlined" onClick={() => setLoginFor(f)}>Add login</Button>
                   {!counts[f.id] && <Button size="small" color="error" onClick={() => setDeleting(f)}>Delete</Button>}
                 </Box>
+                {logins.length > 0 && (
+                  <Box component="ul" sx={{ gridColumn: '1 / -1', listStyle: 'none', m: 0, p: 0, borderTop: `1px dashed ${line}` }}>
+                    {logins.map((p) => <LoginLine key={p.id} p={p} onReset={setPasswordFor} onRemove={setRemoving} />)}
+                  </Box>
+                )}
               </Box>
             );
           })}
@@ -304,12 +326,12 @@ export default function Partners({ email: myEmail }) {
       </Panel>
 
       <Panel
-        title={`${people.length} logins`}
+        title={`${staffLogins.length} staff logins`}
         action={<Button size="small" startIcon={<AddIcon />} onClick={() => setLoginFor('staff')}>Add staff login</Button>}
         sx={{ mt: 4 }}
       >
         <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
-          {people.map((p) => (
+          {staffLogins.map((p) => (
             <Box
               component="li"
               key={p.id}
@@ -334,7 +356,7 @@ export default function Partners({ email: myEmail }) {
               )}
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Button size="small" variant="outlined" onClick={() => setPasswordFor(p)}>Reset password</Button>
-                {p.email !== myEmail && <Button size="small" color="error" onClick={() => setRemoving(p)}>Remove</Button>}
+                {p.email !== myEmail && <Button size="small" color="error" onClick={() => setRemoving(p)}>Remove login</Button>}
               </Box>
             </Box>
           ))}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Box, Typography, Alert, Button, Chip, TextField, Link } from '@mui/material';
+import { Box, Typography, Alert, Button, Chip, TextField, Link, MenuItem } from '@mui/material';
 import PhoneIcon from '@mui/icons-material/PhoneOutlined';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import { supabase, fetchAll } from './supabase';
@@ -11,7 +11,7 @@ const statusLook = { new: ['New', 'warning'], contacted: ['Contacted', 'info'], 
 const when = (t) => new Date(t).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 const whatsapp = (phone) => `https://wa.me/${phone.replace(/\D/g, '').replace(/^(\d{10})$/, '91$1')}`;
 
-function RequestRow({ r, onChanged }) {
+function RequestRow({ r, partners, onChanged }) {
   const [notes, setNotes] = useState(r.notes ?? '');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -43,6 +43,16 @@ function RequestRow({ r, onChanged }) {
         {r.email && <Button size="small" variant="outlined" href={`mailto:${r.email}`} sx={{ textTransform: 'none' }}>{r.email}</Button>}
       </Box>
       {error && <Alert severity="error" sx={{ mt: 1.5 }}>{error}</Alert>}
+      {partners && (
+        <TextField
+          select size="small" label="Allocated to" value={r.franchisee_id ?? ''} sx={{ mt: 1.5, minWidth: 240 }}
+          slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
+          onChange={(e) => update({ franchisee_id: e.target.value || null })}
+        >
+          <MenuItem value="">Not allocated</MenuItem>
+          {partners.filter((p) => p.active || p.id === r.franchisee_id).map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
+        </TextField>
+      )}
       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 1, mt: 1.5 }}>
         <TextField
           size="small" placeholder="Notes, e.g. called, meeting on Monday" value={notes} onChange={(e) => setNotes(e.target.value)}
@@ -58,7 +68,9 @@ function RequestRow({ r, onChanged }) {
 }
 
 export default function Requests({ profile }) {
-  const allOffices = profile.role === 'admin' || !profile.office;
+  const isStaff = profile.role !== 'franchisee';
+  const allOffices = isStaff && (profile.role === 'admin' || !profile.office);
+  const [partners, setPartners] = useState(null);
   const [rows, setRows] = useState(null);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('new');
@@ -66,14 +78,15 @@ export default function Requests({ profile }) {
   const [limit, setLimit] = useState(PAGE_ROWS);
 
   function load() {
-    fetchAll((o) => supabase.from('consultation_requests').select('*', o).order('created_at', { ascending: false }).order('id'))
+    if (isStaff) supabase.from('franchisees').select('id, name, active').order('name').then(({ data }) => setPartners(data ?? []));
+    fetchAll((o) => supabase.from('consultation_requests').select('*, franchisees(name)', o).order('created_at', { ascending: false }).order('id'))
       .then(({ data, error }) => (error ? setError(errText(error)) : setRows(data)));
   }
   useEffect(load, []);
   useEffect(() => setLimit(PAGE_ROWS), [status, office]);
 
   if (error) return <Alert severity="error">{error}</Alert>;
-  if (!rows) return null;
+  if (!rows || (isStaff && !partners)) return null;
   const inOffice = rows.filter((r) => office === 'all' || r.office === office);
   const list = inOffice.filter((r) => status === 'all' || r.status === status);
   const count = (s) => inOffice.filter((r) => r.status === s).length;
@@ -82,7 +95,9 @@ export default function Requests({ profile }) {
     <>
       <PageTitle>Requests</PageTitle>
       <Typography color="text.secondary" sx={{ mb: 2.5, maxWidth: '65ch' }}>
-        Call-back requests from the website's contact form{allOffices ? '' : ` for the ${profile.office} office`}.
+        {isStaff
+          ? `Call-back requests from the website's contact form${allOffices ? '' : ` for the ${profile.office} office`}. Allocate one to a partner and they'll see it too.`
+          : 'People who asked Exit for a call back, passed on to you. Call them, then note what happened.'}
       </Typography>
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 1.5, mb: 2.5 }}>
         <FilterChips
@@ -96,11 +111,11 @@ export default function Requests({ profile }) {
       <Panel>
         {list.length === 0 && (
           <Typography color="text.secondary" sx={{ px: 3, py: 5, textAlign: 'center' }}>
-            {status === 'new' ? 'No new requests. New ones from the website appear here.' : 'Nothing here.'}
+            {status !== 'new' ? 'Nothing here.' : isStaff ? 'No new requests. New ones from the website appear here.' : 'No new requests. When Exit passes one to you, it appears here.'}
           </Typography>
         )}
         <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
-          {list.slice(0, limit).map((r) => <RequestRow key={`${r.id}${r.status}${r.notes}`} r={r} onChanged={load} />)}
+          {list.slice(0, limit).map((r) => <RequestRow key={`${r.id}${r.status}${r.notes}`} r={r} partners={partners} onChanged={load} />)}
         </Box>
         <ShowMore shown={limit} total={list.length} onMore={() => setLimit(limit + PAGE_ROWS)} />
       </Panel>

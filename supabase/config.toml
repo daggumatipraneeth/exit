@@ -244,6 +244,12 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# Reset links carry a token hash the portal verifies itself, so they work in any browser
+# (PKCE links only work in the browser that asked). Copy this template to the hosted project too.
+[auth.email.template.recovery]
+subject = "Reset your Exit partner portal password"
+content_path = "./supabase/templates/recovery.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"

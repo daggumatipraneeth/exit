@@ -22,6 +22,8 @@ export const docKinds = [
   ['photo', 'Customer photo', false],
 ];
 const editable = ['draft', 'awaiting_signature'];
+export const latestSigned = (agreements) =>
+  agreements.filter((a) => a.signed_at).sort((a, b) => b.signed_at.localeCompare(a.signed_at))[0];
 export const canEdit = (profile, c) => profile.role !== 'franchisee' || editable.includes(c.status);
 
 const blank = { full_name: '', phone: '', email: '', dob: '', address: '', pan: '', aadhaar_last4: '', franchisee_id: '', cap_pct: 6 };
@@ -310,7 +312,9 @@ export function OnboardingSteps({ customer: c, profile, capital, docs, agreement
   const isAdmin = profile.role === 'admin';
   const detailsDone = c.pan && c.aadhaar_last4;
   const docsDone = docKinds.filter(([, , req]) => req).every(([k]) => docs.some((d) => d.kind === k));
-  const signed = agreements.find((a) => a.signed_at);
+  const lastSigned = latestSigned(agreements);
+  // After a rejection is reopened the customer signs again, so an older signature doesn't count.
+  const signed = ['pending_approval', 'active'].includes(c.status) ? lastSigned : null;
   const pending = agreements.find((a) => !a.signed_at && new Date(a.token_expires_at) > new Date());
   const link = pending && `${window.location.href.split('#')[0]}#/sign/${pending.sign_token}`;
   const wa = link && `https://wa.me/${c.phone.replace(/\D/g, '').replace(/^(\d{10})$/, '91$1')}?text=${encodeURIComponent(`Hello ${c.full_name}, please read and sign your Exit agreement here: ${link}`)}`;
@@ -368,7 +372,11 @@ export function OnboardingSteps({ customer: c, profile, capital, docs, agreement
               </>
             ) : (
               <>
-                <Typography variant="body2" color="text.secondary">When the steps above are done, create a link for the customer to read and sign on their phone.</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {lastSigned
+                    ? `Signed earlier on ${shortDate(lastSigned.signed_at.slice(0, 10))}, before the application was reopened. Create a new link so the customer signs again.`
+                    : 'When the steps above are done, create a link for the customer to read and sign on their phone.'}
+                </Typography>
                 {edit && <Button size="small" variant="contained" onClick={createLink} disabled={!detailsDone || !capital.length || !docsDone} sx={{ mt: 1 }}>Create signing link</Button>}
               </>
             )}

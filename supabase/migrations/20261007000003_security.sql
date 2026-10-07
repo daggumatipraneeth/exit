@@ -58,13 +58,19 @@ alter table customer_capital enable row level security;
 alter table customer_documents enable row level security;
 alter table agreement_templates enable row level security;
 alter table agreements enable row level security;
+alter table franchisee_terms enable row level security;
 alter table daily_entries enable row level security;
-alter table daily_results enable row level security;
+alter table franchisee_days enable row level security;
+alter table customer_days enable row level security;
 alter table closed_months enable row level security;
 alter table audit_log enable row level security;
 
 create policy read on franchisees for select to authenticated using (is_staff() or id = my_franchisee_id());
 create policy admin_write on franchisees for all to authenticated using (is_admin()) with check (is_admin());
+
+-- The hidden charge: Exit staff only.
+create policy staff_read on franchisee_terms for select to authenticated using (is_staff());
+create policy admin_write on franchisee_terms for all to authenticated using (is_admin()) with check (is_admin());
 
 create policy read on profiles for select to authenticated using (id = auth.uid() or is_staff());
 create policy admin_write on profiles for all to authenticated using (is_admin()) with check (is_admin());
@@ -93,10 +99,11 @@ create policy create_link on agreements for insert to authenticated
   with check (can_edit_kyc(customer_id) and signed_at is null);
 create policy staff_write on agreements for update to authenticated using (is_staff()) with check (is_staff());
 
-create policy read on daily_entries for select to authenticated using (can_see_customer(customer_id));
-create policy staff_write on daily_entries for all to authenticated using (is_staff()) with check (is_staff());
+-- Entered amounts reveal the hidden charge, so partners never read them.
+create policy staff_all on daily_entries for all to authenticated using (is_staff()) with check (is_staff());
 
-create policy read on daily_results for select to authenticated using (is_staff() or franchisee_id = my_franchisee_id());
+create policy read on franchisee_days for select to authenticated using (is_staff() or franchisee_id = my_franchisee_id());
+create policy read on customer_days for select to authenticated using (is_staff() or franchisee_id = my_franchisee_id());
 
 create policy read on closed_months for select to authenticated using (true);
 create policy admin_write on closed_months for all to authenticated using (is_admin()) with check (is_admin());

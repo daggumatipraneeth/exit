@@ -5,12 +5,12 @@ import { company } from '../config';
 import { line } from '../theme';
 
 // Three modes: log in, ask for a reset link, and set a new password after following that link.
-export default function Login({ recovering, onRecovered }) {
-  const [mode, setMode] = useState(recovering ? 'reset' : 'login');
+export default function Login({ recovering, linkError, onRecovered }) {
+  const [mode, setMode] = useState(recovering ? 'reset' : linkError ? 'forgot' : 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(linkError ?? '');
   const [notice, setNotice] = useState('');
 
   async function submit(e) {

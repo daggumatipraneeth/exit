@@ -18,19 +18,19 @@ export function Months() {
 
   function load() {
     Promise.all([
-      supabase.from('franchisee_daily').select('trade_date, customer_total, franchisee_income, exit_cut, pnl'),
+      supabase.from('franchisee_days').select('trade_date, net, to_customers, partner_income, exit_share, daily_entries(amount)'),
       supabase.from('closed_months').select('month, closed_at'),
     ]).then(([d, c]) => {
       if (d.error || c.error) return setError(errText(d.error ?? c.error));
       const by = {};
       for (const r of d.data) {
         const m = `${r.trade_date.slice(0, 7)}-01`;
-        const t = (by[m] ??= { month: m, days: new Set(), customers: 0, partners: 0, exit: 0, pnl: 0 });
+        const t = (by[m] ??= { month: m, days: new Set(), customers: 0, partners: 0, exit: 0 });
         t.days.add(r.trade_date);
-        t.customers += Number(r.customer_total);
-        t.partners += Number(r.franchisee_income);
-        t.exit += Number(r.exit_cut);
-        t.pnl += Number(r.pnl);
+        const amount = Number(r.daily_entries.amount);
+        t.customers += Number(r.to_customers);
+        t.partners += Number(r.partner_income);
+        t.exit += Number(r.exit_share) + (amount > 0 ? amount - Number(r.net) : 0); // share above buckets + hidden charge
       }
       setRows(Object.values(by).sort((a, b) => b.month.localeCompare(a.month)));
       setClosed(c.data);
@@ -78,9 +78,9 @@ export function Months() {
                   <Typography sx={{ fontWeight: 600 }}>{monthName(r.month)}</Typography>
                   <Typography variant="body2" color="text.secondary">{r.days.size} trading days</Typography>
                 </Box>
-                <Box><Typography variant="body2" color="text.secondary">Customers</Typography><Signed value={r.customers} /></Box>
+                <Box><Typography variant="body2" color="text.secondary">To customers</Typography><Signed value={r.customers} /></Box>
                 <Box><Typography variant="body2" color="text.secondary">Partners</Typography><Signed value={r.partners} signed={false} /></Box>
-                <Box><Typography variant="body2" color="text.secondary">Exit commission</Typography><Box sx={{ fontWeight: 600 }}>{money(r.exit)}</Box></Box>
+                <Box><Typography variant="body2" color="text.secondary">Exit earned</Typography><Box sx={{ fontWeight: 600 }}>{money(r.exit)}</Box></Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', justifyContent: { md: 'flex-end' } }}>
                   {isClosed && <Chip size="small" label={`Closed ${shortDate(closedAt[r.month].slice(0, 10))}`} />}
                   {!isClosed && r.month === thisMonth ? <Chip size="small" variant="outlined" label="In progress" /> : (
@@ -186,7 +186,7 @@ export function Templates() {
 }
 
 const tableNames = {
-  customers: 'Customer', daily_entries: 'Daily entry', customer_capital: 'Capital', customer_documents: 'KYC document',
+  customers: 'Customer', daily_entries: 'Daily entry', franchisee_terms: 'Hidden charge', customer_capital: 'Capital', customer_documents: 'KYC document',
   agreements: 'Agreement', franchisees: 'Partner', profiles: 'Login', closed_months: 'Month', agreement_templates: 'Agreement template',
 };
 const verbs = { INSERT: 'added', UPDATE: 'changed', DELETE: 'removed' };
@@ -195,15 +195,16 @@ const PAGE = 50;
 
 export function Activity() {
   const [rows, setRows] = useState([]);
-  const [names, setNames] = useState({ people: {}, customers: {} });
+  const [names, setNames] = useState({ people: {}, customers: {}, partners: {} });
   const [table, setTable] = useState('all');
   const [more, setMore] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    Promise.all([supabase.from('profiles').select('id, full_name'), supabase.from('customers').select('id, full_name')]).then(([p, c]) => {
-      setNames({ people: Object.fromEntries((p.data ?? []).map((x) => [x.id, x.full_name])), customers: Object.fromEntries((c.data ?? []).map((x) => [x.id, x.full_name])) });
-    });
+    const byId = (rows, key) => Object.fromEntries((rows ?? []).map((x) => [x.id, x[key]]));
+    Promise.all([
+      supabase.from('profiles').select('id, full_name'), supabase.from('customers').select('id, full_name'), supabase.from('franchisees').select('id, name'),
+    ]).then(([p, c, f]) => setNames({ people: byId(p.data, 'full_name'), customers: byId(c.data, 'full_name'), partners: byId(f.data, 'name') }));
   }, []);
 
   function load(from = 0) {
@@ -219,13 +220,13 @@ export function Activity() {
 
   const describe = useMemo(() => (r) => {
     const row = r.new ?? r.old;
-    const who = row.full_name ?? row.name ?? names.customers[row.customer_id] ?? row.month ?? row.title ?? '';
+    const who = row.full_name ?? row.name ?? names.customers[row.customer_id] ?? names.partners[row.franchisee_id] ?? row.month ?? row.title ?? '';
     let detail = '';
     if (r.op === 'UPDATE') {
       detail = Object.keys(r.new).filter((k) => !quiet.has(k) && JSON.stringify(r.new[k]) !== JSON.stringify(r.old[k]))
         .map((k) => `${k.replace(/_/g, ' ')}: ${r.old[k] ?? '–'} → ${r.new[k] ?? '–'}`).join('; ');
     } else if (r.table_name === 'daily_entries') {
-      detail = `${row.trade_date}, gross ${money(row.gross_pnl)}`;
+      detail = `${row.trade_date}, ${money(row.amount, true)}`;
     } else if (r.table_name === 'customer_capital') {
       detail = `${money(row.amount)} from ${row.effective_from}`;
     } else if (r.table_name === 'customer_documents') {

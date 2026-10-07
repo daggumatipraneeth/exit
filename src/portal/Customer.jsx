@@ -5,9 +5,9 @@ import { supabase } from './supabase';
 import { money } from '../finance';
 import { ink, line } from '../theme';
 import { today, fmtDate, shortDate, monthName, sum, Signed, Panel, Field, CapMeter, StatusChip, Figures } from './ui';
-import { OnboardingSteps, Documents, EditDetailsDialog, CapitalDialog, AgreementDialog, canEdit } from './Onboarding';
+import { OnboardingSteps, Documents, EditDetailsDialog, CapitalDialog, AgreementDialog, canEdit, latestSigned } from './Onboarding';
 
-const cols = { xs: '1fr auto', md: '1.1fr 0.5fr 0.9fr 0.9fr 0.9fr 0.9fr 1fr' };
+const cols = { xs: '1fr auto', md: '1.2fr 1fr 1fr' };
 
 export default function Customer({ profile, id }) {
   const staff = profile.role !== 'franchisee';
@@ -28,15 +28,17 @@ export default function Customer({ profile, id }) {
   const reload = () => { setDialog(null); load(); };
 
   useEffect(() => {
+    let live = true;
     const start = `${month}-01`;
     const end = new Date(`${start}T00:00`); end.setMonth(end.getMonth() + 1);
-    supabase.from('daily_results')
-      .select('trade_date, trades_count, pnl, exit_cut, net, cap, covered, customer_today, franchisee_income, daily_entries(gross_pnl, broker_charges, other_charges)')
+    supabase.from('customer_days')
+      .select('trade_date, credited, covered, cap')
       .eq('customer_id', id)
       .gte('trade_date', start)
       .lt('trade_date', end.toLocaleDateString('en-CA'))
       .order('trade_date', { ascending: false })
-      .then(({ data, error }) => (error ? setError(error.message) : setDays(data)));
+      .then(({ data, error }) => live && (error ? setError(error.message) : setDays(data)));
+    return () => { live = false; };
   }, [id, month]);
 
   if (error) return <Alert severity="error">{error}</Alert>;
@@ -44,10 +46,9 @@ export default function Customer({ profile, id }) {
 
   const capital = c.customer_capital.toSorted((a, b) => b.effective_from.localeCompare(a.effective_from));
   const latest = days[0];
-  const earnedLabel = staff ? 'Partner earned' : 'You earned';
   const active = c.status === 'active';
   const edit = canEdit(profile, c);
-  const signed = c.agreements.find((a) => a.signed_at);
+  const signed = latestSigned(c.agreements);
   const documents = <Documents customer={c} docs={c.customer_documents} edit={edit} onChanged={load} />;
 
   return (
@@ -76,16 +77,15 @@ export default function Customer({ profile, id }) {
           {active && <>
           <Figures
             items={[
-              { label: `Customer, ${monthName(`${month}-01`)}`, value: <Signed value={sum(days, 'customer_today')} sx={{ fontWeight: 700 }} /> },
-              { label: earnedLabel, value: <Signed value={sum(days, 'franchisee_income')} signed={false} sx={{ fontWeight: 700 }} /> },
-              { label: 'Exit commission', value: money(sum(days, 'exit_cut')) },
+              { label: `Credited in ${monthName(`${month}-01`)}`, value: <Signed value={sum(days, 'credited')} sx={{ fontWeight: 700 }} /> },
+              { label: 'Bucket this month', value: latest ? money(latest.cap) : '–', note: `${Number(c.cap_pct)}% of capital` },
             ]}
           />
 
           {latest && (
             <Panel sx={{ px: { xs: 2, md: 3 }, py: 2.5 }}>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                Monthly cap as of {shortDate(latest.trade_date)}
+                Bucket as of {shortDate(latest.trade_date)}
               </Typography>
               <CapMeter covered={latest.covered} cap={latest.cap} thick />
             </Panel>
@@ -107,7 +107,7 @@ export default function Customer({ profile, id }) {
           >
             {days.length === 0 ? (
               <Typography color="text.secondary" sx={{ px: { xs: 2, md: 3 }, py: 4, textAlign: 'center' }}>
-                No trades in {monthName(`${month}-01`)}.
+                No results in {monthName(`${month}-01`)}.
               </Typography>
             ) : (
               <>
@@ -118,40 +118,30 @@ export default function Customer({ profile, id }) {
                     color: 'text.secondary', fontSize: 13, borderBottom: `1px solid ${line}`, '& > :not(:first-of-type)': { textAlign: 'right' },
                   }}
                 >
-                  <span>Date</span><span>Trades</span><span>Gross</span><span>Charges</span><span>Exit cut</span><span>Customer</span><span>{earnedLabel}</span>
+                  <span>Date</span><span>Credited</span><span>Bucket after</span>
                 </Box>
                 <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
-                  {days.map((d) => {
-                    const e = d.daily_entries;
-                    const charges = Number(e.broker_charges) + Number(e.other_charges);
-                    return (
-                      <Box
-                        component="li"
-                        key={d.trade_date}
-                        sx={{
-                          display: 'grid', alignItems: 'baseline', columnGap: 2, rowGap: 0.5, px: { xs: 2, md: 3 }, py: 1.5,
-                          gridTemplateColumns: cols,
-                          '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` },
-                          '& > :not(:first-of-type)': { textAlign: 'right' },
-                        }}
-                      >
-                        <Box sx={{ fontWeight: 500 }}>
-                          {fmtDate(d.trade_date, { weekday: 'short', day: 'numeric', month: 'short' })}
-                          {/* phone: details under the date */}
-                          <Typography variant="caption" color="text.secondary" component="p" sx={{ display: { md: 'none' }, fontWeight: 400 }}>
-                            {d.trades_count} trades, gross {money(e.gross_pnl)}, charges {money(charges)}, Exit {money(d.exit_cut)}
-                            {Number(d.franchisee_income) > 0 && <>, {earnedLabel.toLowerCase()} {money(d.franchisee_income)}</>}
-                          </Typography>
-                        </Box>
-                        <Box sx={{ display: { xs: 'none', md: 'block' } }}>{d.trades_count}</Box>
-                        <Box sx={{ display: { xs: 'none', md: 'block' } }}><Signed value={e.gross_pnl} sx={{ fontWeight: 400 }} /></Box>
-                        <Box sx={{ display: { xs: 'none', md: 'block' }, color: 'text.secondary' }}>{money(charges)}</Box>
-                        <Box sx={{ display: { xs: 'none', md: 'block' }, color: 'text.secondary' }}>{money(d.exit_cut)}</Box>
-                        <Box><Signed value={d.customer_today} /></Box>
-                        <Box sx={{ display: { xs: 'none', md: 'block' } }}><Signed value={d.franchisee_income} signed={false} /></Box>
+                  {days.map((d) => (
+                    <Box
+                      component="li"
+                      key={d.trade_date}
+                      sx={{
+                        display: 'grid', alignItems: 'baseline', columnGap: 2, rowGap: 0.5, px: { xs: 2, md: 3 }, py: 1.5,
+                        gridTemplateColumns: cols,
+                        '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` },
+                        '& > :not(:first-of-type)': { textAlign: 'right' },
+                      }}
+                    >
+                      <Box sx={{ fontWeight: 500 }}>
+                        {fmtDate(d.trade_date, { weekday: 'short', day: 'numeric', month: 'short' })}
+                        <Typography variant="caption" color="text.secondary" component="p" sx={{ display: { md: 'none' }, fontWeight: 400 }}>
+                          Bucket {money(d.covered)} of {money(d.cap)}
+                        </Typography>
                       </Box>
-                    );
-                  })}
+                      <Box><Signed value={d.credited} /></Box>
+                      <Box sx={{ display: { xs: 'none', md: 'block' }, color: 'text.secondary' }}>{money(d.covered)} of {money(d.cap)}</Box>
+                    </Box>
+                  ))}
                 </Box>
               </>
             )}

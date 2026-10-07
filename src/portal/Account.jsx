@@ -43,7 +43,7 @@ export default function Account({ profile, email }) {
                 <Box sx={{ gridColumn: '1 / -1' }}><Field label="Business name">{f.name}</Field></Box>
                 <Field label="Phone">{f.phone}</Field>
                 <Field label="Email">{f.email}</Field>
-                <Field label="Exit commission">{`${Number(f.exit_commission_pct)}% of customer profit`}</Field>
+                <Field label="Your profit share">{`${Number(f.profit_share_pct)}% once every customer bucket is full`}</Field>
                 <Field label="Status">{f.active ? 'Active' : 'Inactive'}</Field>
               </Box>
               <Typography variant="body2" color="text.secondary" sx={{ px: { xs: 2, md: 3 }, pb: 2.5 }}>

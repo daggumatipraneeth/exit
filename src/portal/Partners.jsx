@@ -8,7 +8,8 @@ import { supabase } from './supabase';
 import { line } from '../theme';
 import { Panel, PageTitle } from './ui';
 
-const blankPartner = { name: '', phone: '', email: '', exit_commission_pct: '', active: true };
+const blankPartner = { name: '', phone: '', email: '', hidden_charge_pct: '', profit_share_pct: 70, active: true };
+const pctOk = (v) => v !== '' && Number(v) >= 0 && Number(v) <= 100;
 
 // Readable temporary password; the person changes it from their Account page.
 function tempPassword() {
@@ -20,13 +21,18 @@ function PartnerDialog({ partner, onClose, onSaved }) {
   const [f, setF] = useState(partner ?? blankPartner);
   const [error, setError] = useState('');
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
-  const pct = Number(f.exit_commission_pct);
-  const valid = f.name.trim() && f.exit_commission_pct !== '' && pct >= 0 && pct <= 100;
+  const valid = f.name.trim() && pctOk(f.hidden_charge_pct) && pctOk(f.profit_share_pct);
 
   async function save() {
-    const row = { name: f.name.trim(), phone: f.phone || null, email: f.email || null, exit_commission_pct: pct, active: f.active };
-    const { error } = f.id ? await supabase.from('franchisees').update(row).eq('id', f.id) : await supabase.from('franchisees').insert(row);
-    if (error) return setError(error.message);
+    const row = { name: f.name.trim(), phone: f.phone || null, email: f.email || null, profit_share_pct: Number(f.profit_share_pct), active: f.active };
+    const saved = f.id
+      ? await supabase.from('franchisees').update(row).eq('id', f.id).select('id').single()
+      : await supabase.from('franchisees').insert(row).select('id').single();
+    const before = partner?.hidden_charge_pct;
+    const termsChanged = before == null || before === '' || Number(before) !== Number(f.hidden_charge_pct);
+    const terms = saved.error || !termsChanged ? saved
+      : await supabase.from('franchisee_terms').upsert({ franchisee_id: saved.data.id, hidden_charge_pct: Number(f.hidden_charge_pct) });
+    if (terms.error) return setError(/franchisees_name_key/.test(terms.error.message) ? 'Another partner already has this name.' : terms.error.message);
     onSaved();
   }
 
@@ -40,9 +46,14 @@ function PartnerDialog({ partner, onClose, onSaved }) {
           <TextField label="Phone" value={f.phone ?? ''} onChange={set('phone')} type="tel" />
           <TextField label="Email" value={f.email ?? ''} onChange={set('email')} type="email" />
           <TextField
-            label="Exit commission" required type="number" value={f.exit_commission_pct} onChange={set('exit_commission_pct')}
-            helperText="Exit's share of each customer's daily profit. A change applies to new entries only."
+            label="Hidden charge" required type="number" value={f.hidden_charge_pct} onChange={set('hidden_charge_pct')}
+            helperText="Taken from each profitable day before the partner sees it. Partners never see this. Changes apply to new days only."
             slotProps={{ htmlInput: { min: 0, max: 100, step: 0.5 }, input: { endAdornment: <InputAdornment position="end">%</InputAdornment> } }}
+          />
+          <TextField
+            label="Partner's profit share" required type="number" value={f.profit_share_pct} onChange={set('profit_share_pct')}
+            helperText="Partner's share of profit once every customer bucket is full. Exit keeps the rest."
+            slotProps={{ htmlInput: { min: 0, max: 100, step: 1 }, input: { endAdornment: <InputAdornment position="end">%</InputAdornment> } }}
           />
           <FormControlLabel control={<Switch checked={f.active} onChange={(e) => setF({ ...f, active: e.target.checked })} />} label="Active (inactive partners can't see anything)" />
         </Stack>
@@ -123,13 +134,13 @@ export default function Partners() {
 
   function load() {
     Promise.all([
-      supabase.from('franchisees').select('*').order('name'),
+      supabase.from('franchisees').select('*, franchisee_terms(hidden_charge_pct)').order('name'),
       supabase.from('profiles').select('id, full_name, email, role, franchisee_id').order('full_name'),
       supabase.from('customers').select('franchisee_id').eq('status', 'active'),
     ]).then(([f, p, c]) => {
       const err = f.error ?? p.error ?? c.error;
       if (err) return setError(err.message);
-      setPartners(f.data);
+      setPartners(f.data.map((x) => ({ ...x, hidden_charge_pct: x.franchisee_terms?.hidden_charge_pct ?? '' })));
       setPeople(p.data);
       setCounts(c.data.reduce((m, r) => ({ ...m, [r.franchisee_id]: (m[r.franchisee_id] ?? 0) + 1 }), {}));
     });
@@ -169,8 +180,8 @@ export default function Partners() {
                   <Chip size="small" label={f.active ? 'Active' : 'Inactive'} color={f.active ? 'success' : 'default'} variant={f.active ? 'filled' : 'outlined'} />
                 </Box>
                 <Box>
-                  <Typography variant="body2" color="text.secondary">Exit commission</Typography>
-                  <Typography sx={{ fontWeight: 600 }}>{Number(f.exit_commission_pct)}%</Typography>
+                  <Typography variant="body2" color="text.secondary">Hidden charge; split</Typography>
+                  <Typography sx={{ fontWeight: 600 }}>{f.hidden_charge_pct === '' ? 'Not set' : `${Number(f.hidden_charge_pct)}%`}; {Number(f.profit_share_pct)}/{100 - Number(f.profit_share_pct)}</Typography>
                 </Box>
                 <Box sx={{ minWidth: 0 }}>
                   <Typography variant="body2" color="text.secondary">{counts[f.id] ?? 0} active customers; logins</Typography>

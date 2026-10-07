@@ -19,9 +19,12 @@ select pg_temp.add_user('00000000-0000-0000-0000-00000000000e', 'staff@exit.loca
 select pg_temp.add_user('00000000-0000-0000-0000-0000000000f1', 'ravi@exit.local');
 select pg_temp.add_user('00000000-0000-0000-0000-0000000000f2', 'priya@exit.local');
 
-insert into franchisees (id, name, phone, email, exit_commission_pct) values
-  ('10000000-0000-0000-0000-000000000001', 'Ravi Kumar Associates', '+91 90000 11111', 'ravi@exit.local', 20),
-  ('10000000-0000-0000-0000-000000000002', 'Priya Wealth Partners', '+91 90000 22222', 'priya@exit.local', 25);
+insert into franchisees (id, name, phone, email, profit_share_pct) values
+  ('10000000-0000-0000-0000-000000000001', 'Ravi Kumar Associates', '+91 90000 11111', 'ravi@exit.local', 70),
+  ('10000000-0000-0000-0000-000000000002', 'Priya Wealth Partners', '+91 90000 22222', 'priya@exit.local', 70);
+insert into franchisee_terms (franchisee_id, hidden_charge_pct) values
+  ('10000000-0000-0000-0000-000000000001', 20),
+  ('10000000-0000-0000-0000-000000000002', 25);
 
 insert into profiles (id, full_name, email, role, franchisee_id) values
   ('00000000-0000-0000-0000-00000000000a', 'Exit Admin', 'admin@exit.local', 'admin', null),
@@ -37,7 +40,7 @@ its partner <strong>{{franchisee}}</strong> ("Partner"), and <strong>{{full_name
 <ol>
   <li>The Client places capital of <strong>{{capital}}</strong> with Exit for trading.</li>
   <li>The Client's payout in any calendar month is capped at <strong>{{cap_pct}}%</strong> of capital.
-      Returns above the cap are retained as the Partner's income.</li>
+      Returns above the cap are shared between the Partner and Exit.</li>
   <li>Brokerage, statutory and other charges are deducted before any payout is calculated.</li>
   <li>Trading involves risk of loss. Losses reduce the Client's payout for that month. Returns are not guaranteed.</li>
   <li>The Client confirms the KYC documents submitted are true and their own.</li>
@@ -69,16 +72,13 @@ select id, 1, '<p>Seeded test agreement</p>', full_name, now() from customers;
 insert into customers (franchisee_id, full_name, phone, email, status)
 values ('10000000-0000-0000-0000-000000000001', 'Kavya Lakshmi', '+91 98480 20001', 'kavya@example.com', 'draft');
 
--- Weekday trades from the start of last month to today; deterministic pseudo-random results.
+-- One figure per partner per weekday, from the start of last month to today. Deterministic pseudo-random:
+-- averages about 0.5% of the partner's total capital a day, so buckets fill around mid-month.
 select setseed(0.42);
-insert into daily_entries (customer_id, trade_date, trades_count, gross_pnl, broker_charges, other_charges)
-select c.id, d::date,
-       1 + floor(random() * 12)::int,
-       round((cap.amount * (random() * 0.016 - 0.005))::numeric, 2),
-       round((20 + random() * 200)::numeric, 2),
-       round((5 + random() * 60)::numeric, 2)
-from customers c
-join customer_capital cap on cap.customer_id = c.id
+insert into daily_entries (franchisee_id, trade_date, amount)
+select f.id, d::date, round((t.capital * (random() * 0.0165 - 0.0033))::numeric, 2)
+from franchisees f
+cross join lateral (select sum(k.amount) capital from customer_capital k join customers c on c.id = k.customer_id where c.franchisee_id = f.id) t
 cross join generate_series(date_trunc('month', current_date) - interval '1 month', current_date, interval '1 day') d
 where extract(isodow from d) < 6
-order by d, c.id;
+order by d, f.id;

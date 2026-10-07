@@ -64,7 +64,18 @@ function Portal() {
   const [profile, setProfile] = useState(undefined);
   const [path, id] = useRoute();
 
+  const [linkError, setLinkError] = useState('');
+
   useEffect(() => {
+    // Password reset link: ?token_hash=...&type=recovery (see supabase/templates/recovery.html)
+    const q = new URLSearchParams(window.location.search);
+    if (q.get('type') === 'recovery' && q.get('token_hash')) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.hash);
+      supabase.auth.verifyOtp({ token_hash: q.get('token_hash'), type: 'recovery' }).then(({ error }) => {
+        if (error) setLinkError('This reset link has expired or was already used. Ask for a new one below.');
+        else setRecovering(true);
+      });
+    }
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const { data } = supabase.auth.onAuthStateChange((event, s) => {
       if (event === 'PASSWORD_RECOVERY') setRecovering(true);
@@ -77,7 +88,7 @@ function Portal() {
     if (!session) return setProfile(undefined);
     supabase
       .from('profiles')
-      .select('full_name, role, franchisee_id, franchisees(name, phone, email, exit_commission_pct, active)')
+      .select('full_name, role, franchisee_id, franchisees(name, phone, email, profit_share_pct, active)')
       .eq('id', session.user.id)
       .maybeSingle()
       .then(({ data }) => setProfile(data ?? null));
@@ -88,7 +99,7 @@ function Portal() {
   if (session === undefined || (session && profile === undefined && !recovering)) {
     return <Centered><CircularProgress aria-label="Loading" /></Centered>;
   }
-  if (!session || recovering) return <Login key={String(recovering)} recovering={recovering} onRecovered={() => setRecovering(false)} />;
+  if (!session || recovering) return <Login key={`${recovering}${linkError}`} recovering={recovering} linkError={linkError} onRecovered={() => setRecovering(false)} />;
   if (!profile) {
     return (
       <Centered>

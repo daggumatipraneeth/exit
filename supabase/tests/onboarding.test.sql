@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select plan(13);
 
-insert into franchisees (id, name, exit_commission_pct) values ('f1000000-0000-0000-0000-000000000001', 'Onboard Partner', 10);
+insert into franchisees (id, name) values ('f1000000-0000-0000-0000-000000000001', 'Onboard Partner');
 insert into auth.users (id, email) values
   ('b1000000-0000-0000-0000-000000000001', 'p@test'), ('b1000000-0000-0000-0000-000000000002', 'a@test');
 insert into profiles (id, role, franchisee_id) values

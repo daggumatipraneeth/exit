@@ -6,12 +6,18 @@ create type doc_kind as enum ('pan', 'aadhaar_front', 'aadhaar_back', 'photo', '
 
 create table franchisees (
   id uuid primary key default gen_random_uuid(),
-  name text not null,
+  name text not null unique, -- also how CSV uploads name the partner
   phone text,
   email text,
-  exit_commission_pct numeric(5,2) not null check (exit_commission_pct between 0 and 100),
+  profit_share_pct numeric(5,2) not null default 70 check (profit_share_pct between 0 and 100), -- partner's share once all buckets are full
   active boolean not null default true,
   created_at timestamptz not null default now()
+);
+
+-- Exit's hidden charge on each profitable day. Separate table so partners can never read it.
+create table franchisee_terms (
+  franchisee_id uuid primary key references franchisees on delete cascade,
+  hidden_charge_pct numeric(5,2) not null check (hidden_charge_pct between 0 and 100)
 );
 
 create table profiles (
@@ -79,37 +85,46 @@ create table agreements (
 );
 create index on agreements (customer_id);
 
+-- One profit/loss figure per partner per day, entered by Exit staff. Partners can't read this table.
 create table daily_entries (
-  customer_id uuid not null references customers,
+  franchisee_id uuid not null references franchisees,
   trade_date date not null,
-  trades_count int not null default 0 check (trades_count >= 0),
-  gross_pnl numeric(14,2) not null,
-  broker_charges numeric(14,2) not null default 0 check (broker_charges >= 0),
-  other_charges numeric(14,2) not null default 0 check (other_charges >= 0),
-  exit_commission_pct numeric(5,2) not null, -- snapshot of the franchisee rate, filled by trigger
+  amount numeric(14,2) not null,             -- the day's profit (+) or loss (-) after broker charges
+  hidden_charge_pct numeric(5,2) not null,   -- snapshot of franchisee_terms, filled by trigger
+  profit_share_pct numeric(5,2) not null,    -- snapshot of franchisees.profit_share_pct, filled by trigger
   entered_by uuid default auth.uid() references auth.users,
   entered_at timestamptz not null default now(),
-  primary key (customer_id, trade_date)
+  primary key (franchisee_id, trade_date)
 );
 
 -- Written only by recompute_month(); never edit by hand.
-create table daily_results (
-  customer_id uuid not null,
+-- What the partner sees for each day. Excludes the entered amount and the hidden charge.
+create table franchisee_days (
+  franchisee_id uuid not null references franchisees,
+  trade_date date not null,
+  net numeric(14,2) not null,               -- amount after the hidden charge (losses: the amount itself)
+  to_customers numeric(14,2) not null,      -- credited (or debited) to customer buckets
+  overflow numeric(14,2) not null,          -- left after every bucket is full
+  partner_income numeric(14,2) not null,    -- partner's share of overflow
+  exit_share numeric(14,2) not null,        -- Exit's share of overflow
+  customers int not null,
+  primary key (franchisee_id, trade_date),
+  foreign key (franchisee_id, trade_date) references daily_entries on delete cascade on update cascade
+);
+
+-- Each customer's slice of a partner's day.
+create table customer_days (
+  customer_id uuid not null references customers,
   trade_date date not null,
   franchisee_id uuid not null references franchisees,
-  trades_count int not null,
-  pnl numeric(14,2) not null,               -- gross - charges
-  exit_cut numeric(14,2) not null,          -- Exit's % of profit
-  net numeric(14,2) not null,               -- pnl - exit_cut
-  cap numeric(14,2) not null,               -- monthly max payout for the customer
-  covered numeric(14,2) not null,           -- customer's month-to-date share after today
-  customer_today numeric(14,2) not null,    -- change in covered today
-  franchisee_income numeric(14,2) not null, -- overflow above the cap today
+  capital numeric(14,2) not null,           -- capital the share is weighted by
+  cap numeric(14,2) not null,               -- this month's bucket size
+  credited numeric(14,2) not null,          -- today's share (negative on loss days)
+  covered numeric(14,2) not null,           -- bucket level after today
   primary key (customer_id, trade_date),
-  foreign key (customer_id, trade_date) references daily_entries on delete cascade on update cascade,
-  foreign key (customer_id) references customers
+  foreign key (franchisee_id, trade_date) references franchisee_days on delete cascade on update cascade
 );
-create index on daily_results (franchisee_id, trade_date);
+create index on customer_days (franchisee_id, trade_date);
 
 create table closed_months (
   month date primary key check (month = date_trunc('month', month)::date),
@@ -140,7 +155,7 @@ end $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['profiles', 'franchisees', 'customers', 'customer_capital', 'customer_documents',
+  foreach t in array array['profiles', 'franchisees', 'franchisee_terms', 'customers', 'customer_capital', 'customer_documents',
                            'agreement_templates', 'agreements', 'daily_entries', 'closed_months'] loop
     execute format('create trigger audit after insert or update or delete on %I for each row execute function audit()', t);
   end loop;

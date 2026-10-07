@@ -12,17 +12,14 @@ All money maths runs inside the database (`supabase/migrations/*_calc.sql`). The
 
 ## Payout rules
 
-For each customer, each trading day:
+Each day Exit enters **one profit/loss figure per partner**, after broker charges. Then, for that partner:
 
-```
-pnl      = gross profit/loss − broker charges − other charges
-exit cut = partner's Exit commission % × pnl     (only when pnl > 0)
-net      = pnl − exit cut
-cap      = customer's capital on the 1st of the month × cap % (default 6%)
-```
+1. **Hidden charge.** On a profitable day Exit takes the partner's hidden charge, for example 20%. The partner sees only what's left: ₹1,00,000 shows as ₹80,000. Losses carry no charge. Partners can never read the entered figure or the charge %.
+2. **Customer buckets.** Each customer has a monthly bucket of cap % × capital (default 6%). The partner's amount is shared among the customers in proportion to their capital until the buckets are full. If one bucket fills early, its extra goes to the customers who still have room.
+3. **Profit share.** Once every bucket is full, the rest is split by the partner's profit share, for example 70% to the partner and 30% to Exit. Partners see both figures.
+4. **Losses.** A loss comes out of the customers' buckets in proportion to their capital. Partner income already earned is kept. Later profit refills the buckets before the partner earns again.
 
-Within each calendar month the customer's share builds up day by day. Whatever goes above the cap goes to the partner.
-A loss reduces the customer's share. Partner income already earned is not taken back. Everything resets on the 1st.
+Buckets reset on the 1st of each month. Amounts are rounded to whole paise so every split adds up exactly. The hidden charge and profit share are copied onto each day when it's first entered, so changing them later only affects new days.
 
 ## Run it locally
 
@@ -58,7 +55,7 @@ Other local addresses:
 Other commands:
 
 ```bash
-npm run db:test         # 32 database tests: payouts, security, onboarding
+npm run db:test         # 38 database tests: payouts, security, onboarding
 npm run db:reset        # wipe and reload test data
 node src/finance.check.js
 ```
@@ -77,20 +74,21 @@ node src/finance.check.js
    - Turn **off** "Allow new users to sign up". Only admins create logins.
    - Set **Site URL** to the live portal, e.g. `https://<user>.github.io/exit/portal.html`, and add it to **Redirect URLs**. This is needed for password-reset emails.
    - Set up custom SMTP so reset emails come from your domain. The built-in sender is heavily rate-limited.
-4. **Create the first admin.** Go to Dashboard → Authentication → Add user, enter your email and a password, and tick auto-confirm. Then in the SQL editor:
+4. **Password-reset email.** In Dashboard → Authentication → Email Templates → Reset Password, paste the contents of `supabase/templates/recovery.html`. This makes reset links work on any device.
+5. **Create the first admin.** Go to Dashboard → Authentication → Add user, enter your email and a password, and tick auto-confirm. Then in the SQL editor:
    ```sql
    insert into profiles (id, full_name, email, role)
    select id, 'Your Name', email, 'admin' from auth.users where email = 'you@example.com';
    ```
    After that, create every other login from the portal's Partners page.
-5. **Write the agreement.** As admin, open More → Agreement and publish version 1. Have a lawyer review the text first.
-6. **Connect the website** (GitHub → Settings → Secrets and variables → Actions → Variables). Add these two values from Dashboard → Project Settings → API:
+6. **Write the agreement.** As admin, open More → Agreement and publish version 1. Have a lawyer review the text first.
+7. **Connect the website** (GitHub → Settings → Secrets and variables → Actions → Variables). Add these two values from Dashboard → Project Settings → API:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY` (the publishable or anon key, never the service key)
 
    The next push to `main` deploys the portal. Without these variables the portal page says it isn't set up yet, and the landing page still works.
 
-**Staging:** create a second Supabase project and repeat steps 1–5 against it. Use `npx supabase link` to switch between the two.
+**Staging:** create a second Supabase project and repeat steps 1–6 against it. Use `npx supabase link` to switch between the two.
 
 ## Compliance notes
 

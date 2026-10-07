@@ -18,6 +18,7 @@ const toAmount = (v) => (v == null || String(v).trim() === '' ? null : Number(St
 
 function HandEntry({ date, partners, closed }) {
   const [saved, setSaved] = useState(null); // amount by partner
+  const [stamps, setStamps] = useState({}); // entered_at by partner, to spot someone else's save
   const [form, setForm] = useState({});
   const [results, setResults] = useState({});
   const [msg, setMsg] = useState(null);
@@ -26,13 +27,14 @@ function HandEntry({ date, partners, closed }) {
   // Inputs stay hidden until this date's figures arrive, so a slow response can't wipe what someone typed.
   function load(isLive = () => true) {
     Promise.all([
-      supabase.from('daily_entries').select('franchisee_id, amount').eq('trade_date', date),
+      supabase.from('daily_entries').select('franchisee_id, amount, entered_at').eq('trade_date', date),
       supabase.from('franchisee_days').select('franchisee_id, net, to_customers, partner_income, exit_share').eq('trade_date', date),
     ]).then(([e, r]) => {
       if (!isLive()) return; // the date changed while loading
       if (e.error || r.error) return setMsg(['error', errText(e.error ?? r.error)]);
       const byId = Object.fromEntries(e.data.map((x) => [x.franchisee_id, x.amount]));
       setSaved(byId);
+      setStamps(Object.fromEntries(e.data.map((x) => [x.franchisee_id, x.entered_at])));
       setResults(Object.fromEntries(r.data.map((x) => [x.franchisee_id, x])));
       setForm(Object.fromEntries(partners.map((p) => [p.id, byId[p.id] ?? ''])));
     });
@@ -48,24 +50,51 @@ function HandEntry({ date, partners, closed }) {
   if (!saved) return <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>Loading {fmtDate(date, { day: 'numeric', month: 'long' })}…</Typography>;
   const changed = partners.filter((p) => String(form[p.id]) !== String(saved[p.id] ?? ''));
 
+  // Each change only applies if the partner's day is still as it was when this screen loaded.
+  // If someone else saved it meanwhile, nothing of theirs is overwritten: their figure is shown instead.
   async function save() {
-    const upserts = [];
+    const inserts = [];
+    const updates = [];
     const deletes = [];
     for (const p of changed) {
       const v = toAmount(form[p.id]);
-      if (v === null) { if (saved[p.id] != null) deletes.push(p.id); continue; }
-      if (!Number.isFinite(v)) return setMsg(['error', `${p.name}: enter a number, like 15000 or -3500.`]);
-      upserts.push({ franchisee_id: p.id, trade_date: date, amount: v });
+      if (v !== null && !Number.isFinite(v)) return setMsg(['error', `${p.name}: enter a number, like 15000 or -3500.`]);
+      if (saved[p.id] == null) inserts.push({ franchisee_id: p.id, trade_date: date, amount: v });
+      else if (v === null) deletes.push(p);
+      else updates.push([p, v]);
     }
     setBusy(true);
     setMsg(null);
-    const up = upserts.length ? await supabase.from('daily_entries').upsert(upserts, { onConflict: 'franchisee_id,trade_date' }) : {};
-    const del = deletes.length ? await supabase.from('daily_entries').delete().eq('trade_date', date).in('franchisee_id', deletes) : {};
+    const conflicts = [];
+    let err = null;
+    if (inserts.length) {
+      const { error } = await supabase.from('daily_entries').insert(inserts);
+      if (error?.code === '23505') conflicts.push(...partners.filter((p) => inserts.some((r) => r.franchisee_id === p.id)));
+      else err ??= error;
+    }
+    for (const [p, v] of updates) {
+      const { data, error } = await supabase.from('daily_entries').update({ amount: v })
+        .eq('franchisee_id', p.id).eq('trade_date', date).eq('entered_at', stamps[p.id]).select('franchisee_id');
+      if (error) err ??= error; else if (!data.length) conflicts.push(p);
+    }
+    for (const p of deletes) {
+      const { data, error } = await supabase.from('daily_entries').delete()
+        .eq('franchisee_id', p.id).eq('trade_date', date).eq('entered_at', stamps[p.id]).select('franchisee_id');
+      if (error) err ??= error; else if (!data.length) conflicts.push(p);
+    }
     setBusy(false);
-    const err = up.error ?? del.error;
-    if (err) return setMsg(['error', errText(err)]);
-    setMsg(['success', `Saved ${upserts.length} ${upserts.length === 1 ? 'partner' : 'partners'}${deletes.length ? `, removed ${deletes.length}` : ''}. Customer shares are recalculated.`]);
     load();
+    if (err) {
+      const closedNow = /Month (\w+ \d{4}) is closed/.exec(errText(err));
+      return setMsg(['error', closedNow
+        ? `${closedNow[1]} was closed while you were editing, so nothing was saved. Ask an admin to reopen it if this figure needs changing.`
+        : errText(err)]);
+    }
+    if (conflicts.length) {
+      return setMsg(['warning', `Someone else saved ${conflicts.map((p) => p.name).join(', ')} for this day while you were editing, so your change there wasn't applied. Their figure is shown now; change it and save again if needed.`]);
+    }
+    const n = inserts.length + updates.length;
+    setMsg(['success', `Saved ${n} ${n === 1 ? 'partner' : 'partners'}${deletes.length ? `, removed ${deletes.length}` : ''}. Customer shares are recalculated.`]);
   }
 
   const saveButton = (

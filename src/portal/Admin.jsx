@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Box, Typography, Button, Alert, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Chip, MenuItem, Stack, InputAdornment,
 } from '@mui/material';
-import { supabase } from './supabase';
+import { supabase, fetchAll } from './supabase';
 import { money } from '../finance';
 import { line } from '../theme';
 import { today, monthName, shortDate, Panel, PageTitle, Signed, Pairs, errText } from './ui';
@@ -18,21 +18,11 @@ export function Months() {
 
   function load() {
     Promise.all([
-      supabase.from('franchisee_days').select('trade_date, net, to_customers, partner_income, exit_share, daily_entries(amount)'),
+      supabase.from('month_totals').select('*').order('month', { ascending: false }),
       supabase.from('closed_months').select('month, closed_at'),
     ]).then(([d, c]) => {
       if (d.error || c.error) return setError(errText(d.error ?? c.error));
-      const by = {};
-      for (const r of d.data) {
-        const m = `${r.trade_date.slice(0, 7)}-01`;
-        const t = (by[m] ??= { month: m, days: new Set(), customers: 0, partners: 0, exit: 0 });
-        t.days.add(r.trade_date);
-        const amount = Number(r.daily_entries.amount);
-        t.customers += Number(r.to_customers);
-        t.partners += Number(r.partner_income);
-        t.exit += Number(r.exit_share) + (amount > 0 ? amount - Number(r.net) : 0); // share above buckets + hidden charge
-      }
-      setRows(Object.values(by).sort((a, b) => b.month.localeCompare(a.month)));
+      setRows(d.data.map((r) => ({ month: r.month, days: r.trading_days, customers: r.to_customers, partners: r.partner_income, exit: r.exit_earned })));
       setClosed(c.data);
     });
   }
@@ -76,7 +66,7 @@ export function Months() {
               >
                 <Box>
                   <Typography sx={{ fontWeight: 600 }}>{monthName(r.month)}</Typography>
-                  <Typography variant="body2" color="text.secondary">{r.days.size} trading days</Typography>
+                  <Typography variant="body2" color="text.secondary">{r.days} trading days</Typography>
                 </Box>
                 <Pairs items={[['To customers', <Signed value={r.customers} />], ['Partners', <Signed value={r.partners} signed={false} />], ['Exit earned', money(r.exit)]]} />
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', justifyContent: 'flex-end', borderTop: { xs: `1px solid ${line}`, md: 'none' }, pt: { xs: 1.5, md: 0 } }}>
@@ -201,7 +191,9 @@ export function Activity() {
   useEffect(() => {
     const byId = (rows, key) => Object.fromEntries((rows ?? []).map((x) => [x.id, x[key]]));
     Promise.all([
-      supabase.from('profiles').select('id, full_name'), supabase.from('customers').select('id, full_name'), supabase.from('franchisees').select('id, name'),
+      fetchAll((o) => supabase.from('profiles').select('id, full_name', o).order('id')),
+      fetchAll((o) => supabase.from('customers').select('id, full_name', o).order('id')),
+      fetchAll((o) => supabase.from('franchisees').select('id, name', o).order('id')),
     ]).then(([p, c, f]) => setNames({ people: byId(p.data, 'full_name'), customers: byId(c.data, 'full_name'), partners: byId(f.data, 'name') }));
   }, []);
 

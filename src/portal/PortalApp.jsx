@@ -94,7 +94,7 @@ function Portal() {
       .then(({ data }) => setProfile(data ?? null));
   }, [session?.user.id]);
 
-  if (path === 'sign') return <Sign token={id} />; // public: customers sign without a login
+  if (path === 'sign') return <Sign key={id} token={id} />; // public: customers sign without a login; fresh state per link
 
   if (session === undefined || (session && profile === undefined && !recovering)) {
     return <Centered><CircularProgress aria-label="Loading" /></Centered>;

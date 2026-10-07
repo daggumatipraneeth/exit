@@ -1,5 +1,5 @@
 // Small pieces shared by portal pages.
-import { Box, Typography, Chip } from '@mui/material';
+import { Box, Typography, Chip, Button } from '@mui/material';
 import { money } from '../finance';
 import { accent, line, loss, navy } from '../theme';
 
@@ -187,6 +187,18 @@ export function Pairs({ items, sx }) {
           <Box sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{value}</Box>
         </Box>
       ))}
+    </Box>
+  );
+}
+
+// Long lists render 100 rows at a time so phones stay responsive with thousands of customers.
+export const PAGE_ROWS = 100;
+export function ShowMore({ shown, total, onMore }) {
+  if (shown >= total) return null;
+  const next = Math.min(PAGE_ROWS, total - shown);
+  return (
+    <Box sx={{ p: 1.5, textAlign: 'center', borderTop: `1px solid ${line}` }}>
+      <Button onClick={onMore}>Show {next} more ({total - shown} not shown)</Button>
     </Box>
   );
 }

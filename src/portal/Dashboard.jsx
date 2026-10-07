@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import { Box, Typography, IconButton, Alert, Button } from '@mui/material';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
 import ChevronRight from '@mui/icons-material/ChevronRight';
-import { supabase } from './supabase';
+import { supabase, fetchAll } from './supabase';
 import { money } from '../finance';
 import { ink, line } from '../theme';
-import { today, shift, fmtDate, monthName, sum, Signed, Panel, CapMeter, Figures, Pairs, rowLink } from './ui';
+import { today, shift, fmtDate, monthName, sum, Signed, Panel, CapMeter, Figures, Pairs, ShowMore, PAGE_ROWS, rowLink } from './ui';
 
 const cols = { xs: '1fr auto', md: '1.3fr 0.8fr 1.9fr 0.8fr' };
 const head = { display: { xs: 'none', md: 'grid' }, columnGap: 4, px: 3, py: 1.25, color: 'text.secondary', fontSize: 13, borderBottom: `1px solid ${line}` };
@@ -22,6 +22,7 @@ export default function Dashboard({ profile }) {
   const [date, setDate] = useState(null);
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
+  const [limit, setLimit] = useState(PAGE_ROWS);
 
   // Open on the latest day that has results.
   useEffect(() => {
@@ -32,13 +33,14 @@ export default function Dashboard({ profile }) {
   useEffect(() => {
     if (!date) return;
     let live = true;
+    setLimit(PAGE_ROWS);
     const from = `${date.slice(0, 7)}-01`;
     Promise.all([
-      supabase.from('franchisee_days').select('*, franchisees(name)').gte('trade_date', from).lte('trade_date', date),
-      supabase.from('customer_days')
-        .select('customer_id, credited, cap, covered, capital, customers(full_name, franchisees(name))')
-        .eq('trade_date', date),
-      staff ? supabase.from('daily_entries').select('franchisee_id, trade_date, amount').gte('trade_date', from).lte('trade_date', date) : { data: [] },
+      fetchAll((o) => supabase.from('franchisee_days').select('*, franchisees(name)', o).gte('trade_date', from).lte('trade_date', date).order('trade_date').order('franchisee_id')),
+      fetchAll((o) => supabase.from('customer_days')
+        .select('customer_id, franchisee_id, credited, cap, covered, capital, customers(full_name)', o)
+        .eq('trade_date', date).order('customer_id')),
+      staff ? fetchAll((o) => supabase.from('daily_entries').select('franchisee_id, trade_date, amount', o).gte('trade_date', from).lte('trade_date', date).order('trade_date').order('franchisee_id')) : { data: [] },
     ]).then(([days, rows, entries]) => {
       if (!live) return;
       const err = days.error ?? rows.error ?? entries.error;
@@ -58,6 +60,7 @@ export default function Dashboard({ profile }) {
   if (!date || !data) return null;
 
   const { day, month, rows, entries } = data;
+  const partnerName = Object.fromEntries(month.map((d) => [d.franchisee_id, d.franchisees.name]));
   const dayEntries = entries.filter((e) => e.trade_date === date);
   const exitDay = hiddenCharge(dayEntries, day) + sum(day, 'exit_share');
   const exitMonth = hiddenCharge(entries, month) + sum(month, 'exit_share');
@@ -148,7 +151,7 @@ export default function Dashboard({ profile }) {
               <span>Customer</span><Box sx={{ textAlign: 'right' }}>Credited</Box><span>Monthly bucket</span><Box sx={{ textAlign: 'right' }}>Capital</Box>
             </Box>
             <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
-              {rows.map((r) => (
+              {rows.slice(0, limit).map((r) => (
                 <Box component="li" key={r.customer_id} sx={{ '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` } }}>
                   <Box
                     component="a"
@@ -161,7 +164,7 @@ export default function Dashboard({ profile }) {
                   >
                     <Box sx={{ gridArea: 'name', minWidth: 0 }}>
                       <Typography sx={{ fontWeight: 600 }} noWrap>{r.customers.full_name}</Typography>
-                      {staff && <Typography variant="caption" color="text.secondary" noWrap component="p">{r.customers.franchisees.name}</Typography>}
+                      {staff && <Typography variant="caption" color="text.secondary" noWrap component="p">{partnerName[r.franchisee_id]}</Typography>}
                     </Box>
                     <Box sx={{ gridArea: 'day', textAlign: 'right' }}><Signed value={r.credited} /></Box>
                     <Box sx={{ gridArea: 'cap' }}><CapMeter covered={r.covered} cap={r.cap} /></Box>
@@ -170,6 +173,7 @@ export default function Dashboard({ profile }) {
                 </Box>
               ))}
             </Box>
+            <ShowMore shown={limit} total={rows.length} onMore={() => setLimit(limit + PAGE_ROWS)} />
           </Panel>
         </>
       )}

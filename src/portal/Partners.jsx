@@ -4,7 +4,7 @@ import {
   FormControlLabel, MenuItem, InputAdornment, Chip, Stack,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import { supabase } from './supabase';
+import { supabase, fetchAll } from './supabase';
 import { line } from '../theme';
 import { Panel, PageTitle, Field } from './ui';
 
@@ -134,15 +134,15 @@ export default function Partners() {
 
   function load() {
     Promise.all([
-      supabase.from('franchisees').select('*, franchisee_terms(hidden_charge_pct)').order('name'),
-      supabase.from('profiles').select('id, full_name, email, role, franchisee_id').order('full_name'),
-      supabase.from('customers').select('franchisee_id').eq('status', 'active'),
+      fetchAll((o) => supabase.from('franchisees').select('*, franchisee_terms(hidden_charge_pct)', o).order('name').order('id')),
+      fetchAll((o) => supabase.from('profiles').select('id, full_name, email, role, franchisee_id', o).order('full_name').order('id')),
+      supabase.from('partner_customer_counts').select('*'),
     ]).then(([f, p, c]) => {
       const err = f.error ?? p.error ?? c.error;
       if (err) return setError(err.message);
       setPartners(f.data.map((x) => ({ ...x, hidden_charge_pct: x.franchisee_terms?.hidden_charge_pct ?? '' })));
       setPeople(p.data);
-      setCounts(c.data.reduce((m, r) => ({ ...m, [r.franchisee_id]: (m[r.franchisee_id] ?? 0) + 1 }), {}));
+      setCounts(Object.fromEntries(c.data.map((r) => [r.franchisee_id, r.active_customers])));
     });
   }
   useEffect(load, []);

@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Box, Typography, TextField, InputAdornment, Alert, Button } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
-import { supabase } from './supabase';
+import { supabase, fetchAll } from './supabase';
 import { money } from '../finance';
 import { line } from '../theme';
-import { today, monthName, Panel, PageTitle, CapMeter, StatusChip, FilterChips, rowLink } from './ui';
+import { today, monthName, Panel, PageTitle, CapMeter, StatusChip, FilterChips, ShowMore, PAGE_ROWS, rowLink } from './ui';
 
 const cols = { xs: '1fr auto', md: '1.4fr 0.8fr 0.9fr 1.6fr' };
 const onboarding = ['draft', 'awaiting_signature', 'pending_approval'];
@@ -16,14 +16,16 @@ export default function Customers({ profile }) {
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
   const [show, setShow] = useState('all');
+  const [limit, setLimit] = useState(PAGE_ROWS);
+  useEffect(() => setLimit(PAGE_ROWS), [q, show]);
   const month = `${today().slice(0, 7)}-01`;
 
   useEffect(() => {
     Promise.all([
-      supabase.from('customers')
-        .select('id, full_name, phone, status, franchisees(name), customer_capital(effective_from, amount)')
-        .order('full_name'),
-      supabase.from('customer_month_progress').select('customer_id, cap, covered').eq('month', month),
+      fetchAll((o) => supabase.from('customers')
+        .select('id, full_name, phone, status, franchisees(name), customer_capital(effective_from, amount)', o)
+        .order('full_name').order('id')),
+      fetchAll((o) => supabase.from('customer_month_progress').select('customer_id, cap, covered', o).eq('month', month).order('customer_id')),
     ]).then(([c, p]) => {
       const err = c.error ?? p.error;
       if (err) return setError(err.message);
@@ -86,7 +88,7 @@ export default function Customers({ profile }) {
           </Typography>
         )}
         <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
-          {list.map((c) => (
+          {list.slice(0, limit).map((c) => (
             <Box component="li" key={c.id} sx={{ '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` } }}>
               <Box
                 component="a"
@@ -116,6 +118,7 @@ export default function Customers({ profile }) {
             </Box>
           ))}
         </Box>
+        <ShowMore shown={limit} total={list.length} onMore={() => setLimit(limit + PAGE_ROWS)} />
       </Panel>
     </>
   );

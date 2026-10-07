@@ -9,7 +9,7 @@ import RadioUnchecked from '@mui/icons-material/RadioButtonUnchecked';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import CopyIcon from '@mui/icons-material/ContentCopy';
 import UploadIcon from '@mui/icons-material/FileUploadOutlined';
-import { supabase } from './supabase';
+import { supabase, fetchAll } from './supabase';
 import { money } from '../finance';
 import { accent, line } from '../theme';
 import { today, shortDate, Panel, PageTitle, FormPage, errText } from './ui';
@@ -46,8 +46,10 @@ function DetailsFields({ f, setF, profile, partners }) {
         helperText="We never store the full Aadhaar number." slotProps={{ htmlInput: { inputMode: 'numeric' }, input: { startAdornment: <InputAdornment position="start">XXXX XXXX</InputAdornment> } }}
       />
       {profile.role !== 'franchisee' && (
-        <TextField select label="Partner" required value={f.franchisee_id} onChange={set('franchisee_id')}>
-          {partners.map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
+        <TextField select label="Partner" required value={partners ? f.franchisee_id : ''} onChange={set('franchisee_id')} disabled={!partners}>
+          {(partners ?? []).filter((p) => p.active || p.id === f.franchisee_id).map((p) => (
+            <MenuItem key={p.id} value={p.id}>{p.active ? p.name : `${p.name} (inactive)`}</MenuItem>
+          ))}
         </TextField>
       )}
       {profile.role !== 'franchisee' && (
@@ -77,10 +79,12 @@ const toRow = (f, profile) => {
 
 const friendly = (e) => (/customers_pan_key/.test(errText(e)) ? 'Another customer already has this PAN.' : errText(e));
 
+// null while loading. Includes inactive partners so a customer's current partner always shows;
+// those can't be newly chosen.
 function usePartners(profile) {
-  const [partners, setPartners] = useState([]);
+  const [partners, setPartners] = useState(null);
   useEffect(() => {
-    if (profile.role !== 'franchisee') supabase.from('franchisees').select('id, name').eq('active', true).order('name').then(({ data }) => setPartners(data ?? []));
+    if (profile.role !== 'franchisee') fetchAll((o) => supabase.from('franchisees').select('id, name, active', o).order('name').order('id')).then(({ data }) => setPartners(data ?? []));
   }, []);
   return partners;
 }
@@ -89,6 +93,7 @@ export function NewCustomer({ profile }) {
   const partners = usePartners(profile);
   const [f, setF] = useState(blank);
   const [capital, setCapital] = useState('');
+  const [capitalFrom, setCapitalFrom] = useState(today());
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -98,7 +103,7 @@ export function NewCustomer({ profile }) {
     const { data, error } = await supabase.from('customers').insert({ ...toRow(f, profile), status: 'draft' }).select('id').single();
     if (error) { setBusy(false); return setError(friendly(error)); }
     if (Number(capital) > 0) {
-      const { error } = await supabase.from('customer_capital').insert({ customer_id: data.id, effective_from: today(), amount: Number(capital) });
+      const { error } = await supabase.from('customer_capital').insert({ customer_id: data.id, effective_from: capitalFrom || today(), amount: Number(capital) });
       if (error) { setBusy(false); return setError(errText(error)); }
     }
     window.location.hash = `#/customers/${data.id}`;
@@ -115,11 +120,17 @@ export function NewCustomer({ profile }) {
           </Typography>
           {error && <Alert severity="error">{error}</Alert>}
           <DetailsFields f={f} setF={setF} profile={profile} partners={partners} />
-          <TextField
-            label="Capital" type="number" value={capital} onChange={(e) => setCapital(e.target.value)}
-            helperText="Amount the customer is investing. The monthly cap is a % of this."
-            slotProps={{ htmlInput: { min: 1, inputMode: 'decimal' }, input: { startAdornment: <InputAdornment position="start">₹</InputAdornment> } }}
-          />
+          <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: '2fr 1fr' } }}>
+            <TextField
+              label="Capital" type="number" value={capital} onChange={(e) => setCapital(e.target.value)}
+              helperText="Amount the customer is investing. The monthly cap is a % of this."
+              slotProps={{ htmlInput: { min: 1, inputMode: 'decimal' }, input: { startAdornment: <InputAdornment position="start">₹</InputAdornment> } }}
+            />
+            <TextField
+              label="Capital from" type="date" value={capitalFrom} onChange={(e) => setCapitalFrom(e.target.value)}
+              slotProps={{ inputLabel: { shrink: true } }} helperText="The customer shares in results from this day."
+            />
+          </Box>
           <Button type="submit" variant="contained" size="large" disabled={busy || !detailsValid(f, profile)} sx={{ justifySelf: { xs: 'stretch', sm: 'end' } }}>
             Save and continue
           </Button>

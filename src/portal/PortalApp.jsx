@@ -1,20 +1,28 @@
 import { useEffect, useState } from 'react';
 import { Box, Button, CircularProgress, Typography } from '@mui/material';
 import TodayIcon from '@mui/icons-material/TodayOutlined';
+import PeopleIcon from '@mui/icons-material/PeopleAltOutlined';
+import PersonIcon from '@mui/icons-material/AccountCircleOutlined';
 import { supabase } from './supabase';
 import Login from './Login';
 import Layout from './Layout';
 import Dashboard from './Dashboard';
+import Customers from './Customers';
+import Customer from './Customer';
+import Account from './Account';
 
-// Pages by hash route (#/today). roles: who sees it in the nav.
+const everyone = ['admin', 'employee', 'franchisee'];
+// Pages by hash route (#/today). roles: who sees it in the nav. #/customers/<id> opens one customer.
 const pages = [
-  { path: 'today', label: 'Today', icon: TodayIcon, roles: ['admin', 'employee', 'franchisee'], Page: Dashboard },
+  { path: 'today', label: 'Today', icon: TodayIcon, roles: everyone, Page: Dashboard },
+  { path: 'customers', label: 'Customers', icon: PeopleIcon, roles: everyone, Page: Customers, Detail: Customer },
+  { path: 'account', label: 'Account', icon: PersonIcon, roles: everyone, Page: Account },
 ];
 
 function useRoute() {
   const [hash, setHash] = useState(window.location.hash);
   useEffect(() => {
-    const onChange = () => setHash(window.location.hash);
+    const onChange = () => { setHash(window.location.hash); window.scrollTo(0, 0); };
     window.addEventListener('hashchange', onChange);
     return () => window.removeEventListener('hashchange', onChange);
   }, []);
@@ -29,7 +37,7 @@ export default function PortalApp() {
   const [session, setSession] = useState(undefined); // undefined = still loading
   const [recovering, setRecovering] = useState(false);
   const [profile, setProfile] = useState(undefined);
-  const [path] = useRoute();
+  const [path, id] = useRoute();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -44,7 +52,7 @@ export default function PortalApp() {
     if (!session) return setProfile(undefined);
     supabase
       .from('profiles')
-      .select('full_name, role, franchisee_id, franchisees(name)')
+      .select('full_name, role, franchisee_id, franchisees(name, phone, email, exit_commission_pct, active)')
       .eq('id', session.user.id)
       .maybeSingle()
       .then(({ data }) => setProfile(data ?? null));
@@ -70,9 +78,10 @@ export default function PortalApp() {
 
   const nav = pages.filter((p) => p.roles.includes(profile.role));
   const current = nav.find((p) => p.path === path) ?? nav[0];
+  const Page = (id && current.Detail) || current.Page;
   return (
     <Layout profile={profile} nav={nav} current={current.path}>
-      <current.Page profile={profile} />
+      <Page key={id} profile={profile} id={id} email={session.user.email} />
     </Layout>
   );
 }

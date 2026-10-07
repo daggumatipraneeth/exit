@@ -1,0 +1,119 @@
+// Small pieces shared by portal pages.
+import { Box, Typography, Chip } from '@mui/material';
+import { money } from '../finance';
+import { accent, line, loss, navy } from '../theme';
+
+// Dates travel as 'YYYY-MM-DD' strings in local time.
+export const iso = (d) => d.toLocaleDateString('en-CA');
+export const today = () => iso(new Date());
+export const shift = (date, days) => { const d = new Date(`${date}T00:00`); d.setDate(d.getDate() + days); return iso(d); };
+export const fmtDate = (date, opts = { weekday: 'long', day: 'numeric', month: 'long' }) =>
+  new Date(`${date}T00:00`).toLocaleDateString('en-IN', opts);
+export const shortDate = (date) => fmtDate(date, { day: 'numeric', month: 'short', year: 'numeric' });
+export const monthName = (date) => fmtDate(date, { month: 'long', year: 'numeric' });
+export const sum = (rows, key) => rows.reduce((t, r) => t + Number(r[key]), 0);
+
+export const tone = (v) => (Number(v) < 0 ? loss : Number(v) > 0 ? accent : 'text.secondary');
+
+// Coloured, signed rupee amount that never wraps. abs: show without sign (for "made"/"lost" copy), keep the colour.
+export function Signed({ value, signed = true, abs, sx }) {
+  return (
+    <Box component="span" sx={{ color: tone(value), fontWeight: 600, whiteSpace: 'nowrap', ...sx }}>
+      {abs ? money(Math.abs(value)) : money(value, signed)}
+    </Box>
+  );
+}
+
+export function Panel({ title, action, children, sx }) {
+  return (
+    <Box component="section" sx={{ bgcolor: '#fff', border: `1px solid ${line}`, borderRadius: 2, ...sx }}>
+      {title && (
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.5, px: { xs: 2, md: 3 }, py: 1.75, borderBottom: `1px solid ${line}` }}>
+          <Typography variant="h6" component="h2" sx={{ fontSize: '1.05rem', flex: 1, minWidth: 'fit-content' }}>{title}</Typography>
+          {action}
+        </Box>
+      )}
+      {children}
+    </Box>
+  );
+}
+
+// One label/value pair in a details list.
+export function Field({ label, children }) {
+  return (
+    <Box sx={{ minWidth: 0 }}>
+      <Typography variant="body2" color="text.secondary">{label}</Typography>
+      <Typography sx={{ fontWeight: 500, overflowWrap: 'anywhere' }}>{children || '–'}</Typography>
+    </Box>
+  );
+}
+
+const statusLook = {
+  draft: ['Draft', 'default'],
+  awaiting_signature: ['Awaiting signature', 'warning'],
+  pending_approval: ['Pending approval', 'info'],
+  active: ['Active', 'success'],
+  rejected: ['Rejected', 'error'],
+};
+export function StatusChip({ status }) {
+  const [label, color] = statusLook[status];
+  return <Chip size="small" label={label} color={color} variant={status === 'active' ? 'filled' : 'outlined'} />;
+}
+
+export function CapMeter({ covered, cap, thick }) {
+  const c = Number(covered);
+  const full = c >= Number(cap);
+  const fill = cap > 0 ? Math.max(0, Math.min(1, c / cap)) : 0;
+  return (
+    <Box>
+      <Box
+        role="meter"
+        aria-label="Progress to monthly cap"
+        aria-valuemin={0}
+        aria-valuemax={Number(cap)}
+        aria-valuenow={c}
+        sx={{ height: thick ? 10 : 6, borderRadius: 5, bgcolor: '#E6EBF2', overflow: 'hidden' }}
+      >
+        <Box sx={{ height: 1, width: `${fill * 100}%`, bgcolor: full ? accent : navy, borderRadius: 5 }} />
+      </Box>
+      <Typography variant="caption" sx={{ display: 'block', mt: 0.75, color: c < 0 ? loss : 'text.secondary' }}>
+        {full ? `Cap of ${money(cap)} reached` : c < 0 ? `${money(c)} this month, cap ${money(cap)}` : `${money(c)} of ${money(cap)} cap`}
+      </Typography>
+    </Box>
+  );
+}
+
+// Row of figures inside one panel, divided by rules; stacks on phones.
+export function Figures({ items }) {
+  return (
+    <Box
+      sx={{
+        display: 'grid', gridTemplateColumns: { xs: '1fr', sm: `repeat(${items.length}, minmax(0, 1fr))` },
+        bgcolor: '#fff', border: `1px solid ${line}`, borderRadius: 2,
+        '& > *:not(:last-child)': { borderBottom: { xs: `1px solid ${line}`, sm: 'none' }, borderRight: { sm: `1px solid ${line}` } },
+      }}
+    >
+      {items.map(({ label, value, note }) => (
+        <Box
+          key={label}
+          sx={{
+            px: { xs: 2, md: 3 }, py: { xs: 1.5, md: 2.5 }, minWidth: 0,
+            display: { xs: 'grid', sm: 'block' }, gridTemplateColumns: '1fr auto', alignItems: 'baseline', columnGap: 2,
+          }}
+        >
+          <Typography variant="body2" color="text.secondary">{label}</Typography>
+          <Typography component="div" sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem', md: '1.75rem' }, fontWeight: 700, letterSpacing: '-0.02em', mt: { sm: 0.25 }, textAlign: { xs: 'right', sm: 'left' } }}>
+            {value}
+          </Typography>
+          {note && <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25, gridColumn: '1 / -1' }}>{note}</Typography>}
+        </Box>
+      ))}
+    </Box>
+  );
+}
+
+export const rowLink = {
+  display: 'grid', alignItems: 'center', color: 'inherit', textDecoration: 'none',
+  '&:hover': { bgcolor: '#F8FAFC' },
+  '&:focus-visible': { outline: `2px solid ${accent}`, outlineOffset: -2 },
+};

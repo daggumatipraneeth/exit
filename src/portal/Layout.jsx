@@ -42,9 +42,9 @@ export default function Layout({ profile, nav, current, children }) {
   return (
     <Box sx={{ minHeight: '100dvh', pb: { xs: 9, md: 0 } }}>
       <AppBar elevation={0} position="sticky" sx={{ bgcolor: '#fff', color: ink, borderBottom: `1px solid ${line}` }}>
-        <Container maxWidth="lg">
+        <Container maxWidth="xl">
           <Toolbar disableGutters sx={{ gap: 3, minHeight: { xs: 60, md: 68 } }}>
-            <Box component="a" href="#/" aria-label="Partner portal home" sx={{ display: 'flex', flexShrink: 0 }}>
+            <Box component="a" href="#/" aria-label="Partner portal home" sx={{ display: 'flex', alignItems: 'center', minHeight: 44, flexShrink: 0 }}>
               <Box component="img" src="media/Exit256.png" alt="Exit" sx={{ height: { xs: 30, md: 34 } }} />
             </Box>
             <Box component="nav" aria-label="Portal" sx={{ display: { xs: 'none', md: 'flex' }, gap: 0.5, alignSelf: 'stretch' }}>
@@ -67,7 +67,7 @@ export default function Layout({ profile, nav, current, children }) {
               onClick={() => supabase.auth.signOut()}
               startIcon={<LogoutIcon fontSize="small" />}
               aria-label="Log out"
-              sx={{ px: { xs: 1, sm: 2 }, minWidth: 0, flexShrink: 0, '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 } } }}
+              sx={{ px: { xs: 1, sm: 2 }, minWidth: 44, minHeight: 44, flexShrink: 0, '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 } } }}
             >
               <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Log out</Box>
             </Button>
@@ -75,7 +75,7 @@ export default function Layout({ profile, nav, current, children }) {
         </Container>
       </AppBar>
 
-      <Container maxWidth="lg" component="main" sx={{ py: { xs: 3, md: 5 } }}>
+      <Container maxWidth="xl" component="main" sx={{ py: { xs: 3, md: 5 } }}>
         {children}
       </Container>
 

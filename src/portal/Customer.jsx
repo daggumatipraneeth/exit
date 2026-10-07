@@ -53,7 +53,7 @@ export default function Customer({ profile, id }) {
 
   return (
     <>
-      <Link href="#/customers" underline="hover" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, mb: 2, fontWeight: 500 }}>
+      <Link href="#/customers" underline="hover" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minHeight: 40, mb: 1, fontWeight: 500 }}>
         <ArrowBack fontSize="small" /> All customers
       </Link>
       <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.5, mb: 3 }}>

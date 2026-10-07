@@ -55,7 +55,7 @@ Other local addresses:
 Other commands:
 
 ```bash
-npm run db:test         # 38 database tests: payouts, security, onboarding
+npm run db:test         # 49 database tests: payouts, security, onboarding, record keeping
 npm run db:reset        # wipe and reload test data
 node src/finance.check.js
 ```
@@ -89,6 +89,47 @@ node src/finance.check.js
    The next push to `main` deploys the portal. Without these variables the portal page says it isn't set up yet, and the landing page still works.
 
 **Staging:** create a second Supabase project and repeat steps 1–6 against it. Use `npx supabase link` to switch between the two.
+
+## Records are never deleted
+
+The database itself enforces these rules, for every login including the Supabase dashboard:
+
+- **Customers** can't be deleted. Reject or deactivate them instead.
+- **KYC documents** keep every version. Uploading a new PAN photo adds a version and the old one stays viewable as "Earlier".
+- **KYC files** in storage can't be deleted or overwritten, even with the service key or "Empty bucket".
+- **Signed agreements** can't be changed or deleted. Unsigned links can still be replaced.
+
+## Backups
+
+Two layers. Use both.
+
+**1. Supabase backups (database only).** On the Pro plan, Supabase keeps daily database backups for 7 days. Add Point-in-Time Recovery if you want to restore to any minute. **These don't include the KYC files.**
+
+**2. Nightly copy to separate storage (database and KYC files).** `.github/workflows/backup.yml` runs `scripts/backup.sh` every night at 02:00 IST:
+- a full database dump goes to `db/<date-time>/` (structure, data, logins and the file list);
+- every KYC file is copied to `kyc/`;
+- nothing at the destination is ever deleted or replaced.
+
+Set it up once:
+1. Create a private bucket on an S3-compatible service in a different account from Supabase: Cloudflare R2, AWS S3 (Mumbai) or Backblaze B2. Turn on object lock or versioning if offered. Create an access key that can only write to that bucket.
+2. In Supabase: Project Settings → Storage → S3 Connection. Note the endpoint and region, and create an access key.
+3. In GitHub: Settings → Secrets and variables → Actions:
+   - **Secrets:**
+     - `SUPABASE_DB_URL`: Database → Connection string (session pooler, with password)
+     - `SUPABASE_S3_ENDPOINT`, `SUPABASE_S3_REGION`, `SUPABASE_S3_ACCESS_KEY_ID`, `SUPABASE_S3_SECRET_ACCESS_KEY`
+     - `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY`
+   - **Variables:**
+     - `BACKUP_PATH`: bucket and folder, e.g. `exit-backups/portal`
+     - `BACKUP_S3_PROVIDER`: `Cloudflare`, `AWS` or `Other`
+     - `BACKUP_S3_ENDPOINT`, `BACKUP_S3_REGION`
+4. Actions → Nightly backup → Run workflow, and check the files appear. Until `BACKUP_PATH` is set, the job is skipped.
+
+**Restore** (tested locally: a wiped database came back with every record, login and file):
+1. Create a fresh Supabase project and run `npx supabase db push`. This creates the tables and the `kyc` bucket.
+2. Restore the data: `psql "<new SUPABASE_DB_URL>" -v ON_ERROR_STOP=1 -f db/<date-time>/data.sql`
+3. Copy the files back: `rclone copy dst:<BACKUP_PATH>/kyc src:kyc`, with `src` pointing at the new project.
+
+Restore into a new project rather than over a damaged one, check it, then switch the website's `VITE_SUPABASE_*` variables to it.
 
 ## Compliance notes
 

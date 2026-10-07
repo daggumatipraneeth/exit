@@ -9,6 +9,7 @@ const theme = createTheme(base, {
   components: {
     MuiCssBaseline: { styleOverrides: { body: { fontFeatureSettings: '"tnum"' } } },
     MuiButton: { styleOverrides: { root: { paddingBlock: 9 } } },
+    MuiToggleButton: { styleOverrides: { root: { minWidth: 44, minHeight: 40 } } }, // comfortable tap targets on phones
   },
 });
 

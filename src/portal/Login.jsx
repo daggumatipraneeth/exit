@@ -72,7 +72,7 @@ export default function Login({ recovering, linkError, onRecovered }) {
           </Stack>
           {mode !== 'reset' && (
             <Typography variant="body2" sx={{ mt: 2.5 }}>
-              <Link component="button" type="button" onClick={() => { setMode(mode === 'login' ? 'forgot' : 'login'); setError(''); setNotice(''); }}>
+              <Link component="button" type="button" sx={{ minHeight: 40 }} onClick={() => { setMode(mode === 'login' ? 'forgot' : 'login'); setError(''); setNotice(''); }}>
                 {mode === 'login' ? 'Forgot password?' : 'Back to login'}
               </Link>
             </Typography>

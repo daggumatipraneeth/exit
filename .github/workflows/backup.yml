@@ -1,0 +1,41 @@
+name: Nightly backup
+
+# Copies the database and every KYC file to separate backup storage. Setup: PORTAL.md → Backups.
+on:
+  schedule:
+    - cron: '30 20 * * *' # 02:00 IST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    # Skipped until backup storage is configured.
+    if: vars.BACKUP_PATH != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: curl -fsSL https://rclone.org/install.sh | sudo bash
+      - run: ./scripts/backup.sh
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_PATH: ${{ vars.BACKUP_PATH }}
+          RCLONE_CONFIG_SRC_TYPE: s3
+          RCLONE_CONFIG_SRC_PROVIDER: Other
+          RCLONE_CONFIG_SRC_FORCE_PATH_STYLE: 'true'
+          RCLONE_CONFIG_SRC_ENDPOINT: ${{ secrets.SUPABASE_S3_ENDPOINT }}
+          RCLONE_CONFIG_SRC_REGION: ${{ secrets.SUPABASE_S3_REGION }}
+          RCLONE_CONFIG_SRC_ACCESS_KEY_ID: ${{ secrets.SUPABASE_S3_ACCESS_KEY_ID }}
+          RCLONE_CONFIG_SRC_SECRET_ACCESS_KEY: ${{ secrets.SUPABASE_S3_SECRET_ACCESS_KEY }}
+          RCLONE_CONFIG_DST_TYPE: s3
+          RCLONE_CONFIG_DST_PROVIDER: ${{ vars.BACKUP_S3_PROVIDER }}
+          RCLONE_CONFIG_DST_ENDPOINT: ${{ vars.BACKUP_S3_ENDPOINT }}
+          RCLONE_CONFIG_DST_REGION: ${{ vars.BACKUP_S3_REGION }}
+          RCLONE_CONFIG_DST_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+          RCLONE_CONFIG_DST_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}

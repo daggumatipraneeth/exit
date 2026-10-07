@@ -12,7 +12,7 @@ import UploadIcon from '@mui/icons-material/FileUploadOutlined';
 import { supabase } from './supabase';
 import { money } from '../finance';
 import { accent, line } from '../theme';
-import { today, shortDate, Panel, PageTitle, errText } from './ui';
+import { today, shortDate, Panel, PageTitle, FormPage, errText } from './ui';
 import { AgreementFrame } from './Sign';
 
 export const docKinds = [
@@ -105,10 +105,10 @@ export function NewCustomer({ profile }) {
   }
 
   return (
-    <>
-      <Link href="#/customers" underline="hover" sx={{ display: 'inline-block', mb: 2, fontWeight: 500 }}>Back to customers</Link>
+    <FormPage>
+      <Link href="#/customers" underline="hover" sx={{ display: 'inline-flex', alignItems: 'center', minHeight: 40, mb: 1, fontWeight: 500 }}>Back to customers</Link>
       <PageTitle>Add customer</PageTitle>
-      <Panel sx={{ maxWidth: 760 }}>
+      <Panel>
         <Box component="form" onSubmit={save} sx={{ px: { xs: 2, md: 3 }, py: 3, display: 'grid', gap: 2 }}>
           <Typography color="text.secondary">
             Start with the basics. You can save now and add documents and the signing link on the next screen.
@@ -120,12 +120,12 @@ export function NewCustomer({ profile }) {
             helperText="Amount the customer is investing. The monthly cap is a % of this."
             slotProps={{ htmlInput: { min: 1, inputMode: 'decimal' }, input: { startAdornment: <InputAdornment position="start">₹</InputAdornment> } }}
           />
-          <Button type="submit" variant="contained" size="large" disabled={busy || !detailsValid(f, profile)} sx={{ justifySelf: 'start' }}>
+          <Button type="submit" variant="contained" size="large" disabled={busy || !detailsValid(f, profile)} sx={{ justifySelf: { xs: 'stretch', sm: 'end' } }}>
             Save and continue
           </Button>
         </Box>
       </Panel>
-    </>
+    </FormPage>
   );
 }
 
@@ -227,9 +227,10 @@ export function Documents({ customer, docs, edit, onChanged }) {
     setError('');
     const blob = await shrink(file);
     if (blob.size > 5 * 1024 * 1024) { setBusy(null); return setError('That file is over 5 MB. Take a smaller photo or compress the PDF.'); }
-    const path = `${customer.id}/${kind}`;
-    const up = await supabase.storage.from('kyc').upload(path, blob, { upsert: true, contentType: blob.type || file.type });
-    const row = up.error ? up : await supabase.from('customer_documents').upsert({ customer_id: customer.id, kind, path, uploaded_at: new Date().toISOString() }, { onConflict: 'customer_id,kind' });
+    // Every upload is a new file; earlier versions are kept (the database refuses deletes and overwrites).
+    const path = `${customer.id}/${kind}-${Date.now()}`;
+    const up = await supabase.storage.from('kyc').upload(path, blob, { contentType: blob.type || file.type });
+    const row = up.error ? up : await supabase.from('customer_documents').insert({ customer_id: customer.id, kind, path });
     setBusy(null);
     if (row.error) return setError(errText(row.error));
     onChanged();
@@ -240,7 +241,8 @@ export function Documents({ customer, docs, edit, onChanged }) {
       {error && <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(4, minmax(0, 1fr))' }, gap: 2, p: { xs: 2, md: 3 } }}>
         {docKinds.map(([kind, label, required]) => {
-          const d = docs.find((x) => x.kind === kind);
+          const versions = docs.filter((x) => x.kind === kind).sort((a, b) => b.uploaded_at.localeCompare(a.uploaded_at));
+          const d = versions[0];
           const url = d && urls[d.path];
           return (
             <Box key={kind} sx={{ minWidth: 0 }}>
@@ -260,6 +262,17 @@ export function Documents({ customer, docs, edit, onChanged }) {
                 ) : <Typography variant="body2">{url ? 'Open file' : d ? 'Loading…' : required ? 'Required' : 'Optional'}</Typography>}
               </Box>
               <Typography variant="body2" sx={{ mt: 0.75, fontWeight: 500 }}>{label}</Typography>
+              {versions.length > 1 && (
+                <Typography variant="caption" color="text.secondary" component="p">
+                  Earlier:{' '}
+                  {versions.slice(1).map((v, i) => (
+                    <span key={v.path}>
+                      {i > 0 && ', '}
+                      <Link href={urls[v.path]} target="_blank" rel="noreferrer">{shortDate(v.uploaded_at.slice(0, 10))}</Link>
+                    </span>
+                  ))}
+                </Typography>
+              )}
               {edit && (
                 <Button size="small" component="label" startIcon={<UploadIcon />} sx={{ ml: -1, px: 1 }}>
                   {d ? 'Replace' : 'Upload'}

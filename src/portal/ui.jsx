@@ -131,3 +131,8 @@ export function PageTitle({ children, action }) {
 
 // Supabase errors carry the Postgres message; show just that.
 export const errText = (e) => e?.message ?? String(e);
+
+// Centered column for form pages, so they don't hang off the left on wide screens.
+export function FormPage({ children, width = 880 }) {
+  return <Box sx={{ maxWidth: width, mx: 'auto' }}>{children}</Box>;
+}

@@ -3,7 +3,7 @@ import { Box, Typography, Alert, Button } from '@mui/material';
 import { supabase } from './supabase';
 import { money } from '../finance';
 import { ink, line } from '../theme';
-import { today, fmtDate, shortDate, monthName, sum, Signed, Panel, Field, CapMeter, StatusChip, Figures, BackLink } from './ui';
+import { today, fmtDate, shortDate, monthName, sum, Signed, Panel, Field, CapMeter, StatusChip, Figures, BackLink, tableHead } from './ui';
 import { OnboardingSteps, Documents, EditDetailsDialog, CapitalDialog, AgreementDialog, canEdit, latestSigned } from './Onboarding';
 
 const cols = { xs: '1fr auto', md: '1.2fr 1fr 1fr' };
@@ -117,8 +117,7 @@ export default function Customer({ profile, id }) {
                 <Box
                   aria-hidden
                   sx={{
-                    display: { xs: 'none', md: 'grid' }, gridTemplateColumns: cols.md, columnGap: 2, px: 3, py: 1.25,
-                    color: 'text.secondary', fontSize: 13, borderBottom: `1px solid ${line}`, '& > :not(:first-of-type)': { textAlign: 'right' },
+                    ...tableHead, gridTemplateColumns: cols.md, columnGap: 2, '& > :not(:first-of-type)': { textAlign: 'right' },
                   }}
                 >
                   <span>Date</span><span>Credited</span><span>Bucket after</span>

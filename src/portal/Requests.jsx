@@ -7,7 +7,7 @@ import EmailIcon from '@mui/icons-material/MailOutlined';
 import { supabase, fetchAll } from './supabase';
 import { offices, interests } from '../config';
 import { line } from '../theme';
-import { Panel, PageTitle, FilterChips, ShowMore, PAGE_ROWS, errText, Pill } from './ui';
+import { Panel, PageTitle, FilterChips, ShowMore, PAGE_ROWS, errText, Pill, tableRow } from './ui';
 
 const statusLook = { new: ['New', 'attention'], contacted: ['Contacted', 'progress'], closed: ['Closed', 'neutral'] };
 const when = (t) => new Date(t).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
@@ -30,39 +30,40 @@ function RequestRow({ r, partners, onChanged }) {
 
   const [label, tone] = statusLook[r.status];
   return (
-    <Box component="li" sx={{ px: { xs: 2, md: 3 }, py: 2, '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` } }}>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', columnGap: 2, rowGap: 1.5 }}>
-        <Box sx={{ minWidth: 0, flex: '1 1 300px' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography sx={{ fontWeight: 600 }}>{r.name}</Typography>
-            <Pill label={label} tone={tone} />
-          </Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-            {r.interest} · {r.office} office · {when(r.created_at)}
-          </Typography>
-          {r.message && <Typography sx={{ mt: 1, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{r.message}</Typography>}
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 2, mt: 0.75, '& .MuiButton-root.MuiButton-sizeSmall': { px: 0, py: 0.5, minWidth: 0 }, '& .MuiButton-startIcon': { ml: 0 } }}>
-            <Button size="small" startIcon={<PhoneIcon />} href={`tel:${r.phone}`}>{r.phone}</Button>
-            <Button size="small" startIcon={<WhatsAppIcon />} href={whatsapp(r.phone)} target="_blank" rel="noreferrer">WhatsApp</Button>
-            {r.email && <Button size="small" startIcon={<EmailIcon />} href={`mailto:${r.email}`} sx={{ textTransform: 'none' }}>{r.email}</Button>}
-          </Box>
+    <Box component="li" sx={{ ...tableRow, py: { xs: 1.5, md: 1.5 }, '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` } }}>
+      {/* Who and what on one line; how to reach them on the right (below on phones). */}
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1.5, rowGap: 0.5 }}>
+        <Typography sx={{ fontWeight: 600 }}>{r.name}</Typography>
+        <Pill label={label} tone={tone} />
+        <Typography variant="body2" color="text.secondary" sx={{ flex: '1 1 260px' }}>
+          {r.interest} · {r.office} office · {when(r.created_at)}
+        </Typography>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 2, '& .MuiButton-root.MuiButton-sizeSmall': { px: 0, py: 0.25, minWidth: 0 }, '& .MuiButton-startIcon': { ml: 0 } }}>
+          <Button size="small" startIcon={<PhoneIcon />} href={`tel:${r.phone}`}>{r.phone}</Button>
+          <Button size="small" startIcon={<WhatsAppIcon />} href={whatsapp(r.phone)} target="_blank" rel="noreferrer">WhatsApp</Button>
+          {r.email && <Button size="small" startIcon={<EmailIcon />} href={`mailto:${r.email}`} sx={{ textTransform: 'none' }}>{r.email}</Button>}
         </Box>
+      </Box>
+      {r.message && <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{r.message}</Typography>}
+      {error && <Alert severity="error" sx={{ mt: 1 }}>{error}</Alert>}
+      {/* Everything you can do, in one row of equal-height controls. */}
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mt: 1.25 }}>
         {partners && (
           <TextField
-            select size="small" label="Allocated to" value={r.franchisee_id ?? ''} sx={{ width: { xs: '100%', sm: 240 } }}
-            slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
+            select size="small" value={r.franchisee_id ?? ''} sx={{ width: { xs: '100%', sm: 260 } }}
+            slotProps={{ select: {
+              displayEmpty: true, inputProps: { 'aria-label': `Allocate ${r.name} to a partner` },
+              renderValue: (v) => (v ? `To ${partners.find((p) => p.id === v)?.name}` : 'Not allocated'),
+            } }}
             onChange={(e) => update({ franchisee_id: e.target.value || null })}
           >
             <MenuItem value="">Not allocated</MenuItem>
             {partners.filter((p) => p.active || p.id === r.franchisee_id).map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
           </TextField>
         )}
-      </Box>
-      {error && <Alert severity="error" sx={{ mt: 1.5 }}>{error}</Alert>}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 1, mt: 1.5 }}>
         <TextField
           size="small" placeholder="Notes, e.g. called, meeting on Monday" value={notes} onChange={(e) => setNotes(e.target.value)}
-          sx={{ flex: '1 1 260px' }} slotProps={{ htmlInput: { 'aria-label': `Notes for ${r.name}`, maxLength: 1000 } }}
+          sx={{ flex: '1 1 240px' }} slotProps={{ htmlInput: { 'aria-label': `Notes for ${r.name}`, maxLength: 1000 } }}
         />
         {notes !== (r.notes ?? '') && <Button variant="contained" disabled={busy} onClick={() => update({ notes })}>Save note</Button>}
         {r.status === 'new' && <Button variant="contained" disabled={busy} onClick={() => update({ status: 'contacted', notes })}>Mark contacted</Button>}

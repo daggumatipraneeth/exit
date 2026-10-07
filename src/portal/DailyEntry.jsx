@@ -8,7 +8,7 @@ import Papa from 'papaparse';
 import { supabase } from './supabase';
 import { money, splitByWeight } from '../finance';
 import { ink, line, loss } from '../theme';
-import { today, shift, fmtDate, Panel, PageTitle, Signed, FilterChips, errText } from './ui';
+import { today, shift, fmtDate, Panel, PageTitle, Signed, FilterChips, errText, tableHead, tableRow } from './ui';
 
 const csvColumns = ['date', 'partner', 'amount'];
 const cols = { xs: '1fr', md: '1.3fr 1fr 1.6fr' };
@@ -138,7 +138,7 @@ function HandEntry({ date, partners, closed }) {
         </Box>
       </Panel>
       <Panel title={`${partners.length} active partners`} action={saveButton}>
-        <Box aria-hidden sx={{ display: { xs: 'none', md: 'grid' }, gridTemplateColumns: cols.md, columnGap: 3, px: 3, py: 1.25, color: 'text.secondary', fontSize: 13, borderBottom: `1px solid ${line}` }}>
+        <Box aria-hidden sx={{ ...tableHead, gridTemplateColumns: cols.md, columnGap: 3 }}>
           <span>Partner</span><span>Profit / loss after broker charges</span><span>Result</span>
         </Box>
         <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
@@ -150,7 +150,7 @@ function HandEntry({ date, partners, closed }) {
                 component="li"
                 key={p.id}
                 sx={{
-                  display: 'grid', alignItems: 'center', columnGap: 3, rowGap: 1.25, px: { xs: 2, md: 3 }, py: 1.75,
+                  display: 'grid', alignItems: 'center', columnGap: 3, rowGap: 1.25, ...tableRow,
                   gridTemplateColumns: cols, bgcolor: dirty ? '#FFFBEB' : 'transparent',
                   '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` },
                 }}

@@ -100,7 +100,7 @@ export function CapMeter({ covered, cap, thick }) {
       >
         <Box sx={{ height: 1, width: `${fill * 100}%`, bgcolor: full ? accent : navy, borderRadius: 5 }} />
       </Box>
-      <Typography variant="caption" sx={{ display: 'block', mt: 0.75, color: c < 0 ? loss : 'text.secondary' }}>
+      <Typography variant="caption" sx={{ display: 'block', mt: 0.5, lineHeight: 1.4, color: c < 0 ? loss : 'text.secondary' }}>
         {full ? `Cap of ${money(cap)} reached` : c < 0 ? `${money(c)} this month, cap ${money(cap)}` : `${money(c)} of ${money(cap)} cap`}
       </Typography>
     </Box>
@@ -135,6 +135,25 @@ export function Figures({ items }) {
     </Box>
   );
 }
+
+// Secondary details separated by dots; on narrow screens they wrap between items, never mid-item.
+export function Inline({ items, empty, sx }) {
+  return (
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 1, color: 'text.secondary', fontSize: 14, ...sx }}>
+      {items.length === 0 && empty}
+      {items.map((t, i) => (
+        <Box component="span" key={t} sx={{ overflowWrap: 'anywhere', '&::after': i < items.length - 1 ? { content: '"·"', ml: 1 } : undefined }}>{t}</Box>
+      ))}
+    </Box>
+  );
+}
+
+// Every table: a shaded column-header strip and compact rows with the same padding.
+export const tableHead = {
+  display: { xs: 'none', md: 'grid' }, px: 3, py: 1, bgcolor: '#F7F9FB', color: 'text.secondary',
+  fontSize: 12.5, fontWeight: 500, borderBottom: `1px solid ${line}`,
+};
+export const tableRow = { px: { xs: 2, md: 3 }, py: { xs: 1.5, md: 1.25 } };
 
 export const rowLink = {
   display: 'grid', alignItems: 'center', color: 'inherit', textDecoration: 'none',

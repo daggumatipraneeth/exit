@@ -12,7 +12,7 @@ import RemoveLoginIcon from '@mui/icons-material/PersonRemoveOutlined';
 import { supabase, fetchAll } from './supabase';
 import { line } from '../theme';
 import { offices } from '../config';
-import { Panel, PageTitle, Pill } from './ui';
+import { Panel, PageTitle, Pill, Inline, tableHead, tableRow } from './ui';
 
 const COLS = { xs: 'minmax(0, 1fr) auto', md: 'minmax(0, 1fr) 120px 90px 100px 112px' };
 // Phones: name and actions on one line, details full width below. Desktop: figures in columns beside the name.
@@ -170,18 +170,6 @@ function ConfirmDialog({ title, children, action, run, onClose, onDone }) {
   );
 }
 
-// Secondary details separated by dots; on narrow screens they wrap between items, never mid-item.
-function Inline({ items, empty, sx }) {
-  return (
-    <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 1, color: 'text.secondary', fontSize: 14, ...sx }}>
-      {items.length === 0 && empty}
-      {items.map((t, i) => (
-        <Box component="span" key={t} sx={{ overflowWrap: 'anywhere', '&::after': i < items.length - 1 ? { content: '"·"', ml: 1 } : undefined }}>{t}</Box>
-      ))}
-    </Box>
-  );
-}
-
 // Small icon button; the tooltip doubles as its accessible name.
 function Act({ label, icon: Icon, onClick, danger }) {
   return (
@@ -196,7 +184,7 @@ function Act({ label, icon: Icon, onClick, danger }) {
 // One login: name and email on a line, actions at the end. `extra` sits before the actions (staff office).
 function LoginLine({ p, you, extra, onReset, onRemove, sx }) {
   return (
-    <Box component="li" sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1.5, minHeight: 44, ...sx }}>
+    <Box component="li" sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1.5, minHeight: 36, ...sx }}>
       <Box sx={{ minWidth: 0, flex: '1 1 200px', display: 'flex', flexWrap: 'wrap', columnGap: 1.25, alignItems: 'baseline' }}>
         <Typography variant="body2" sx={{ fontWeight: 500 }} noWrap>{p.full_name}{you && ' (you)'}</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ minWidth: 0, overflowWrap: 'anywhere' }}>{p.email}</Typography>
@@ -314,9 +302,9 @@ export default function Partners({ email: myEmail }) {
       <Panel title={`${partners.length} partners`}>
         {partners.length === 0 && <Typography color="text.secondary" sx={{ p: 4, textAlign: 'center' }}>Add your first partner to start onboarding customers.</Typography>}
         {partners.length > 0 && (
-          <Box sx={{ display: { xs: 'none', md: 'grid' }, gridTemplateColumns: COLS, columnGap: 2, px: 3, py: 1.25, borderBottom: `1px solid ${line}` }}>
+          <Box aria-hidden sx={{ ...tableHead, gridTemplateColumns: COLS, columnGap: 2 }}>
             {['Partner', 'Hidden charge', 'Split', 'Customers'].map((h) => (
-              <Typography key={h} variant="body2" color="text.secondary" sx={{ textAlign: h === 'Partner' ? 'left' : 'right' }}>{h}</Typography>
+              <Box key={h} sx={{ textAlign: h === 'Partner' ? 'left' : 'right' }}>{h}</Box>
             ))}
           </Box>
         )}
@@ -327,7 +315,7 @@ export default function Partners({ email: myEmail }) {
             const split = `${Number(f.profit_share_pct)} / ${100 - Number(f.profit_share_pct)}`;
             const customers = counts[f.id] ?? 0;
             return (
-              <Box component="li" key={f.id} sx={{ px: { xs: 2, md: 3 }, py: 1.5, '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` } }}>
+              <Box component="li" key={f.id} sx={{ ...tableRow, '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` } }}>
                 <Box sx={{ display: 'grid', gridTemplateColumns: COLS, gridTemplateAreas: AREAS, columnGap: 2, alignItems: 'center' }}>
                   <Box sx={{ gridArea: 'name', minWidth: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Typography sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>{f.name}</Typography>
@@ -341,11 +329,14 @@ export default function Partners({ email: myEmail }) {
                   <Box sx={{ gridArea: 'actions', display: 'flex', justifyContent: 'flex-end' }}>
                     <Act label="Edit partner" icon={EditIcon} onClick={() => setEditing(f)} />
                     <Act label="Add login" icon={AddLoginIcon} onClick={() => setLoginFor(f)} />
-                    {!customers && <Act label="Delete partner" icon={DeleteIcon} onClick={() => setDeleting(f)} danger />}
+                    {/* Keep the slot when there's no delete, so the icons line up from row to row. */}
+                    <Box aria-hidden={Boolean(customers)} sx={{ visibility: customers ? 'hidden' : 'visible' }}>
+                      <Act label="Delete partner" icon={DeleteIcon} onClick={() => setDeleting(f)} danger />
+                    </Box>
                   </Box>
                 </Box>
                 {logins.length > 0 && (
-                  <Box component="ul" sx={{ listStyle: 'none', m: 0, mt: 1, p: 0, pl: 1.5, borderLeft: `2px solid ${line}` }}>
+                  <Box component="ul" sx={{ listStyle: 'none', m: 0, mt: 0.75, p: 0, pl: 1.5, borderLeft: `2px solid ${line}` }}>
                     {logins.map((p) => <LoginLine key={p.id} p={p} onReset={setPasswordFor} onRemove={setRemoving} />)}
                   </Box>
                 )}
@@ -364,7 +355,7 @@ export default function Partners({ email: myEmail }) {
           {staffLogins.map((p) => (
             <LoginLine
               key={p.id} p={p} you={p.email === myEmail} onReset={setPasswordFor} onRemove={setRemoving}
-              sx={{ px: { xs: 2, md: 3 }, py: 1, '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` } }}
+              sx={{ ...tableRow, py: { xs: 1, md: 0.75 }, '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` } }}
               extra={p.role === 'admin' ? <Typography variant="body2" color="text.secondary">Admin</Typography> : (
                 <OfficeSelect
                   size="small" variant="standard" label={null} helperText={null} sx={{ width: 130 }}

@@ -23,11 +23,11 @@ insert into franchisees (id, name, phone, email, exit_commission_pct) values
   ('10000000-0000-0000-0000-000000000001', 'Ravi Kumar Associates', '+91 90000 11111', 'ravi@exit.local', 20),
   ('10000000-0000-0000-0000-000000000002', 'Priya Wealth Partners', '+91 90000 22222', 'priya@exit.local', 25);
 
-insert into profiles (id, full_name, role, franchisee_id) values
-  ('00000000-0000-0000-0000-00000000000a', 'Exit Admin', 'admin', null),
-  ('00000000-0000-0000-0000-00000000000e', 'Exit Staff', 'employee', null),
-  ('00000000-0000-0000-0000-0000000000f1', 'Ravi Kumar', 'franchisee', '10000000-0000-0000-0000-000000000001'),
-  ('00000000-0000-0000-0000-0000000000f2', 'Priya Reddy', 'franchisee', '10000000-0000-0000-0000-000000000002');
+insert into profiles (id, full_name, email, role, franchisee_id) values
+  ('00000000-0000-0000-0000-00000000000a', 'Exit Admin', 'admin@exit.local', 'admin', null),
+  ('00000000-0000-0000-0000-00000000000e', 'Exit Staff', 'staff@exit.local', 'employee', null),
+  ('00000000-0000-0000-0000-0000000000f1', 'Ravi Kumar', 'ravi@exit.local', 'franchisee', '10000000-0000-0000-0000-000000000001'),
+  ('00000000-0000-0000-0000-0000000000f2', 'Priya Reddy', 'priya@exit.local', 'franchisee', '10000000-0000-0000-0000-000000000002');
 
 insert into agreement_templates (title, body) values ('Client Trading Agreement v1', $html$
 <h2>Client Trading Agreement</h2>
@@ -60,6 +60,14 @@ insert into customer_capital (customer_id, effective_from, amount)
 select id, (date_trunc('month', current_date) - interval '1 month')::date,
        (array[100000, 250000, 500000, 150000, 300000, 200000, 400000, 120000, 750000, 180000])[row_number() over (order by id)]
 from customers;
+
+-- Seeded customers count as signed, so later edits by admin pass the approval rule.
+insert into agreements (customer_id, template_version, rendered_html, signer_name, signed_at)
+select id, 1, '<p>Seeded test agreement</p>', full_name, now() from customers;
+
+-- One customer mid-onboarding for Ravi.
+insert into customers (franchisee_id, full_name, phone, email, status)
+values ('10000000-0000-0000-0000-000000000001', 'Kavya Lakshmi', '+91 98480 20001', 'kavya@example.com', 'draft');
 
 -- Weekday trades from the start of last month to today; deterministic pseudo-random results.
 select setseed(0.42);

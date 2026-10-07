@@ -37,6 +37,16 @@ Deno.serve(async (req) => {
     return del.error?.message ?? null;
   }
 
+  // An account with this email that has no profile, i.e. no portal access.
+  async function strayLogin(email: string) {
+    // ponytail: scans up to 1000 accounts; page through listUsers if Exit ever has more.
+    const { data } = await admin.auth.admin.listUsers({ perPage: 1000 });
+    const user = data?.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+    if (!user) return null;
+    const { data: profile } = await admin.from('profiles').select('id').eq('id', user.id).maybeSingle();
+    return profile ? null : user.id;
+  }
+
   switch (body.action) {
     case 'create': {
       const { email, password, full_name, role: newRole, franchisee_id, office } = body;
@@ -45,8 +55,14 @@ Deno.serve(async (req) => {
       if (!(full_name ?? '').trim()) return json({ error: 'Enter a name.' }, 400);
       if (!['admin', 'employee', 'franchisee'].includes(newRole)) return json({ error: 'Choose a role.' }, 400);
       if ((newRole === 'franchisee') !== Boolean(franchisee_id)) return json({ error: 'Partner logins need a partner; staff logins must not have one.' }, 400);
-      const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-      if (error) return json({ error: /already/i.test(error.message) ? 'A login with this email already exists.' : error.message }, 400);
+      let { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
+      if (error && /already/i.test(error.message)) {
+        // A login half-removed earlier (account left, profile gone) is invisible on the Partners page: take it over.
+        const stray = await strayLogin(email);
+        if (!stray) return json({ error: 'A login with this email already exists. Find it on the Partners page.' }, 400);
+        ({ data, error } = await admin.auth.admin.updateUserById(stray, { password, email_confirm: true }));
+      }
+      if (error) return json({ error: error.message }, 400);
       const { error: profileError } = await admin.from('profiles').insert({
         id: data.user.id, email, full_name: full_name.trim(), role: newRole, franchisee_id: franchisee_id ?? null,
         office: newRole === 'employee' ? office || null : null, // the database checks it's a real office

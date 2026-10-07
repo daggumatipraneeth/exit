@@ -1,9 +1,9 @@
 -- Run: npx supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(18);
+select plan(26);
 
-insert into franchisees (id, name) values ('f5000000-0000-0000-0000-000000000001', 'Consult Partner');
+insert into franchisees (id, name) values ('f5000000-0000-0000-0000-000000000001', 'Consult Partner'), ('f5000000-0000-0000-0000-000000000002', 'Other Partner');
 insert into auth.users (id, email) values
   ('a5000000-0000-0000-0000-000000000001', 'admin5@test'), ('a5000000-0000-0000-0000-000000000002', 'guntur5@test'),
   ('a5000000-0000-0000-0000-000000000003', 'anyoffice5@test'), ('a5000000-0000-0000-0000-000000000004', 'partner5@test');
@@ -41,7 +41,23 @@ set local request.jwt.claims = '{"sub":"a5000000-0000-0000-0000-000000000003"}';
 select is((select count(*) from consultation_requests where name like '% T5'), 4::bigint, 'all-office staff see every office');
 select is((select status from consultation_requests where name = 'Sita T5'), 'new', 'Guntur staff could not touch a Hyderabad request');
 set local request.jwt.claims = '{"sub":"a5000000-0000-0000-0000-000000000004"}';
-select is((select count(*) from consultation_requests), 0::bigint, 'partners see no requests');
+select is((select count(*) from consultation_requests), 0::bigint, 'partners see no requests until one is allocated');
+
+-- Staff allocate; the partner then sees and updates it, but can't pass it on.
+set local request.jwt.claims = '{"sub":"a5000000-0000-0000-0000-000000000002"}';
+select lives_ok($$update consultation_requests set franchisee_id = 'f5000000-0000-0000-0000-000000000001' where name = 'Ravi T5'$$, 'staff allocate to a partner');
+set local request.jwt.claims = '{"sub":"a5000000-0000-0000-0000-000000000004"}';
+select results_eq($$select distinct name from consultation_requests$$, $$values ('Ravi T5'::text)$$, 'partner sees only what is allocated to them');
+select lives_ok($$update consultation_requests set status = 'closed', notes = 'Opened account' where name = 'Ravi T5'$$, 'partner updates status and notes');
+select throws_ok($$update consultation_requests set franchisee_id = 'f5000000-0000-0000-0000-000000000002' where name = 'Ravi T5'$$, '42501', null, 'partner cannot pass a request to another partner');
+select throws_ok($$update consultation_requests set franchisee_id = null where name = 'Ravi T5'$$, '42501', null, 'partner cannot drop a request');
+reset role;
+select is((select count(*) from consultation_requests where name = 'Ravi T5' and franchisee_id = 'f5000000-0000-0000-0000-000000000001' and status = 'closed'), 3::bigint,
+  'partner could not hand requests on or drop them');
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"a5000000-0000-0000-0000-000000000004"}';
+select throws_ok($$update consultation_requests set name = 'x' where name = 'Ravi T5'$$, '42501', null, 'partner cannot edit the request itself');
+select is((select count(*) from consultation_requests where name = 'Sita T5'), 0::bigint, 'partner does not see unallocated requests');
 reset role;
 
 select * from finish();

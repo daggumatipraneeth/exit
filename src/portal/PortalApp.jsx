@@ -32,7 +32,7 @@ const pages = [
   { path: 'today', label: 'Today', icon: TodayIcon, roles: everyone, Page: Dashboard },
   { path: 'entry', label: 'Daily entry', short: 'Entry', icon: EditNoteIcon, roles: staff, Page: DailyEntry },
   { path: 'customers', label: 'Customers', icon: PeopleIcon, roles: everyone, Page: Customers, Detail: Customer },
-  { path: 'requests', label: 'Requests', icon: PhoneIcon, roles: staff, Page: Requests },
+  { path: 'requests', label: 'Requests', icon: PhoneIcon, roles: everyone, Page: Requests },
   { path: 'partners', label: 'Partners', icon: HandshakeIcon, roles: admin, Page: Partners },
   { path: 'months', label: 'Months', icon: EventIcon, roles: admin, Page: Months },
   { path: 'agreement', label: 'Agreement', icon: ArticleIcon, roles: admin, Page: Templates },

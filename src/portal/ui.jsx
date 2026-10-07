@@ -54,16 +54,34 @@ export function Field({ label, children }) {
   );
 }
 
+// Status pills: one shape everywhere, colour by meaning. good = done/healthy, attention = needs someone,
+// progress = under way, neutral = nothing to do, bad = stopped.
+const tones = {
+  good: ['#E3F5EC', '#0B6E4B'],
+  attention: ['#FFF1DB', '#8A4B00'],
+  progress: ['#E6EEFA', '#1F4E8C'],
+  neutral: ['#EDF1F5', '#4A5670'],
+  bad: ['#FBE6E4', '#9B2C20'],
+};
+export function Pill({ label, tone = 'neutral' }) {
+  const [bg, fg] = tones[tone];
+  return (
+    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', height: 24, px: 1.25, borderRadius: 999, bgcolor: bg, color: fg, fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
+      {label}
+    </Box>
+  );
+}
+
 const statusLook = {
-  draft: ['Draft', 'default'],
-  awaiting_signature: ['Awaiting signature', 'warning'],
-  pending_approval: ['Pending approval', 'info'],
-  active: ['Active', 'success'],
-  rejected: ['Rejected', 'error'],
+  draft: ['Draft', 'neutral'],
+  awaiting_signature: ['Awaiting signature', 'attention'],
+  pending_approval: ['Pending approval', 'attention'],
+  active: ['Active', 'good'],
+  rejected: ['Rejected', 'bad'],
 };
 export function StatusChip({ status }) {
-  const [label, color] = statusLook[status];
-  return <Chip size="small" label={label} color={color} variant={status === 'active' ? 'filled' : 'outlined'} />;
+  const [label, tone] = statusLook[status];
+  return <Pill label={label} tone={tone} />;
 }
 
 export function CapMeter({ covered, cap, thick }) {

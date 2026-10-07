@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Box, Typography, Button, Alert, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Switch,
-  FormControlLabel, MenuItem, InputAdornment, Chip, Stack, IconButton, Tooltip,
+  FormControlLabel, MenuItem, InputAdornment, Stack, IconButton, Tooltip,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/EditOutlined';
@@ -12,7 +12,7 @@ import RemoveLoginIcon from '@mui/icons-material/PersonRemoveOutlined';
 import { supabase, fetchAll } from './supabase';
 import { line } from '../theme';
 import { offices } from '../config';
-import { Panel, PageTitle } from './ui';
+import { Panel, PageTitle, Pill } from './ui';
 
 const COLS = { xs: 'minmax(0, 1fr) auto', md: 'minmax(0, 1fr) 120px 90px 100px 112px' };
 // Phones: name and actions on one line, details full width below. Desktop: figures in columns beside the name.
@@ -331,7 +331,7 @@ export default function Partners({ email: myEmail }) {
                 <Box sx={{ display: 'grid', gridTemplateColumns: COLS, gridTemplateAreas: AREAS, columnGap: 2, alignItems: 'center' }}>
                   <Box sx={{ gridArea: 'name', minWidth: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Typography sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>{f.name}</Typography>
-                    {!f.active && <Chip size="small" variant="outlined" label="Inactive" />}
+                    {!f.active && <Pill label="Inactive" />}
                   </Box>
                   <Inline sx={{ gridArea: 'contact' }} items={[f.phone, f.email].filter(Boolean)} empty="No contact details" />
                   <Inline sx={{ gridArea: 'stats', display: { xs: 'flex', md: 'none' } }} items={[`${charge} charge`, `${split} split`, `${customers} customers`]} />
@@ -358,7 +358,7 @@ export default function Partners({ email: myEmail }) {
       <Panel
         title={`${staffLogins.length} staff logins`}
         action={<Button size="small" startIcon={<AddIcon />} onClick={() => setLoginFor('staff')}>Add staff login</Button>}
-        sx={{ mt: 4 }}
+        sx={{ mt: { xs: 3, md: 4 } }}
       >
         <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
           {staffLogins.map((p) => (

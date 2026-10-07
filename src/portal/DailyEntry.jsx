@@ -126,7 +126,7 @@ function HandEntry({ date, partners, closed }) {
   return (
     <>
       {msg && <Alert severity={msg[0]} sx={{ mb: 2 }}>{msg[1]}</Alert>}
-      <Panel title="Split a total" sx={{ mb: 3 }}>
+      <Panel title="Split a total" sx={{ mb: { xs: 3, md: 4 } }}>
         <Box component="form" onSubmit={(e) => { e.preventDefault(); split(); }} sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 1.5, px: { xs: 2, md: 3 }, py: 2 }}>
           <TextField
             size="small" label="Total profit / loss for the day" value={total} onChange={(e) => setTotal(e.target.value)} disabled={closed}

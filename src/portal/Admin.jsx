@@ -6,7 +6,7 @@ import {
 import { supabase } from './supabase';
 import { money } from '../finance';
 import { line } from '../theme';
-import { today, monthName, shortDate, Panel, PageTitle, Signed, errText } from './ui';
+import { today, monthName, shortDate, Panel, PageTitle, Signed, Pairs, errText } from './ui';
 import { AgreementFrame } from './Sign';
 
 export function Months() {
@@ -70,18 +70,16 @@ export function Months() {
                 key={r.month}
                 sx={{
                   display: 'grid', gap: { xs: 1.5, md: 3 }, alignItems: 'center', px: { xs: 2, md: 3 }, py: 2,
-                  gridTemplateColumns: { xs: '1fr 1fr', md: '1.2fr repeat(3, 1fr) 1.2fr' },
+                  gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) minmax(0, 3fr) minmax(0, 1fr)' },
                   '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` },
                 }}
               >
-                <Box sx={{ gridColumn: { xs: '1 / -1', md: 'auto' } }}>
+                <Box>
                   <Typography sx={{ fontWeight: 600 }}>{monthName(r.month)}</Typography>
                   <Typography variant="body2" color="text.secondary">{r.days.size} trading days</Typography>
                 </Box>
-                <Box><Typography variant="body2" color="text.secondary">To customers</Typography><Signed value={r.customers} /></Box>
-                <Box><Typography variant="body2" color="text.secondary">Partners</Typography><Signed value={r.partners} signed={false} /></Box>
-                <Box><Typography variant="body2" color="text.secondary">Exit earned</Typography><Box sx={{ fontWeight: 600 }}>{money(r.exit)}</Box></Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', justifyContent: { md: 'flex-end' } }}>
+                <Pairs items={[['To customers', <Signed value={r.customers} />], ['Partners', <Signed value={r.partners} signed={false} />], ['Exit earned', money(r.exit)]]} />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', justifyContent: 'flex-end', borderTop: { xs: `1px solid ${line}`, md: 'none' }, pt: { xs: 1.5, md: 0 } }}>
                   {isClosed && <Chip size="small" label={`Closed ${shortDate(closedAt[r.month].slice(0, 10))}`} />}
                   {!isClosed && r.month === thisMonth ? <Chip size="small" variant="outlined" label="In progress" /> : (
                     <Button size="small" variant={isClosed ? 'text' : 'outlined'} onClick={() => setConfirm({ month: r.month, close: !isClosed })}>

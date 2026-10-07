@@ -6,7 +6,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import { supabase } from './supabase';
 import { line } from '../theme';
-import { Panel, PageTitle } from './ui';
+import { Panel, PageTitle, Field } from './ui';
 
 const blankPartner = { name: '', phone: '', email: '', hidden_charge_pct: '', profit_share_pct: 70, active: true };
 const pctOk = (v) => v !== '' && Number(v) >= 0 && Number(v) <= 100;
@@ -167,27 +167,27 @@ export default function Partners() {
                 component="li"
                 key={f.id}
                 sx={{
-                  display: 'grid', gap: { xs: 1.5, md: 3 }, alignItems: 'center', px: { xs: 2, md: 3 }, py: 2,
-                  gridTemplateColumns: { xs: '1fr auto', md: '1.4fr 0.7fr 0.7fr 1.6fr auto' },
+                  display: 'grid', columnGap: 4, rowGap: 2, alignItems: 'center', px: { xs: 2, md: 3 }, py: 2.25,
+                  gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1.2fr) minmax(0, 2.6fr) auto' },
                   '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` },
                 }}
               >
                 <Box sx={{ minWidth: 0 }}>
-                  <Typography sx={{ fontWeight: 600 }}>{f.name}</Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>{[f.phone, f.email].filter(Boolean).join(', ') || 'No contact details'}</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'space-between', md: 'flex-start' }, gap: 1.5 }}>
+                    <Typography sx={{ fontWeight: 600 }}>{f.name}</Typography>
+                    <Chip size="small" label={f.active ? 'Active' : 'Inactive'} color={f.active ? 'success' : 'default'} variant={f.active ? 'filled' : 'outlined'} />
+                  </Box>
+                  {[f.phone, f.email].filter(Boolean).map((c) => (
+                    <Typography key={c} variant="body2" color="text.secondary" noWrap>{c}</Typography>
+                  ))}
                 </Box>
-                <Box sx={{ justifySelf: { xs: 'end', md: 'start' } }}>
-                  <Chip size="small" label={f.active ? 'Active' : 'Inactive'} color={f.active ? 'success' : 'default'} variant={f.active ? 'filled' : 'outlined'} />
+                <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(4, minmax(0, 1fr))' } }}>
+                  <Field label="Hidden charge">{f.hidden_charge_pct === '' ? 'Not set' : `${Number(f.hidden_charge_pct)}%`}</Field>
+                  <Field label="Profit split">{`${Number(f.profit_share_pct)} / ${100 - Number(f.profit_share_pct)}`}</Field>
+                  <Field label="Active customers">{String(counts[f.id] ?? 0)}</Field>
+                  <Field label="Logins">{logins.map((l) => l.email ?? l.full_name).join(', ') || 'None yet'}</Field>
                 </Box>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">Hidden charge; split</Typography>
-                  <Typography sx={{ fontWeight: 600 }}>{f.hidden_charge_pct === '' ? 'Not set' : `${Number(f.hidden_charge_pct)}%`}; {Number(f.profit_share_pct)}/{100 - Number(f.profit_share_pct)}</Typography>
-                </Box>
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography variant="body2" color="text.secondary">{counts[f.id] ?? 0} active customers; logins</Typography>
-                  <Typography sx={{ overflowWrap: 'anywhere' }}>{logins.map((l) => l.email ?? l.full_name).join(', ') || 'None yet'}</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', gap: 1, gridColumn: { xs: '1 / -1', md: 'auto' } }}>
+                <Box sx={{ display: 'flex', gap: 1, justifyContent: { md: 'flex-end' } }}>
                   <Button size="small" variant="outlined" onClick={() => setEditing(f)}>Edit</Button>
                   <Button size="small" variant="outlined" onClick={() => setLoginFor(f)}>Add login</Button>
                 </Box>

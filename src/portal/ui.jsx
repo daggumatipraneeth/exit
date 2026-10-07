@@ -175,3 +175,18 @@ export function FilterChips({ label, value, onChange, options }) {
     </Box>
   );
 }
+
+// Labelled amounts: one row each on phones (label left, value right, never colliding),
+// side-by-side columns from the md breakpoint.
+export function Pairs({ items, sx }) {
+  return (
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: `repeat(${items.length}, minmax(0, 1fr))` }, columnGap: 3, rowGap: { xs: 0.75, md: 0 }, minWidth: 0, ...sx }}>
+      {items.map(([label, value]) => (
+        <Box key={label} sx={{ display: { xs: 'flex', md: 'block' }, justifyContent: 'space-between', alignItems: 'baseline', gap: 2, minWidth: 0 }}>
+          <Typography variant="body2" color="text.secondary">{label}</Typography>
+          <Box sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{value}</Box>
+        </Box>
+      ))}
+    </Box>
+  );
+}

@@ -154,12 +154,12 @@ export default function Customer({ profile, id }) {
           <Panel title="Details" action={edit && <Button size="small" onClick={() => setDialog('edit')}>Edit</Button>}>
             <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr 1fr', lg: '1fr' }, px: { xs: 2, md: 3 }, py: 2.5 }}>
               <Field label="Phone">{c.phone}</Field>
-              <Field label="Email">{c.email}</Field>
+              <Field label="Date of birth">{c.dob && shortDate(c.dob)}</Field>
               <Field label="PAN">{c.pan}</Field>
               <Field label="Aadhaar">{c.aadhaar_last4 && `XXXX XXXX ${c.aadhaar_last4}`}</Field>
-              <Field label="Date of birth">{c.dob && shortDate(c.dob)}</Field>
-              {staff && <Field label="Partner">{c.franchisees.name}</Field>}
+              <Box sx={{ gridColumn: '1 / -1' }}><Field label="Email">{c.email}</Field></Box>
               <Box sx={{ gridColumn: '1 / -1' }}><Field label="Address">{c.address}</Field></Box>
+              {staff && <Field label="Partner">{c.franchisees.name}</Field>}
               <Field label="Customer since">{shortDate(c.created_at.slice(0, 10))}</Field>
             </Box>
           </Panel>

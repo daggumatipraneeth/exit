@@ -5,7 +5,7 @@ import ChevronRight from '@mui/icons-material/ChevronRight';
 import { supabase } from './supabase';
 import { money } from '../finance';
 import { ink, line } from '../theme';
-import { today, shift, fmtDate, monthName, sum, Signed, Panel, CapMeter, Figures, rowLink } from './ui';
+import { today, shift, fmtDate, monthName, sum, Signed, Panel, CapMeter, Figures, Pairs, rowLink } from './ui';
 
 const cols = { xs: '1fr auto', md: '1.3fr 0.8fr 1.9fr 0.8fr' };
 const head = { display: { xs: 'none', md: 'grid' }, columnGap: 4, px: 3, py: 1.25, color: 'text.secondary', fontSize: 13, borderBottom: `1px solid ${line}` };
@@ -129,9 +129,10 @@ export default function Dashboard({ profile }) {
                     >
                       <Typography sx={{ fontWeight: 600 }}>{d.franchisees.name}</Typography>
                       <Box sx={{ textAlign: 'right' }}><Signed value={e?.amount ?? 0} /></Box>
-                      <Typography variant="body2" color="text.secondary" sx={{ display: { md: 'none' }, gridColumn: '1 / -1' }}>
-                        Customers {money(d.to_customers)}, partner {money(d.partner_income)}, Exit {money(d.exit_share)}
-                      </Typography>
+                      <Pairs
+                        sx={{ display: { xs: 'grid', md: 'none' }, gridColumn: '1 / -1', mt: 0.75 }}
+                        items={[['To customers', money(d.to_customers)], ['Partner earned', money(d.partner_income)], ['Exit share', money(d.exit_share)]]}
+                      />
                       {['to_customers', 'partner_income', 'exit_share'].map((k) => (
                         <Box key={k} sx={{ display: { xs: 'none', md: 'block' }, textAlign: 'right' }}>{money(d[k])}</Box>
                       ))}

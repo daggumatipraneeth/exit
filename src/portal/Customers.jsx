@@ -99,9 +99,8 @@ export default function Customers({ profile }) {
               >
                 <Box sx={{ gridArea: 'name', minWidth: 0 }}>
                   <Typography sx={{ fontWeight: 600 }} noWrap>{c.full_name}</Typography>
-                  <Typography variant="body2" color="text.secondary" noWrap>
-                    {c.phone}{staff && ` – ${c.franchisees.name}`}
-                  </Typography>
+                  <Typography variant="body2" color="text.secondary" noWrap>{c.phone}</Typography>
+                  {staff && <Typography variant="body2" color="text.secondary" noWrap>{c.franchisees.name}</Typography>}
                 </Box>
                 <Box sx={{ gridArea: 'status', justifySelf: { xs: 'end', md: 'start' } }}><StatusChip status={c.status} /></Box>
                 <Box sx={{ gridArea: 'capital', display: 'flex', justifyContent: { xs: 'space-between', md: 'flex-end' }, fontWeight: 500 }}>

@@ -17,7 +17,7 @@ import { AgreementFrame } from './Sign';
 
 export const docKinds = [
   ['pan', 'PAN card', true],
-  ['aadhaar_front', 'Aadhaar front (masked)', true],
+  ['aadhaar_front', 'Aadhaar front', true],
   ['aadhaar_back', 'Aadhaar back', true],
   ['photo', 'Customer photo', false],
 ];

@@ -60,6 +60,20 @@ npm run db:reset        # wipe and reload test data
 node src/finance.check.js
 ```
 
+## Production
+
+| | |
+|---|---|
+| Supabase organization | Exit Stock Broker (Free plan) |
+| Project | `exit-portal` (`sxtndyhjvrthsvvhzdvi`), Mumbai |
+| Portal | https://exitstocks.com/portal.html |
+| Login settings | Public sign-up off; reset links go to exitstocks.com (`[remotes.production]` in `supabase/config.toml`, applied with `npx supabase config push`) |
+
+**Free plan limits to know:**
+- **Password-reset emails** use Supabase's default email, which works only when the link is opened in the same browser that asked. The built-in sender also allows just a few emails an hour. Adding your own email provider (Authentication → SMTP) lifts both limits and allows the custom template in `supabase/templates/recovery.html`; then remove the template override in `config.toml` and run `config push` again.
+- **No daily database backups** on Free. Set up the nightly backup below, or upgrade to Pro.
+- **The project pauses** after a week without use.
+
 ## Go live
 
 1. **Create a Supabase project** at supabase.com. Choose the Mumbai region, which is closest to your users.

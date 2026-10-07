@@ -419,3 +419,27 @@ enabled = true
 # formatted with uppercase keywords, indent 2, max width 180, trailing commas,
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
+
+# Production project: values that differ from local development. Applied with `npx supabase config push`.
+[remotes.production]
+project_id = "sxtndyhjvrthsvvhzdvi"
+
+[remotes.production.auth]
+site_url = "https://exitstocks.com/portal.html"
+additional_redirect_urls = ["https://exitstocks.com/portal.html", "https://www.exitstocks.com/portal.html"]
+
+# Keep production's safer defaults where local development relaxes them.
+[remotes.production.auth.email]
+enable_confirmations = true
+max_frequency = "1m0s"
+otp_length = 8
+
+[remotes.production.auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+# Free plan without custom SMTP can't change email templates; keep Supabase's default reset email there
+# (reset links then work in the same browser that asked). Remove this once SMTP is set up.
+[remotes.production.auth.email.template.recovery]
+subject = "Reset your password"
+content_path = ""

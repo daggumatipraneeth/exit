@@ -1,7 +1,7 @@
 -- Run: npx supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(26);
+select plan(30);
 
 insert into franchisees (id, name) values ('f5000000-0000-0000-0000-000000000001', 'Consult Partner'), ('f5000000-0000-0000-0000-000000000002', 'Other Partner');
 insert into auth.users (id, email) values
@@ -58,6 +58,20 @@ set local role authenticated;
 set local request.jwt.claims = '{"sub":"a5000000-0000-0000-0000-000000000004"}';
 select throws_ok($$update consultation_requests set name = 'x' where name = 'Ravi T5'$$, '42501', null, 'partner cannot edit the request itself');
 select is((select count(*) from consultation_requests where name = 'Sita T5'), 0::bigint, 'partner does not see unallocated requests');
+reset role;
+
+-- Staff add phone-in requests for their own office; partners can't add any.
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"a5000000-0000-0000-0000-000000000002"}';
+select lives_ok($$insert into consultation_requests (name, phone, interest, office, franchisee_id)
+  values ('Walk-in T5', '9848011111', 'Stock Advisory', 'Guntur', 'f5000000-0000-0000-0000-000000000001')$$, 'Guntur staff add a request and allocate it');
+select throws_ok($$insert into consultation_requests (name, phone, interest, office) values ('Other T5', '9848011112', 'Stock Advisory', 'Hyderabad')$$,
+  '42501', null, 'Guntur staff cannot add a Hyderabad request');
+select throws_ok($$insert into consultation_requests (name, phone, interest, office, status) values ('Odd T5', '9848011113', 'Stock Advisory', 'Guntur', 'closed')$$,
+  '42501', null, 'status cannot be set when adding');
+set local request.jwt.claims = '{"sub":"a5000000-0000-0000-0000-000000000004"}';
+select throws_ok($$insert into consultation_requests (name, phone, interest, office) values ('Self T5', '9848011114', 'Stock Advisory', 'Guntur')$$,
+  '42501', null, 'partners cannot add requests');
 reset role;
 
 select * from finish();

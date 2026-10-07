@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Box, Typography, Alert, Button, Chip, TextField, Link, MenuItem } from '@mui/material';
+import { Box, Typography, Alert, Button, Chip, TextField, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions, Stack } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import PhoneIcon from '@mui/icons-material/PhoneOutlined';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import EmailIcon from '@mui/icons-material/MailOutlined';
 import { supabase, fetchAll } from './supabase';
-import { offices } from '../config';
+import { offices, interests } from '../config';
 import { line } from '../theme';
 import { Panel, PageTitle, FilterChips, ShowMore, PAGE_ROWS, errText } from './ui';
 
@@ -29,30 +31,34 @@ function RequestRow({ r, partners, onChanged }) {
   const [label, color] = statusLook[r.status];
   return (
     <Box component="li" sx={{ px: { xs: 2, md: 3 }, py: 2, '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` } }}>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.5 }}>
-        <Typography sx={{ fontWeight: 600, flex: '1 1 auto' }}>{r.name}</Typography>
-        <Chip size="small" label={label} color={color} variant={r.status === 'new' ? 'filled' : 'outlined'} />
-      </Box>
-      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-        {r.interest} · {r.office} office · {when(r.created_at)}
-      </Typography>
-      {r.message && <Typography sx={{ mt: 1, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{r.message}</Typography>}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1.5 }}>
-        <Button size="small" variant="outlined" startIcon={<PhoneIcon />} href={`tel:${r.phone}`}>{r.phone}</Button>
-        <Button size="small" variant="outlined" startIcon={<WhatsAppIcon />} href={whatsapp(r.phone)} target="_blank" rel="noreferrer">WhatsApp</Button>
-        {r.email && <Button size="small" variant="outlined" href={`mailto:${r.email}`} sx={{ textTransform: 'none' }}>{r.email}</Button>}
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', columnGap: 2, rowGap: 1.5 }}>
+        <Box sx={{ minWidth: 0, flex: '1 1 300px' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography sx={{ fontWeight: 600 }}>{r.name}</Typography>
+            <Chip size="small" label={label} color={color} variant={r.status === 'new' ? 'filled' : 'outlined'} />
+          </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+            {r.interest} · {r.office} office · {when(r.created_at)}
+          </Typography>
+          {r.message && <Typography sx={{ mt: 1, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{r.message}</Typography>}
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 2, mt: 0.75, '& .MuiButton-root': { px: 0, py: 0.5, minWidth: 0 } }}>
+            <Button size="small" startIcon={<PhoneIcon />} href={`tel:${r.phone}`}>{r.phone}</Button>
+            <Button size="small" startIcon={<WhatsAppIcon />} href={whatsapp(r.phone)} target="_blank" rel="noreferrer">WhatsApp</Button>
+            {r.email && <Button size="small" startIcon={<EmailIcon />} href={`mailto:${r.email}`} sx={{ textTransform: 'none' }}>{r.email}</Button>}
+          </Box>
+        </Box>
+        {partners && (
+          <TextField
+            select size="small" label="Allocated to" value={r.franchisee_id ?? ''} sx={{ width: { xs: '100%', sm: 240 } }}
+            slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
+            onChange={(e) => update({ franchisee_id: e.target.value || null })}
+          >
+            <MenuItem value="">Not allocated</MenuItem>
+            {partners.filter((p) => p.active || p.id === r.franchisee_id).map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
+          </TextField>
+        )}
       </Box>
       {error && <Alert severity="error" sx={{ mt: 1.5 }}>{error}</Alert>}
-      {partners && (
-        <TextField
-          select size="small" label="Allocated to" value={r.franchisee_id ?? ''} sx={{ mt: 1.5, minWidth: 240 }}
-          slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
-          onChange={(e) => update({ franchisee_id: e.target.value || null })}
-        >
-          <MenuItem value="">Not allocated</MenuItem>
-          {partners.filter((p) => p.active || p.id === r.franchisee_id).map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
-        </TextField>
-      )}
       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 1, mt: 1.5 }}>
         <TextField
           size="small" placeholder="Notes, e.g. called, meeting on Monday" value={notes} onChange={(e) => setNotes(e.target.value)}
@@ -67,10 +73,60 @@ function RequestRow({ r, partners, onChanged }) {
   );
 }
 
+// A request that came in by phone or at the office, entered by staff and optionally allocated straight away.
+function AddRequestDialog({ partners, office, onClose, onSaved }) {
+  const [f, setF] = useState({ name: '', phone: '', email: '', interest: interests[0], office: office ?? offices[0].city, message: '', franchisee_id: '' });
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  const phone = f.phone.replace(/[^0-9+]/g, '');
+  const valid = f.name.trim().length >= 2 && /^\+?[0-9]{10,13}$/.test(phone) && (!f.email || /^\S+@\S+\.\S+$/.test(f.email));
+
+  async function save() {
+    setBusy(true);
+    const { error } = await supabase.from('consultation_requests').insert({
+      ...f, name: f.name.trim(), phone, email: f.email.trim() || null, message: f.message.trim() || null, franchisee_id: f.franchisee_id || null,
+    });
+    setBusy(false);
+    if (error) return setError(errText(error));
+    onSaved();
+  }
+
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>Add request</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ pt: 1 }}>
+          {error && <Alert severity="error">{error}</Alert>}
+          <TextField label="Name" required autoFocus value={f.name} onChange={set('name')} />
+          <TextField label="Phone" required type="tel" value={f.phone} onChange={set('phone')} helperText="10-digit mobile, or with +91" />
+          <TextField label="Email" type="email" value={f.email} onChange={set('email')} />
+          <TextField select label="Interested in" value={f.interest} onChange={set('interest')}>
+            {interests.map((i) => <MenuItem key={i} value={i}>{i}</MenuItem>)}
+          </TextField>
+          <TextField select label="Office" value={f.office} onChange={set('office')} disabled={Boolean(office)}>
+            {offices.map((o) => <MenuItem key={o.city} value={o.city}>{o.city}</MenuItem>)}
+          </TextField>
+          <TextField select label="Allocated to" value={f.franchisee_id} onChange={set('franchisee_id')} slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}>
+            <MenuItem value="">Not allocated</MenuItem>
+            {partners.filter((p) => p.active).map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
+          </TextField>
+          <TextField label="Notes from the call (optional)" multiline minRows={2} value={f.message} onChange={set('message')} slotProps={{ htmlInput: { maxLength: 2000 } }} />
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="contained" disabled={busy || !valid} onClick={save}>Add request</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 export default function Requests({ profile }) {
   const isStaff = profile.role !== 'franchisee';
   const allOffices = isStaff && (profile.role === 'admin' || !profile.office);
   const [partners, setPartners] = useState(null);
+  const [adding, setAdding] = useState(false);
   const [rows, setRows] = useState(null);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('new');
@@ -93,7 +149,9 @@ export default function Requests({ profile }) {
 
   return (
     <>
-      <PageTitle>Requests</PageTitle>
+      <PageTitle action={isStaff && <Button variant="contained" startIcon={<AddIcon />} onClick={() => setAdding(true)}>Add request</Button>}>
+        Requests
+      </PageTitle>
       <Typography color="text.secondary" sx={{ mb: 2.5, maxWidth: '65ch' }}>
         {isStaff
           ? `Call-back requests from the website's contact form${allOffices ? '' : ` for the ${profile.office} office`}. Allocate one to a partner and they'll see it too.`
@@ -119,9 +177,12 @@ export default function Requests({ profile }) {
         </Box>
         <ShowMore shown={limit} total={list.length} onMore={() => setLimit(limit + PAGE_ROWS)} />
       </Panel>
-      <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-        <Link href="#/today" underline="hover">Back to today</Link>
-      </Typography>
+      {adding && (
+        <AddRequestDialog
+          partners={partners} office={allOffices ? null : profile.office}
+          onClose={() => setAdding(false)} onSaved={() => { setAdding(false); setStatus('new'); load(); }}
+        />
+      )}
     </>
   );
 }

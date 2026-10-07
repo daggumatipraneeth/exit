@@ -1,5 +1,6 @@
 // Small pieces shared by portal pages.
-import { Box, Typography, Chip, Button } from '@mui/material';
+import { Box, Typography, Chip, Button, Link } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { money } from '../finance';
 import { accent, line, loss, navy } from '../theme';
 
@@ -138,6 +139,15 @@ export function PageTitle({ children, action }) {
 export const errText = (e) => e?.message ?? String(e);
 
 // Centered column for form pages, so they don't hang off the left on wide screens.
+// "← All customers" style link above a page title.
+export function BackLink({ href, children }) {
+  return (
+    <Link href={href} underline="hover" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minHeight: 40, mb: 1, fontWeight: 500 }}>
+      <ArrowBackIcon fontSize="small" /> {children}
+    </Link>
+  );
+}
+
 export function FormPage({ children, width = 880 }) {
   return <Box sx={{ maxWidth: width, mx: 'auto' }}>{children}</Box>;
 }

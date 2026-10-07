@@ -5,10 +5,9 @@ import MailIcon from '@mui/icons-material/MailOutlined';
 import PhoneIcon from '@mui/icons-material/PhoneOutlined';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import Reveal from '../components/Reveal';
-import { company, offices } from '../config';
+import { company, offices, interests } from '../config';
 import { accentBright, accentSoft, ink, navy } from '../theme';
 
-const interests = ['Stock Advisory', 'Mutual Funds / SIP', 'Portfolio Management', 'Wealth Management', 'Retirement Planning', 'Tax Planning', 'Insurance', 'Demat / IPO', 'Something else'];
 const empty = { name: '', phone: '', email: '', interest: interests[1], city: offices[0].city, message: '', website: '' };
 
 // Saves the request for the chosen office (portal → Requests). A plain fetch keeps the landing page free of the

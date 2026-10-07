@@ -1,14 +1,22 @@
 import { useEffect, useState } from 'react';
 import {
   Box, Typography, Button, Alert, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Switch,
-  FormControlLabel, MenuItem, InputAdornment, Chip, Stack,
+  FormControlLabel, MenuItem, InputAdornment, Chip, Stack, IconButton, Tooltip,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/EditOutlined';
+import AddLoginIcon from '@mui/icons-material/PersonAddAlt1Outlined';
+import DeleteIcon from '@mui/icons-material/DeleteOutlined';
+import KeyIcon from '@mui/icons-material/KeyOutlined';
+import RemoveLoginIcon from '@mui/icons-material/PersonRemoveOutlined';
 import { supabase, fetchAll } from './supabase';
 import { line } from '../theme';
 import { offices } from '../config';
-import { Panel, PageTitle, Field } from './ui';
+import { Panel, PageTitle } from './ui';
 
+const COLS = { xs: 'minmax(0, 1fr) auto', md: 'minmax(0, 1fr) 120px 90px 100px 112px' };
+// Phones: name and actions on one line, details full width below. Desktop: figures in columns beside the name.
+const AREAS = { xs: '"name actions" "contact contact" "stats stats"', md: '"name charge split cust actions" "contact . . . ."' };
 const blankPartner = { name: '', phone: '', email: '', hidden_charge_pct: '', profit_share_pct: 70, active: true };
 const pctOk = (v) => v !== '' && Number(v) >= 0 && Number(v) <= 100;
 
@@ -162,17 +170,43 @@ function ConfirmDialog({ title, children, action, run, onClose, onDone }) {
   );
 }
 
-// One partner login, shown under its partner.
-function LoginLine({ p, onReset, onRemove }) {
+// Secondary details separated by dots; on narrow screens they wrap between items, never mid-item.
+function Inline({ items, empty, sx }) {
   return (
-    <Box component="li" sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 2, rowGap: 1, pt: 1.5 }}>
-      <Box sx={{ minWidth: 0, flex: '1 1 220px' }}>
-        <Typography variant="body2" sx={{ fontWeight: 500 }}>{p.full_name}</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>{p.email}</Typography>
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 1, color: 'text.secondary', fontSize: 14, ...sx }}>
+      {items.length === 0 && empty}
+      {items.map((t, i) => (
+        <Box component="span" key={t} sx={{ overflowWrap: 'anywhere', '&::after': i < items.length - 1 ? { content: '"·"', ml: 1 } : undefined }}>{t}</Box>
+      ))}
+    </Box>
+  );
+}
+
+// Small icon button; the tooltip doubles as its accessible name.
+function Act({ label, icon: Icon, onClick, danger }) {
+  return (
+    <Tooltip title={label}>
+      <IconButton size="small" aria-label={label} onClick={onClick} sx={{ color: danger ? 'error.main' : 'text.secondary' }}>
+        <Icon fontSize="small" />
+      </IconButton>
+    </Tooltip>
+  );
+}
+
+// One login: name and email on a line, actions at the end. `extra` sits before the actions (staff office).
+function LoginLine({ p, you, extra, onReset, onRemove, sx }) {
+  return (
+    <Box component="li" sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1.5, minHeight: 44, ...sx }}>
+      <Box sx={{ minWidth: 0, flex: '1 1 200px', display: 'flex', flexWrap: 'wrap', columnGap: 1.25, alignItems: 'baseline' }}>
+        <Typography variant="body2" sx={{ fontWeight: 500 }} noWrap>{p.full_name}{you && ' (you)'}</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 0, overflowWrap: 'anywhere' }}>{p.email}</Typography>
       </Box>
-      <Box sx={{ display: 'flex', gap: 1 }}>
-        <Button size="small" variant="outlined" onClick={() => onReset(p)}>Reset password</Button>
-        <Button size="small" color="error" onClick={() => onRemove(p)}>Remove login</Button>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, ml: 'auto' }}>
+        {extra}
+        <Box sx={{ display: 'flex' }}>
+        <Act label="Reset password" icon={KeyIcon} onClick={() => onReset(p)} />
+          {!you && <Act label="Remove login" icon={RemoveLoginIcon} onClick={() => onRemove(p)} danger />}
+        </Box>
       </Box>
     </Box>
   );
@@ -269,9 +303,7 @@ export default function Partners({ email: myEmail }) {
 
   if (error) return <Alert severity="error">{error}</Alert>;
   if (!partners) return null;
-  const partnerName = Object.fromEntries(partners.map((f) => [f.id, f.name]));
   const staffLogins = people.filter((p) => p.role !== 'franchisee');
-  const loginLabel = (p) => (p.role === 'franchisee' ? partnerName[p.franchisee_id] : p.role === 'admin' ? 'Exit admin' : 'Exit staff');
 
   return (
     <>
@@ -281,41 +313,39 @@ export default function Partners({ email: myEmail }) {
 
       <Panel title={`${partners.length} partners`}>
         {partners.length === 0 && <Typography color="text.secondary" sx={{ p: 4, textAlign: 'center' }}>Add your first partner to start onboarding customers.</Typography>}
+        {partners.length > 0 && (
+          <Box sx={{ display: { xs: 'none', md: 'grid' }, gridTemplateColumns: COLS, columnGap: 2, px: 3, py: 1.25, borderBottom: `1px solid ${line}` }}>
+            {['Partner', 'Hidden charge', 'Split', 'Customers'].map((h) => (
+              <Typography key={h} variant="body2" color="text.secondary" sx={{ textAlign: h === 'Partner' ? 'left' : 'right' }}>{h}</Typography>
+            ))}
+          </Box>
+        )}
         <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
           {partners.map((f) => {
             const logins = people.filter((p) => p.franchisee_id === f.id);
+            const charge = f.hidden_charge_pct === '' ? 'Not set' : `${Number(f.hidden_charge_pct)}%`;
+            const split = `${Number(f.profit_share_pct)} / ${100 - Number(f.profit_share_pct)}`;
+            const customers = counts[f.id] ?? 0;
             return (
-              <Box
-                component="li"
-                key={f.id}
-                sx={{
-                  display: 'grid', columnGap: 4, rowGap: 2, alignItems: 'center', px: { xs: 2, md: 3 }, py: 2.25,
-                  gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1.2fr) minmax(0, 2.6fr) auto' },
-                  '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` },
-                }}
-              >
-                <Box sx={{ minWidth: 0 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'space-between', md: 'flex-start' }, gap: 1.5 }}>
-                    <Typography sx={{ fontWeight: 600 }}>{f.name}</Typography>
-                    <Chip size="small" label={f.active ? 'Active' : 'Inactive'} color={f.active ? 'success' : 'default'} variant={f.active ? 'filled' : 'outlined'} />
+              <Box component="li" key={f.id} sx={{ px: { xs: 2, md: 3 }, py: 1.5, '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` } }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: COLS, gridTemplateAreas: AREAS, columnGap: 2, alignItems: 'center' }}>
+                  <Box sx={{ gridArea: 'name', minWidth: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>{f.name}</Typography>
+                    {!f.active && <Chip size="small" variant="outlined" label="Inactive" />}
                   </Box>
-                  {[f.phone, f.email].filter(Boolean).map((c) => (
-                    <Typography key={c} variant="body2" color="text.secondary" noWrap>{c}</Typography>
+                  <Inline sx={{ gridArea: 'contact' }} items={[f.phone, f.email].filter(Boolean)} empty="No contact details" />
+                  <Inline sx={{ gridArea: 'stats', display: { xs: 'flex', md: 'none' } }} items={[`${charge} charge`, `${split} split`, `${customers} customers`]} />
+                  {[['charge', charge], ['split', split], ['cust', String(customers)]].map(([area, v]) => (
+                    <Typography key={area} sx={{ gridArea: area, display: { xs: 'none', md: 'block' }, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{v}</Typography>
                   ))}
-                </Box>
-                <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(4, minmax(0, 1fr))' } }}>
-                  <Field label="Hidden charge">{f.hidden_charge_pct === '' ? 'Not set' : `${Number(f.hidden_charge_pct)}%`}</Field>
-                  <Field label="Profit split">{`${Number(f.profit_share_pct)} / ${100 - Number(f.profit_share_pct)}`}</Field>
-                  <Field label="Active customers">{String(counts[f.id] ?? 0)}</Field>
-                  <Field label="Logins">{String(logins.length)}</Field>
-                </Box>
-                <Box sx={{ display: 'flex', gap: 1, justifyContent: { md: 'flex-end' } }}>
-                  <Button size="small" variant="outlined" onClick={() => setEditing(f)}>Edit</Button>
-                  <Button size="small" variant="outlined" onClick={() => setLoginFor(f)}>Add login</Button>
-                  {!counts[f.id] && <Button size="small" color="error" onClick={() => setDeleting(f)}>Delete</Button>}
+                  <Box sx={{ gridArea: 'actions', display: 'flex', justifyContent: 'flex-end' }}>
+                    <Act label="Edit partner" icon={EditIcon} onClick={() => setEditing(f)} />
+                    <Act label="Add login" icon={AddLoginIcon} onClick={() => setLoginFor(f)} />
+                    {!customers && <Act label="Delete partner" icon={DeleteIcon} onClick={() => setDeleting(f)} danger />}
+                  </Box>
                 </Box>
                 {logins.length > 0 && (
-                  <Box component="ul" sx={{ gridColumn: '1 / -1', listStyle: 'none', m: 0, p: 0, borderTop: `1px dashed ${line}` }}>
+                  <Box component="ul" sx={{ listStyle: 'none', m: 0, mt: 1, p: 0, pl: 1.5, borderLeft: `2px solid ${line}` }}>
                     {logins.map((p) => <LoginLine key={p.id} p={p} onReset={setPasswordFor} onRemove={setRemoving} />)}
                   </Box>
                 )}
@@ -332,33 +362,21 @@ export default function Partners({ email: myEmail }) {
       >
         <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
           {staffLogins.map((p) => (
-            <Box
-              component="li"
-              key={p.id}
-              sx={{
-                display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', columnGap: 2, rowGap: 1,
-                px: { xs: 2, md: 3 }, py: 1.5, '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` },
-              }}
-            >
-              <Box sx={{ minWidth: 0, flex: '1 1 220px' }}>
-                <Typography sx={{ fontWeight: 500 }}>{p.full_name}{p.email === myEmail && ' (you)'}</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>{p.email}</Typography>
-              </Box>
-              <Chip size="small" variant="outlined" label={loginLabel(p)} sx={{ maxWidth: 220 }} />
-              {p.role === 'employee' && (
+            <LoginLine
+              key={p.id} p={p} you={p.email === myEmail} onReset={setPasswordFor} onRemove={setRemoving}
+              sx={{ px: { xs: 2, md: 3 }, py: 1, '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` } }}
+              extra={p.role === 'admin' ? <Typography variant="body2" color="text.secondary">Admin</Typography> : (
                 <OfficeSelect
-                  size="small" value={p.office} helperText={null} sx={{ width: 150 }}
+                  size="small" variant="standard" label={null} helperText={null} sx={{ width: 130 }}
+                  slotProps={{ select: { displayEmpty: true, inputProps: { 'aria-label': `${p.full_name}'s office` } } }}
+                  value={p.office}
                   onChange={async (e) => {
                     const { error } = await supabase.from('profiles').update({ office: e.target.value || null }).eq('id', p.id);
                     if (error) setError(error.message); else load();
                   }}
                 />
               )}
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button size="small" variant="outlined" onClick={() => setPasswordFor(p)}>Reset password</Button>
-                {p.email !== myEmail && <Button size="small" color="error" onClick={() => setRemoving(p)}>Remove login</Button>}
-              </Box>
-            </Box>
+            />
           ))}
         </Box>
       </Panel>

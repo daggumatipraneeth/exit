@@ -63,7 +63,8 @@ Deno.serve(async (req) => {
         ({ data, error } = await admin.auth.admin.updateUserById(stray, { password, email_confirm: true }));
       }
       if (error) return json({ error: error.message }, 400);
-      const { error: profileError } = await admin.from('profiles').insert({
+      // As the caller, so the activity log shows which admin added it.
+      const { error: profileError } = await caller.from('profiles').insert({
         id: data.user.id, email, full_name: full_name.trim(), role: newRole, franchisee_id: franchisee_id ?? null,
         office: newRole === 'employee' ? office || null : null, // the database checks it's a real office
       });

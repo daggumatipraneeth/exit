@@ -36,3 +36,6 @@ export const stats = [
   { value: 250, prefix: '₹', suffix: ' Cr+', label: 'Assets under advice' }, // STUB
   { value: 2, suffix: '', label: 'Offices across AP & Telangana' },
 ];
+
+// What visitors can ask about on the contact form (also used when staff add a request).
+export const interests = ['Stock Advisory', 'Mutual Funds / SIP', 'Portfolio Management', 'Wealth Management', 'Retirement Planning', 'Tax Planning', 'Insurance', 'Demat / IPO', 'Something else'];

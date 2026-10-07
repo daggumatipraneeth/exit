@@ -64,7 +64,7 @@ export default function Account({ profile, email }) {
               onChange={(e) => setPw({ ...pw, again: e.target.value })}
               error={!!mismatch} helperText={mismatch ? "Passwords don't match." : ' '}
             />
-            <Button type="submit" variant="contained" disabled={busy || pw.next.length < 8 || pw.next !== pw.again} sx={{ justifySelf: 'start' }}>
+            <Button type="submit" variant="contained" disabled={busy || pw.next.length < 8 || pw.next !== pw.again} sx={{ justifySelf: { xs: 'stretch', sm: 'end' } }}>
               Change password
             </Button>
           </Box>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Box, Typography, Button, Alert, TextField, IconButton, ToggleButtonGroup, ToggleButton, InputAdornment } from '@mui/material';
+import { Box, Typography, Button, Alert, TextField, IconButton, InputAdornment } from '@mui/material';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
 import ChevronRight from '@mui/icons-material/ChevronRight';
 import UploadIcon from '@mui/icons-material/UploadFile';
@@ -8,7 +8,7 @@ import Papa from 'papaparse';
 import { supabase } from './supabase';
 import { money } from '../finance';
 import { ink, line, loss } from '../theme';
-import { today, shift, fmtDate, Panel, PageTitle, Signed, errText } from './ui';
+import { today, shift, fmtDate, Panel, PageTitle, Signed, FilterChips, errText } from './ui';
 
 const csvColumns = ['date', 'partner', 'amount'];
 const cols = { xs: '1fr', md: '1.3fr 1fr 1.6fr' };
@@ -270,26 +270,20 @@ export default function DailyEntry() {
 
   return (
     <>
-      <PageTitle
-        action={
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <IconButton aria-label="Previous day" onClick={() => setDate(shift(date, -1))}><ChevronLeft /></IconButton>
-            <Box
-              component="input" type="date" aria-label="Trading day" value={date} max={today()}
-              onChange={(e) => e.target.value && setDate(e.target.value)}
-              sx={{ font: 'inherit', fontWeight: 600, color: ink, border: `1px solid ${line}`, borderRadius: 1.5, bgcolor: '#fff', px: 1.5, py: 0.75, minHeight: 40 }}
-            />
-            <IconButton aria-label="Next day" disabled={date >= today()} onClick={() => setDate(shift(date, 1))}><ChevronRight /></IconButton>
-          </Box>
-        }
-      >
-        Daily entry
-      </PageTitle>
+      <PageTitle>Daily entry</PageTitle>
 
-      <ToggleButtonGroup exclusive size="small" value={mode} onChange={(_, v) => v && setMode(v)} sx={{ mb: 2.5, bgcolor: '#fff' }} aria-label="How to enter results">
-        <ToggleButton value="hand">Enter by hand</ToggleButton>
-        <ToggleButton value="csv">Upload CSV</ToggleButton>
-      </ToggleButtonGroup>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { sm: 'center' }, justifyContent: 'space-between', gap: 1.5, mb: 2.5 }}>
+        <FilterChips label="How to enter results" value={mode} onChange={setMode} options={[['hand', 'Enter by hand'], ['csv', 'Upload CSV']]} />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, alignSelf: { xs: 'flex-start', sm: 'auto' }, ml: { xs: -1, sm: 0 } }}>
+          <IconButton aria-label="Previous day" onClick={() => setDate(shift(date, -1))}><ChevronLeft /></IconButton>
+          <Box
+            component="input" type="date" aria-label="Trading day" value={date} max={today()}
+            onChange={(e) => e.target.value && setDate(e.target.value)}
+            sx={{ font: 'inherit', fontWeight: 600, color: ink, border: `1px solid ${line}`, borderRadius: 1.5, bgcolor: '#fff', px: 1.5, height: 40 }}
+          />
+          <IconButton aria-label="Next day" disabled={date >= today()} onClick={() => setDate(shift(date, 1))}><ChevronRight /></IconButton>
+        </Box>
+      </Box>
 
       {isClosed && <Alert severity="info" sx={{ mb: 2 }}>{fmtDate(date, { month: 'long', year: 'numeric' })} is closed. Reopen it from Months to make changes.</Alert>}
 

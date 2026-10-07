@@ -28,7 +28,12 @@ export function Panel({ title, action, children, sx }) {
   return (
     <Box component="section" sx={{ bgcolor: '#fff', border: `1px solid ${line}`, borderRadius: 2, ...sx }}>
       {title && (
-        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.5, px: { xs: 2, md: 3 }, py: 1.75, borderBottom: `1px solid ${line}` }}>
+        <Box
+          sx={{
+            display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.5, px: { xs: 2, md: 3 }, py: 1.75, borderBottom: `1px solid ${line}`,
+            '& > .MuiButton-text': { px: 1.5, mr: -1.5 }, // text sits on the panel's right edge, like the content below
+          }}
+        >
           <Typography variant="h6" component="h2" sx={{ fontSize: '1.05rem', flex: 1, minWidth: 'fit-content' }}>{title}</Typography>
           {action}
         </Box>
@@ -135,4 +140,38 @@ export const errText = (e) => e?.message ?? String(e);
 // Centered column for form pages, so they don't hang off the left on wide screens.
 export function FormPage({ children, width = 880 }) {
   return <Box sx={{ maxWidth: width, mx: 'auto' }}>{children}</Box>;
+}
+
+// Pill filters: selected is filled navy, others outlined on the page background.
+// Phones: one row that scrolls sideways instead of wrapping.
+export function FilterChips({ label, value, onChange, options }) {
+  return (
+    <Box
+      role="group"
+      aria-label={label}
+      sx={{
+        display: 'flex', gap: 1, flexWrap: { xs: 'nowrap', sm: 'wrap' }, overflowX: { xs: 'auto', sm: 'visible' },
+        mx: { xs: -2, sm: 0 }, px: { xs: 2, sm: 0 }, scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' },
+      }}
+    >
+      {options.map(([v, text]) => {
+        const on = v === value;
+        return (
+          <Chip
+            key={v}
+            label={text}
+            clickable
+            aria-pressed={on}
+            onClick={() => onChange(v)}
+            color={on ? 'primary' : 'default'}
+            variant={on ? 'filled' : 'outlined'}
+            sx={{
+              height: 40, borderRadius: 999, px: 0.75, flexShrink: 0, fontSize: 14, fontWeight: on ? 600 : 500,
+              ...(!on && { borderColor: line, color: 'text.primary', bgcolor: 'transparent', '&:hover': { bgcolor: 'rgba(18,40,74,.06)' } }),
+            }}
+          />
+        );
+      })}
+    </Box>
+  );
 }

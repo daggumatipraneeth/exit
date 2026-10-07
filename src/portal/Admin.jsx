@@ -1,7 +1,7 @@
 // Admin-only pages: month close, agreement template, activity log.
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Box, Typography, Button, Alert, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Chip, MenuItem, Stack,
+  Box, Typography, Button, Alert, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Chip, MenuItem, Stack, InputAdornment,
 } from '@mui/material';
 import { supabase } from './supabase';
 import { money } from '../finance';
@@ -240,7 +240,11 @@ export function Activity() {
     <>
       <PageTitle
         action={
-          <TextField select size="small" label="Show" value={table} onChange={(e) => setTable(e.target.value)} sx={{ minWidth: 200, bgcolor: '#fff' }}>
+          <TextField
+            select size="small" value={table} onChange={(e) => setTable(e.target.value)}
+            sx={{ minWidth: 220, bgcolor: '#fff', '& .MuiOutlinedInput-root': { height: 40 } }}
+            slotProps={{ htmlInput: { 'aria-label': 'Show' }, input: { startAdornment: <InputAdornment position="start">Show</InputAdornment> } }}
+          >
             <MenuItem value="all">Everything</MenuItem>
             {Object.entries(tableNames).map(([k, v]) => <MenuItem key={k} value={k}>{v}</MenuItem>)}
           </TextField>

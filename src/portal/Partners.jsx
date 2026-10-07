@@ -204,7 +204,7 @@ export default function Partners() {
       >
         <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
           {staff.map((p) => (
-            <Box component="li" key={p.id} sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 1, px: { xs: 2, md: 3 }, py: 1.5, '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` } }}>
+            <Box component="li" key={p.id} sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 1, px: { xs: 2, md: 3 }, py: 1.5, '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` } }}>
               <Box sx={{ minWidth: 0 }}>
                 <Typography sx={{ fontWeight: 500 }}>{p.full_name}</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>{p.email}</Typography>

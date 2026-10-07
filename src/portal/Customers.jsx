@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Box, Typography, TextField, InputAdornment, Alert, ToggleButtonGroup, ToggleButton, Button } from '@mui/material';
+import { Box, Typography, TextField, InputAdornment, Alert, Button } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import { supabase } from './supabase';
 import { money } from '../finance';
 import { line } from '../theme';
-import { today, monthName, Panel, PageTitle, CapMeter, StatusChip, rowLink } from './ui';
+import { today, monthName, Panel, PageTitle, CapMeter, StatusChip, FilterChips, rowLink } from './ui';
 
 const cols = { xs: '1fr auto', md: '1.4fr 0.8fr 0.9fr 1.6fr' };
 const onboarding = ['draft', 'awaiting_signature', 'pending_approval'];
@@ -52,22 +52,25 @@ export default function Customers({ profile }) {
         Customers
       </PageTitle>
 
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mb: 2.5 }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: { md: 'center' }, gap: 1.5, mb: 2.5 }}>
         <TextField
           size="small"
           placeholder="Search by name or phone"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          sx={{ flex: '1 1 240px', bgcolor: '#fff' }}
+          sx={{ flex: { md: '1 1 auto' }, bgcolor: '#fff', '& .MuiOutlinedInput-root': { height: 40 } }}
           slotProps={{ htmlInput: { 'aria-label': 'Search customers' }, input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
         />
-        <ToggleButtonGroup size="small" exclusive value={show} onChange={(_, v) => v && setShow(v)} aria-label="Filter by status" sx={{ bgcolor: '#fff', flexWrap: 'wrap' }}>
-          <ToggleButton value="all">All</ToggleButton>
-          <ToggleButton value="active">Active</ToggleButton>
-          <ToggleButton value="onboarding">Onboarding</ToggleButton>
-          {staff && <ToggleButton value="pending_approval">To approve ({customers.filter((c) => c.status === 'pending_approval').length})</ToggleButton>}
-          <ToggleButton value="rejected">Rejected</ToggleButton>
-        </ToggleButtonGroup>
+        <FilterChips
+          label="Filter by status"
+          value={show}
+          onChange={setShow}
+          options={[
+            ['all', 'All'], ['active', 'Active'], ['onboarding', 'Onboarding'],
+            ...(staff ? [['pending_approval', `To approve (${customers.filter((c) => c.status === 'pending_approval').length})`]] : []),
+            ['rejected', 'Rejected'],
+          ]}
+        />
       </Box>
 
       <Panel title={`${list.length} of ${customers.length} customers`}>

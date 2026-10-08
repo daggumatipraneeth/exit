@@ -3,8 +3,8 @@ export const company = {
   name: 'Exit Stock Broker Private Limited',
   short: 'Exit',
   tagline: 'Build wealth with clarity. Exit with confidence.',
-  phone: '+91 90000 00000', // STUB
-  whatsapp: '919000000000', // STUB — digits only, with country code
+  phone: '+91 99999 99999',
+  whatsapp: '919999999999', // digits only, with country code
   email: 'contact@exitstocks.com',
   sebiReg: 'INZ000000000', // STUB — SEBI registration no.
   amfiArn: 'ARN-000000', // STUB — AMFI ARN

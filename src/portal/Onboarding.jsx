@@ -539,11 +539,13 @@ export function OnboardingSteps({ customer: c, profile, capital, agreements, onE
             ) : (
               <>
                 <Typography variant="body2" color="text.secondary">
-                  {lastSigned
+                  {c.status === 'rejected'
+                    ? 'Exit has to reopen the application before the customer can sign again.'
+                    : lastSigned
                     ? `Signed earlier on ${shortDate(lastSigned.signed_at)}, before the application was reopened. Create a new link so the customer signs again.`
                     : 'When the steps above are done, create a link for the customer to read and sign on their phone.'}
                 </Typography>
-                {edit && <Button size="small" variant="contained" onClick={createLink} disabled={!c.pan || !bankDone || !capital.length} sx={{ mt: 1 }}>Create signing link</Button>}
+                {edit && c.status !== 'rejected' && <Button size="small" variant="contained" onClick={createLink} disabled={!c.pan || !bankDone || !capital.length} sx={{ mt: 1 }}>Create signing link</Button>}
               </>
             )}
           </Step>

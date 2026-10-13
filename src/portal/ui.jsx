@@ -8,18 +8,24 @@ import ChevronRight from '@mui/icons-material/ChevronRight';
 import { money } from '../finance';
 import { accent, ink, line, loss, navy } from '../theme';
 
-// Dates travel as 'YYYY-MM-DD' strings in local time.
+// Dates travel as 'YYYY-MM-DD' strings. Exit works in India time, whatever time zone a phone or laptop is set to:
+// "today" is India's date, timestamps show in IST, and a time typed in is read as IST.
+export const IST = 'Asia/Kolkata';
 export const iso = (d) => d.toLocaleDateString('en-CA');
-export const today = () => iso(new Date());
+export const today = () => new Date().toLocaleDateString('en-CA', { timeZone: IST });
+// <input type="datetime-local"> value for now in IST ('YYYY-MM-DDTHH:mm'), and that value back as an IST instant.
+export const istNowInput = () => new Date().toLocaleString('sv-SE', { timeZone: IST }).slice(0, 16).replace(' ', 'T');
+export const istInputToISO = (v) => `${v}:00+05:30`;
 // Indian mobiles in one style, '+91 98765 43210', however they were typed; anything else as typed.
 export const phoneText = (v) => {
   const d = (v ?? '').replace(/\D/g, '').replace(/^(91|0)(?=\d{10}$)/, '');
   return /^\d{10}$/.test(d) ? `+91 ${d.slice(0, 5)} ${d.slice(5)}` : v;
 };
 export const shift = (date, days) => { const d = new Date(`${date}T00:00`); d.setDate(d.getDate() + days); return iso(d); };
-// Takes a 'YYYY-MM-DD' day or a full timestamp (shown on its local day, not its UTC one).
+// Takes a 'YYYY-MM-DD' day or a full timestamp (shown on its IST day, not its UTC one).
 export const fmtDate = (date, opts = { weekday: 'long', day: 'numeric', month: 'long' }) =>
-  new Date(date.length > 10 ? date : `${date}T00:00`).toLocaleDateString('en-IN', opts);
+  date.length > 10 ? new Date(date).toLocaleDateString('en-IN', { ...opts, timeZone: IST })
+    : new Date(`${date}T00:00`).toLocaleDateString('en-IN', opts);
 export const shortDate = (date) => fmtDate(date, { day: 'numeric', month: 'short', year: 'numeric' });
 export const monthName = (date) => fmtDate(date, { month: 'long', year: 'numeric' });
 export const sum = (rows, key) => rows.reduce((t, r) => t + Number(r[key]), 0);

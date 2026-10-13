@@ -20,6 +20,9 @@ declare
   v_carried numeric; v_profit numeric; v_out numeric; v_avail numeric; v_w numeric; v_full boolean;
 begin
   if not (is_admin() or auth.uid() is null) then raise exception 'Only an admin can close a month'; end if;
+  -- Join the queue every payout change uses (saves, deposits, cap changes, emergency exits all take it first), so
+  -- nothing recomputing this month can commit after the close has read its figures (found by the stress test).
+  perform pg_advisory_xact_lock(hashtextextended('payouts', 0));
   if today_ist() < nxt - 1 then raise exception 'A month can be closed from its last day'; end if;
   if exists (select 1 from closed_months where month = m) then raise exception '% is already closed', to_char(m, 'Mon YYYY'); end if;
   if exists (select 1 from daily_entries e where e.trade_date < m
@@ -77,6 +80,7 @@ declare
   m date := date_trunc('month', p_month)::date;
 begin
   if not is_admin() then raise exception 'Only an admin can reopen a month'; end if;
+  perform pg_advisory_xact_lock(hashtextextended('payouts', 0)); -- same queue as close_month
   if not exists (select 1 from closed_months where month = m) then raise exception '% is not closed', to_char(m, 'Mon YYYY'); end if;
   if exists (select 1 from closed_months where month > m) then raise exception 'Reopen later months first'; end if;
   if exists (select 1 from settlements where month = m and paid_at is not null) then

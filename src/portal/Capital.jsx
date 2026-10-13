@@ -8,12 +8,10 @@ import Papa from 'papaparse';
 import { supabase } from './supabase';
 import { money } from '../finance';
 import { line } from '../theme';
-import { today, shortDate, Panel, Field, Pill, Pairs, errText } from './ui';
+import { today, shortDate, Panel, Field, Pill, Pairs, errText, IST, istNowInput, istInputToISO } from './ui';
 
 const kindLabel = { deposit: 'Deposit', withdrawal: 'Withdrawal', exit: 'Paid back', correction: 'Correction' };
-const when = (ts) => new Date(ts).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
-// <input type="datetime-local"> value for now, in local (IST) time.
-const nowLocal = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); };
+const when = (ts) => new Date(ts).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: IST });
 
 export const capitalOn = (moves, day) => moves.filter((m) => m.effective_from <= day).reduce((t, m) => t + Number(m.amount), 0);
 
@@ -91,12 +89,12 @@ export function CapitalPanel({ customer: c, moves, canAdd, isAdmin, onChanged })
 // Amount added (not a new total) and when it reached Exit. The server decides when it counts.
 export function AddMoneyDialog({ customer: c, onClose, onSaved }) {
   const [amount, setAmount] = useState('');
-  const [received, setReceived] = useState(nowLocal());
+  const [received, setReceived] = useState(istNowInput());
   const [preview, setPreview] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const n = Number(amount);
-  const receivedAt = received && new Date(received).toISOString();
+  const receivedAt = received && istInputToISO(received); // IST whatever the device's time zone
 
   useEffect(() => {
     if (!(n > 0) || !receivedAt) return setPreview(null);
@@ -124,8 +122,8 @@ export function AddMoneyDialog({ customer: c, onClose, onSaved }) {
           slotProps={{ htmlInput: { min: 1, inputMode: 'decimal' }, input: { startAdornment: <InputAdornment position="start">₹</InputAdornment> } }}
         />
         <TextField
-          label="Reached Exit's account on" type="datetime-local" value={received} onChange={(e) => setReceived(e.target.value)}
-          slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: nowLocal() } }}
+          label="Reached Exit's account on (India time)" type="datetime-local" value={received} onChange={(e) => setReceived(e.target.value)}
+          slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: istNowInput() } }}
           helperText="It counts from the next day: received any time on the 15th, up to midnight, counts from the 16th."
         />
         {preview && (

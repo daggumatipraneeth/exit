@@ -12,7 +12,7 @@ import UploadIcon from '@mui/icons-material/FileUploadOutlined';
 import { supabase, fetchAll, kycUpload, kycObjectUrl } from './supabase';
 import { money } from '../finance';
 import { accent, line } from '../theme';
-import { today, shortDate, Panel, PageTitle, BackLink, errText } from './ui';
+import { today, shortDate, Panel, PageTitle, BackLink, errText, IST, istNowInput, istInputToISO } from './ui';
 import { AgreementFrame } from './Sign';
 
 // Photos are optional for now (the PAN number itself is required); the third value marks required ones.
@@ -190,7 +190,7 @@ export function NewCustomer({ profile }) {
   const [f, setF] = useState(blank);
   const [capital, setCapital] = useState('');
   // When the money reached Exit, as a local <input type="datetime-local"> value (default: now).
-  const [received, setReceived] = useState(() => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); });
+  const [received, setReceived] = useState(istNowInput);
   const [bank, setBank] = useState(blankBank);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -214,7 +214,7 @@ export function NewCustomer({ profile }) {
       if (error) { setBusy(false); return setError(friendly(error)); }
     }
     if (Number(capital) > 0) {
-      const { error } = await supabase.from('capital_movements').insert({ customer_id: data.id, kind: 'deposit', amount: Number(capital), received_at: new Date(received).toISOString() });
+      const { error } = await supabase.from('capital_movements').insert({ customer_id: data.id, kind: 'deposit', amount: Number(capital), received_at: istInputToISO(received) });
       if (error) { setBusy(false); return setError(errText(error)); }
     }
     window.location.hash = `#/customers/${data.id}`;
@@ -242,7 +242,7 @@ export function NewCustomer({ profile }) {
               slotProps={{ htmlInput: { min: 1, inputMode: 'decimal' }, input: { startAdornment: <InputAdornment position="start">₹</InputAdornment> } }}
             />
             <TextField
-              label="Reached Exit's account on" type="datetime-local" value={received} onChange={(e) => setReceived(e.target.value)}
+              label="Reached Exit's account on (India time)" type="datetime-local" value={received} onChange={(e) => setReceived(e.target.value)}
               slotProps={{ inputLabel: { shrink: true } }} helperText="It counts from the next day: received any time on the 15th, up to midnight, counts from the 16th."
             />
           </Box>
@@ -407,7 +407,7 @@ export function AgreementDialog({ customerId, onClose }) {
             <AgreementFrame html={agreement.html} />
             {agreement.signature_png && <Box component="img" src={agreement.signature_png} alt="Customer's signature" sx={{ maxWidth: 320, width: '100%', mt: 2, borderBottom: `1px solid ${line}` }} />}
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
-              Signed by {agreement.signer_name} on {new Date(agreement.signed_at).toLocaleString('en-IN')}
+              Signed by {agreement.signer_name} on {new Date(agreement.signed_at).toLocaleString('en-IN', { timeZone: IST })}
               {agreement.signer_ip && ` from IP ${agreement.signer_ip}`}.
             </Typography>
             {agreement.html_sha256 && <Typography variant="caption" color="text.secondary" sx={{ overflowWrap: 'anywhere', display: 'block', mt: 0.5 }}>Fingerprint (SHA-256): {agreement.html_sha256}</Typography>}

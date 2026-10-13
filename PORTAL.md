@@ -46,7 +46,11 @@ Buckets start fresh on the 1st of each month. Paise are split with exact integer
 
 ### Checking the books
 
-`select * from check_books();` lists any broken money rule (no rows = the books balance); it's read-only and safe on live data. `node scripts/fuzz-payouts.mjs 200` runs random scenarios through the real functions against an independent simulator (local stack only).
+`select * from check_books();` lists any broken money rule (no rows = the books balance); it's read-only and safe on live data. On the local stack only:
+
+- `node scripts/fuzz-payouts.mjs 200`: random multi-month, multi-partner scenarios through the real functions, checked against an independent simulator.
+- `node scripts/stress-concurrency.mjs`: many sessions saving, depositing, closing and paying out at once; the books must still balance. It writes to the database, so `npx supabase db reset` afterwards.
+- `node scripts/coverage.mjs`: statement and branch coverage of the database code (tests plus fuzz).
 
 ## Run it locally
 

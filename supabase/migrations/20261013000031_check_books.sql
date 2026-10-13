@@ -42,6 +42,12 @@ language sql stable security definer set search_path = public as $$
      or (s.plan = 'variable' and not s.full_exit and s.profit_payout + s.carried_out <> s.carried_in + s.result)
      or (s.full_exit and s.carried_out <> 0)
   union all
+  -- A month's settlement uses exactly that month's credits (nothing changed after the close).
+  select 'settlement result = the month''s credits', s.customer_id || ' ' || s.month
+  from settlements s
+  where s.result <> coalesce((select sum(d.credited) from customer_days d where d.customer_id = s.customer_id
+                               and d.trade_date >= s.month and d.trade_date < (s.month + interval '1 month')::date), 0)
+  union all
   -- Emergency exits pay exactly the formula, and the result is the credits up to `through`.
   select 'emergency payout = formula', x.customer_id::text
   from emergency_exits x

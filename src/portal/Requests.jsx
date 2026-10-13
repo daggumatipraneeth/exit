@@ -9,10 +9,10 @@ import EmailIcon from '@mui/icons-material/MailOutlined';
 import { supabase, fetchAll } from './supabase';
 import { offices, interests } from '../config';
 import { line } from '../theme';
-import { Panel, PageTitle, FilterChips, ShowMore, PAGE_ROWS, errText, Pill, tableRow, rowLink, phoneText } from './ui';
+import { Panel, PageTitle, FilterChips, ShowMore, PAGE_ROWS, errText, Pill, tableRow, rowLink, phoneText, IST } from './ui';
 
 const statusLook = { new: ['New', 'attention'], contacted: ['Contacted', 'progress'], closed: ['Closed', 'neutral'] };
-const when = (t) => new Date(t).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+const when = (t) => new Date(t).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: IST });
 const whatsapp = (phone) => `https://wa.me/${phone.replace(/\D/g, '').replace(/^(\d{10})$/, '91$1')}`;
 
 // One line per request in the list; tapping it opens the request on the side.

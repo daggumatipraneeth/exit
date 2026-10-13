@@ -6,7 +6,7 @@ import {
 import { supabase, fetchAll } from './supabase';
 import { money } from '../finance';
 import { line } from '../theme';
-import { today, monthName, shortDate, Panel, PageTitle, Signed, Pairs, errText, Pill } from './ui';
+import { today, monthName, shortDate, Panel, PageTitle, Signed, Pairs, errText, Pill, IST } from './ui';
 import { AgreementFrame } from './Sign';
 import { downloadPayoutCsv } from './Capital';
 
@@ -241,7 +241,7 @@ const quiet = new Set(['entered_at', 'uploaded_at', 'created_at', 'rendered_html
 // Encrypted values are never shown; a change is reported by name only.
 const secret = { pan_enc: 'PAN updated', aadhaar_enc: 'Aadhaar updated', bank_account_enc: 'Bank account updated' };
 // Timestamps in the log are ISO strings; show them the way the rest of the page does.
-const readable = (v) => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v) ? new Date(v).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : v);
+const readable = (v) => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v) ? new Date(v).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: IST }) : v);
 const PAGE = 50;
 
 export function Activity() {
@@ -340,7 +340,7 @@ export function Activity() {
                 }}
               >
                 <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
-                  {new Date(r.at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                  {new Date(r.at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: IST })}
                 </Typography>
                 <Box sx={{ minWidth: 0 }}>
                   <Typography variant="body2" sx={oneLine}>
@@ -352,7 +352,7 @@ export function Activity() {
                     </Typography>
                   )}
                   <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'block', md: 'none' }, ...oneLine }}>
-                    {new Date(r.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })} · {by}
+                    {new Date(r.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: IST })} · {by}
                   </Typography>
                 </Box>
                 <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' }, textAlign: 'right' }}>{by}</Typography>

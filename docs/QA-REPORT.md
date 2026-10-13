@@ -304,3 +304,32 @@ Notes:
   - Legal pages: Terms, Privacy and Risk at 375 px, with footer, contact-consent and SIP-risk links.
 
 Legal review points are in `docs/LEGAL-REVIEW.md`.
+
+## Phase 4: time zones, wider checks, coverage, concurrency (13 Oct 2026)
+
+### Fixed
+| # | Issue | Fix |
+|---|---|---|
+| TZ | On a phone or laptop not set to India time, the "reached Exit's account" time was read in the device's zone. On a New York device, 15 Sep 23:59 was saved as 16 Sep 09:29 IST, so the deposit would have counted a day late. | Typed times are always read as IST. "Today" is India's date on any device, and timestamps show in IST. Checked under Kolkata, New York, Kiritimati (UTC+14) and UTC. |
+| SEC | **Permission hole (pre-existing).** In `request_withdrawal`, `cancel_withdrawal`, `emergency_figures`, `request_emergency_exit` and `cancel_emergency_exit`, the check `not (id = my_customer_id() or can_see_customer(id))` was NULL for any non-customer, so the refusal never fired. A partner could request or cancel withdrawals or emergency exits for another partner's customer and see their emergency figures. | `can_act_for()` (migration 032) never returns NULL, and all five functions use it. Found by the new guards test. |
+| RACE | **Month close vs concurrent recalculation.** A deposit, cap % change or emergency exit recalculating a month while that month was being closed could commit after the close had read the figures, so the settlement no longer matched the final credits. | `close_month` and `reopen_month` take the same payouts lock as every other money change. Found by the stress test; the fix is verified below. |
+
+### Checks now in place
+- **pgTAP:** **285/285** across 19 files. New: `guards.test.sql`, every refusal by its exact message.
+- **Database coverage** (`node scripts/coverage.mjs`, the plpgsql_check profiler):
+  - **99.5% of PL/pgSQL statements (377/379)**; branch coverage 100% on 34 of 37 functions.
+  - The 2 statements not hit: "no agreement template exists" (impossible after migrations) and the KYC-file delete block (inside Supabase storage).
+  - SQL functions: all called. Six are inlined by Postgres, so the counter can't see them; their results are asserted directly.
+- **`src/finance.js`:** 100% lines, branches and functions (`node --test --experimental-test-coverage src/finance.check.js`).
+- **Fuzz** (`scripts/fuzz-payouts.mjs`, now multi-month and multi-partner). Each scenario has:
+  - 2–3 past months closed in order, with trade charges and profit share changing between months
+  - withdrawals every month, including requests that wait for a month the customer has capital
+  - losses carried across months, full exits paying out deposits that haven't started yet, and a reopen + re-close that must change nothing
+  - in the current month: emergency exits, entries after them, and a cap % change
+- **Fuzz results:**
+  - **1,000 + 300 + 150 scenarios: 336,631 rows compared, including 13,059 settlements and 1,703 emergency exits. 0 mismatches.**
+  - Mutation checks (dropping carried losses, ignoring term changes, ignoring withdrawals) fail 13–17 of 20 scenarios, so the harness catches mistakes.
+- **Concurrency** (`scripts/stress-concurrency.mjs`): separate database sessions, each op in its own committed transaction.
+  1. Saves and deposits for last month race its close.
+  2. Then saves, deposits, cap changes and emergency exits all at once.
+  - Before the fix, the books check caught the race above. After it, across 4 runs (8×40 and 3× 12×60 = 2,480 ops), there were 0 deadlocks and 0 unexpected errors, `check_books()` was clean every time, and recomputing every open month from scratch reproduced the concurrent result exactly.

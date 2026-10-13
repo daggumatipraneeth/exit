@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Box, Typography, TextField, Button, Alert } from '@mui/material';
 import { supabase } from './supabase';
 import { company } from '../config';
-import { Panel, Field, PageTitle } from './ui';
+import { Panel, Field, PageTitle, phoneText } from './ui';
 
 const roleName = { admin: 'Exit admin', employee: 'Exit staff', franchisee: 'Franchise partner' };
 
@@ -78,7 +78,7 @@ export default function Account({ profile, email }) {
             <Panel title="Partnership">
               <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: '1fr 1fr', px: { xs: 2, md: 3 }, py: 2.5 }}>
                 <Box sx={{ gridColumn: '1 / -1' }}><Field label="Business name">{f.name}</Field></Box>
-                <Field label="Phone">{f.phone}</Field>
+                <Field label="Phone">{phoneText(f.phone)}</Field>
                 <Field label="Email">{f.email}</Field>
                 <Field label="Your profit share">{`${Number(f.profit_share_pct)}% once every customer bucket is full`}</Field>
                 <Field label="Status">{f.active ? 'Active' : 'Inactive'}</Field>

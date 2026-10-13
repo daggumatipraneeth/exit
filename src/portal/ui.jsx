@@ -9,6 +9,11 @@ import { accent, ink, line, loss, navy } from '../theme';
 // Dates travel as 'YYYY-MM-DD' strings in local time.
 export const iso = (d) => d.toLocaleDateString('en-CA');
 export const today = () => iso(new Date());
+// Indian mobiles in one style, '+91 98765 43210', however they were typed; anything else as typed.
+export const phoneText = (v) => {
+  const d = (v ?? '').replace(/\D/g, '').replace(/^(91|0)(?=\d{10}$)/, '');
+  return /^\d{10}$/.test(d) ? `+91 ${d.slice(0, 5)} ${d.slice(5)}` : v;
+};
 export const shift = (date, days) => { const d = new Date(`${date}T00:00`); d.setDate(d.getDate() + days); return iso(d); };
 // Takes a 'YYYY-MM-DD' day or a full timestamp (shown on its local day, not its UTC one).
 export const fmtDate = (date, opts = { weekday: 'long', day: 'numeric', month: 'long' }) =>

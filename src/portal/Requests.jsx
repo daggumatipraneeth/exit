@@ -9,7 +9,7 @@ import EmailIcon from '@mui/icons-material/MailOutlined';
 import { supabase, fetchAll } from './supabase';
 import { offices, interests } from '../config';
 import { line } from '../theme';
-import { Panel, PageTitle, FilterChips, ShowMore, PAGE_ROWS, errText, Pill, tableRow, rowLink } from './ui';
+import { Panel, PageTitle, FilterChips, ShowMore, PAGE_ROWS, errText, Pill, tableRow, rowLink, phoneText } from './ui';
 
 const statusLook = { new: ['New', 'attention'], contacted: ['Contacted', 'progress'], closed: ['Closed', 'neutral'] };
 const when = (t) => new Date(t).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
@@ -70,7 +70,7 @@ function RequestPanel({ r, partners, onClose, onChanged }) {
           {r.message && <Typography sx={{ mt: 1, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{r.message}</Typography>}
         </Box>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-          <Button variant="outlined" startIcon={<PhoneIcon />} href={`tel:${r.phone}`}>{r.phone}</Button>
+          <Button variant="outlined" startIcon={<PhoneIcon />} href={`tel:${r.phone}`}>{phoneText(r.phone)}</Button>
           <Button variant="outlined" startIcon={<WhatsAppIcon />} href={whatsapp(r.phone)} target="_blank" rel="noreferrer">WhatsApp</Button>
           {r.email && <Button variant="outlined" startIcon={<EmailIcon />} href={`mailto:${r.email}`} sx={{ textTransform: 'none' }}>{r.email}</Button>}
         </Box>

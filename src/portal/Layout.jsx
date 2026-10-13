@@ -47,6 +47,7 @@ function UserMenu({ profile, who }) {
         anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         slotProps={{ paper: { sx: { minWidth: 220, mt: 0.5 } } }}
+        disableRestoreFocus // focus would go back to the button just as the Help drawer hides the page behind it
       >
         <Box sx={{ px: 2, py: 1 }}>
           <Typography sx={{ fontWeight: 600 }} noWrap>{profile.full_name}</Typography>

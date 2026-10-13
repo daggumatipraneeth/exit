@@ -3,7 +3,7 @@ import { Box, Typography, Alert, Button } from '@mui/material';
 import { supabase } from './supabase';
 import { money } from '../finance';
 import { ink, line } from '../theme';
-import { today, fmtDate, shortDate, monthName, sum, Signed, Panel, Field, CapMeter, StatusChip, Figures, BackLink, tableHead } from './ui';
+import { today, fmtDate, shortDate, monthName, sum, Signed, Panel, Field, CapMeter, StatusChip, Figures, BackLink, tableHead, phoneText } from './ui';
 import { OnboardingSteps, Documents, EditDetailsDialog, CapitalDialog, AgreementDialog, BankDialog, canEdit, latestSigned } from './Onboarding';
 import { CustomerLogin, CustomerPayouts } from './CustomerAccount';
 
@@ -157,7 +157,7 @@ export default function Customer({ profile, id }) {
         <Box sx={{ display: 'grid', gap: { xs: 3, md: 4 } }}>
           <Panel title="Details" action={edit && <Button size="small" onClick={() => setDialog('edit')}>Edit</Button>}>
             <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr 1fr', lg: '1fr' }, px: { xs: 2, md: 3 }, py: 2.5 }}>
-              <Field label="Phone">{c.phone}</Field>
+              <Field label="Phone">{phoneText(c.phone)}</Field>
               <Field label="Date of birth">{c.dob && shortDate(c.dob)}</Field>
               <Field label="PAN">{c.pan}</Field>
               <Field label="Aadhaar">{c.aadhaar_last4 && `XXXX XXXX ${c.aadhaar_last4}`}</Field>

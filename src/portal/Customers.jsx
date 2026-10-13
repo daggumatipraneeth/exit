@@ -5,7 +5,7 @@ import AddIcon from '@mui/icons-material/Add';
 import { supabase, fetchAll } from './supabase';
 import { money } from '../finance';
 import { line } from '../theme';
-import { today, monthName, Panel, PageTitle, CapMeter, StatusChip, FilterChips, ShowMore, PAGE_ROWS, rowLink, tableHead, tableRow, Inline } from './ui';
+import { today, monthName, Panel, PageTitle, CapMeter, StatusChip, FilterChips, ShowMore, PAGE_ROWS, rowLink, tableHead, tableRow, Inline, phoneText } from './ui';
 
 const cols = { xs: '1fr auto', md: '1.4fr 0.8fr 0.9fr 1.6fr' };
 const onboarding = ['draft', 'awaiting_signature', 'pending_approval'];
@@ -101,7 +101,7 @@ export default function Customers({ profile }) {
               >
                 <Box sx={{ gridArea: 'name', minWidth: 0 }}>
                   <Typography sx={{ fontWeight: 600 }} noWrap>{c.full_name}</Typography>
-                  <Inline items={staff ? [c.phone, c.franchisees.name] : [c.phone]} />
+                  <Inline items={staff ? [phoneText(c.phone), c.franchisees.name] : [phoneText(c.phone)]} />
                 </Box>
                 <Box sx={{ gridArea: 'status', justifySelf: { xs: 'end', md: 'start' }, alignSelf: { xs: 'start', md: 'center' } }}><StatusChip status={c.status} /></Box>
                 <Box sx={{ gridArea: 'capital', textAlign: 'right', fontWeight: 500, alignSelf: { xs: 'end', md: 'center' } }}>

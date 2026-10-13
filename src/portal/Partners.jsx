@@ -13,7 +13,7 @@ import ChevronRight from '@mui/icons-material/ChevronRight';
 import { supabase, fetchAll } from './supabase';
 import { line } from '../theme';
 import { offices } from '../config';
-import { Panel, PageTitle, Pill, Inline, Field, BackLink, tableHead, tableRow, rowLink } from './ui';
+import { Panel, PageTitle, Pill, Inline, Field, BackLink, tableHead, tableRow, rowLink, phoneText } from './ui';
 
 // Partner list: one row each; everything else is on the partner's own page (#/partners/<id>).
 const COLS = { xs: 'minmax(0, 1fr) auto', md: 'minmax(0, 1.4fr) minmax(0, 1.6fr) 110px 90px 24px' };
@@ -31,6 +31,8 @@ function PartnerDialog({ partner, onClose, onSaved }) {
   const [error, setError] = useState('');
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const valid = f.name.trim() && pctOk(f.hidden_charge_pct) && pctOk(f.profit_share_pct);
+  const badPct = (v) => v !== '' && !pctOk(v); // empty is just not filled in yet
+  const outOfRange = 'Enter a number from 0 to 100.';
 
   async function save() {
     const row = { name: f.name.trim(), phone: f.phone || null, email: f.email || null, profit_share_pct: Number(f.profit_share_pct), active: f.active };
@@ -55,13 +57,13 @@ function PartnerDialog({ partner, onClose, onSaved }) {
           <TextField label="Phone" value={f.phone ?? ''} onChange={set('phone')} type="tel" />
           <TextField label="Email" value={f.email ?? ''} onChange={set('email')} type="email" />
           <TextField
-            label="Hidden charge" required type="number" value={f.hidden_charge_pct} onChange={set('hidden_charge_pct')}
-            helperText="Taken from each profitable day before the partner sees it. Partners never see this. Changes apply to new days only."
+            label="Hidden charge" required type="number" value={f.hidden_charge_pct} onChange={set('hidden_charge_pct')} error={badPct(f.hidden_charge_pct)}
+            helperText={badPct(f.hidden_charge_pct) ? outOfRange : 'Taken from each profitable day before the partner sees it. Partners never see this. Changes apply to new days only.'}
             slotProps={{ htmlInput: { min: 0, max: 100, step: 0.5 }, input: { endAdornment: <InputAdornment position="end">%</InputAdornment> } }}
           />
           <TextField
-            label="Partner's profit share" required type="number" value={f.profit_share_pct} onChange={set('profit_share_pct')}
-            helperText="Partner's share of profit once every customer bucket is full. Exit keeps the rest."
+            label="Partner's profit share" required type="number" value={f.profit_share_pct} onChange={set('profit_share_pct')} error={badPct(f.profit_share_pct)}
+            helperText={badPct(f.profit_share_pct) ? outOfRange : "Partner's share of profit once every customer bucket is full. Exit keeps the rest."}
             slotProps={{ htmlInput: { min: 0, max: 100, step: 1 }, input: { endAdornment: <InputAdornment position="end">%</InputAdornment> } }}
           />
           <FormControlLabel control={<Switch checked={f.active} onChange={(e) => setF({ ...f, active: e.target.checked })} />} label="Active (inactive partners can't see anything)" />
@@ -369,7 +371,7 @@ export default function Partners({ email: myEmail }) {
                     </Box>
                     <Inline sx={{ display: { md: 'none' }, fontSize: 13.5 }} items={[`${customers} customers`, `${logins} ${logins === 1 ? 'login' : 'logins'}`]} />
                   </Box>
-                  <Inline sx={{ display: { xs: 'none', md: 'flex' } }} items={[f.phone, f.email].filter(Boolean)} empty="No contact details" />
+                  <Inline sx={{ display: { xs: 'none', md: 'flex' } }} items={[phoneText(f.phone), f.email].filter(Boolean)} empty="No contact details" />
                   <Typography sx={{ display: { xs: 'none', md: 'block' }, textAlign: 'right' }}>{customers}</Typography>
                   <Typography sx={{ display: { xs: 'none', md: 'block' }, textAlign: 'right' }}>{logins}</Typography>
                   <ChevronRight sx={{ color: 'text.secondary', justifySelf: 'end' }} />
@@ -452,7 +454,7 @@ export function PartnerDetail({ id }) {
       <Box sx={{ display: 'grid', gap: { xs: 3, md: 4 }, gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 1fr) minmax(0, 1fr)' }, alignItems: 'start' }}>
         <Panel title="Details">
           <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: '1fr 1fr', px: { xs: 2, md: 3 }, py: 2.5 }}>
-            <Field label="Phone">{f.phone}</Field>
+            <Field label="Phone">{phoneText(f.phone)}</Field>
             <Field label="Email">{f.email}</Field>
             <Field label="Hidden charge">{f.hidden_charge_pct === '' ? 'Not set' : `${Number(f.hidden_charge_pct)}% of profitable days`}</Field>
             <Field label="Profit split">{`${share}% partner / ${100 - share}% Exit`}</Field>

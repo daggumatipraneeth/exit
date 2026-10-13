@@ -4,7 +4,7 @@ import { Box, Typography, Alert, Button, Dialog, DialogTitle, DialogContent, Dia
 import { supabase } from './supabase';
 import { money } from '../finance';
 import { line } from '../theme';
-import { fmtDate, shortDate, monthName, Signed, Panel, Field, Pill, Figures, PageTitle, StatusChip, errText, tableHead } from './ui';
+import { fmtDate, shortDate, monthName, Signed, Panel, Field, Pill, Figures, PageTitle, StatusChip, errText, tableHead, phoneText } from './ui';
 import { PasswordPanel } from './Account';
 
 const pad = { px: { xs: 2, md: 3 } };
@@ -151,7 +151,7 @@ export default function MyAccount() {
           <Panel title="Your account">
             <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: '1fr 1fr', ...pad, py: 2.5 }}>
               <Field label="Name">{a.name}</Field>
-              <Field label="Mobile">{a.phone}</Field>
+              <Field label="Mobile">{phoneText(a.phone)}</Field>
               <Field label="Plan">{fixed ? 'Fixed monthly payout' : 'Profit share'}</Field>
               <Field label="Partner">{a.partner?.name}</Field>
               <Box sx={{ gridColumn: '1 / -1' }}>
@@ -172,7 +172,7 @@ export default function MyAccount() {
               </Box>
             )}
             <Typography variant="body2" color="text.secondary" sx={{ ...pad, pb: 2.5 }}>
-              To add money or change these details, contact your partner{a.partner?.phone ? ` on ${a.partner.phone}` : ''}.
+              To add money or change these details, contact your partner{a.partner?.phone ? ` on ${phoneText(a.partner.phone)}` : ''}.
             </Typography>
           </Panel>
 

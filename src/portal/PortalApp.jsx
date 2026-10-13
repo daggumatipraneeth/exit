@@ -11,6 +11,7 @@ import ArticleIcon from '@mui/icons-material/ArticleOutlined';
 import HistoryIcon from '@mui/icons-material/HistoryOutlined';
 import PhoneIcon from '@mui/icons-material/PhoneInTalkOutlined';
 import { supabase } from './supabase';
+import { company } from '../config';
 import Login from './Login';
 import Layout from './Layout';
 import Dashboard from './Dashboard';
@@ -100,6 +101,18 @@ function Portal() {
           <Typography color="text.secondary" sx={{ mb: 3 }}>
             Ask the Exit office to set up access for {session.user.email}.
           </Typography>
+          <Button variant="outlined" onClick={() => supabase.auth.signOut()}>Log out</Button>
+        </Box>
+      </Centered>
+    );
+  }
+
+  if (profile.role === 'franchisee' && !profile.franchisees?.active) {
+    return (
+      <Centered>
+        <Box sx={{ maxWidth: 420, textAlign: 'center' }}>
+          <Typography variant="h5" gutterBottom>Your partner account is paused</Typography>
+          <Typography color="text.secondary" sx={{ mb: 3 }}>Call the Exit office on {company.phone} to turn it back on.</Typography>
           <Button variant="outlined" onClick={() => supabase.auth.signOut()}>Log out</Button>
         </Box>
       </Centered>

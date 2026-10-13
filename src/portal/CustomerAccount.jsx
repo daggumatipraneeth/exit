@@ -41,7 +41,7 @@ export function CustomerLogin({ customer: c }) {
         </Typography>
         {made ? (
           <>
-            <ShareDetails label="Mobile" email={mobile10(c.phone)} password={made} title="Exit customer login" />
+            <ShareDetails label="Mobile" email={mobile10(c.phone)} password={made} title="Exit customer login" login="#/" />
             <Typography variant="body2" color="text.secondary">Share this privately. The customer can change the password after logging in.</Typography>
           </>
         ) : (

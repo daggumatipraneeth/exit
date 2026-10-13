@@ -84,12 +84,13 @@ export async function adminUsers(body) {
 }
 
 // Login details to hand over privately, with a one-tap copy.
-export function ShareDetails({ email, password, label = 'Email', title = 'Exit partner portal' }) {
+export function ShareDetails({ email, password, label = 'Email', title = 'Exit partner portal', login = '#/partner' }) {
   const [copied, setCopied] = useState(false);
-  const text = `${title}\n${window.location.href.split('#')[0]}\n${label}: ${email}\nTemporary password: ${password}`;
+  const url = `${window.location.href.split('#')[0]}${login}`;
+  const text = `${title}\n${url}\n${label}: ${email}\nTemporary password: ${password}`;
   return (
     <Box sx={{ border: `1px solid ${line}`, borderRadius: 1.5, p: 2 }}>
-      <Typography sx={{ overflowWrap: 'anywhere' }}>Login page: {window.location.href.split('#')[0]}</Typography>
+      <Typography sx={{ overflowWrap: 'anywhere' }}>Login page: {url}</Typography>
       <Typography sx={{ overflowWrap: 'anywhere' }}>{label}: {email}</Typography>
       <Typography>Temporary password: <strong>{password}</strong></Typography>
       <Button size="small" variant="outlined" sx={{ mt: 1.5 }} onClick={async () => { await navigator.clipboard.writeText(text); setCopied(true); }}>

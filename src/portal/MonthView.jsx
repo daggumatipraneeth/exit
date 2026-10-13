@@ -71,7 +71,8 @@ const shade = (v, max) => {
   return `color-mix(in srgb, ${v > 0 ? accent : loss} ${[0, 14, 26, 38, 50][step]}%, #fff)`;
 };
 
-function Heatmap({ month, byDay }) {
+// `link`: days open the staff day page (off for customers).
+export function Heatmap({ month, byDay, link = true }) {
   const first = new Date(`${month}T00:00`);
   const lead = (first.getDay() + 6) % 7; // Monday-first
   const days = [];
@@ -89,16 +90,17 @@ function Heatmap({ month, byDay }) {
         {days.map((d) => {
           const v = byDay[d];
           const has = v !== undefined;
+          const go = has && link;
           const cell = (
             <Box
-              component={has ? 'a' : 'div'}
-              href={has ? `#/today/${d}` : undefined}
+              component={go ? 'a' : 'div'}
+              href={go ? `#/today/${d}` : undefined}
               aria-label={has ? `${fmtDate(d)}: ${money(v, true)}` : undefined}
               sx={{
                 display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: { xs: 48, md: 72 },
                 p: { xs: 0.5, md: 1 }, borderRadius: 1.5, border: `1px solid ${line}`, bgcolor: shade(v, max),
                 color: ink, textDecoration: 'none', opacity: d > now ? 0.45 : 1, minWidth: 0,
-                ...(has && { '&:hover': { borderColor: ink } }),
+                ...(go && { '&:hover': { borderColor: ink } }),
               }}
             >
               <Typography variant="caption" sx={{ color: 'text.secondary', lineHeight: 1 }}>{Number(d.slice(8))}</Typography>
@@ -123,7 +125,7 @@ function Heatmap({ month, byDay }) {
           <Box sx={{ width: 18, height: 12, borderRadius: 0.5, border: `1px solid ${line}`, bgcolor: '#fff' }} />
           <span>No trading</span>
         </Box>
-        <Box sx={{ ml: { md: 'auto' } }}>Tap a day to see its details.</Box>
+        {link && <Box sx={{ ml: { md: 'auto' } }}>Tap a day to see its details.</Box>}
       </Box>
     </Box>
   );

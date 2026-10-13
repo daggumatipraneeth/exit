@@ -1,7 +1,7 @@
 import { Box, Fab, Tooltip } from '@mui/material';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import CallIcon from '@mui/icons-material/Call';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { company } from '../config';
 import { navy } from '../theme';
 
@@ -18,7 +18,7 @@ export default function FloatingActions() {
   const msg = encodeURIComponent('Hi Exit team, I would like to know more about your advisory services.');
   return (
     <Box
-      component={motion.div}
+      component={m.div}
       initial={{ opacity: 0, y: 40 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 1, duration: 0.5 }}

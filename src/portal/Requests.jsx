@@ -182,7 +182,7 @@ export default function Requests({ profile }) {
       <PageTitle action={isStaff && <Button variant="contained" startIcon={<AddIcon />} onClick={() => setAdding(true)}>Add request</Button>}>
         Requests
       </PageTitle>
-      <Typography color="text.secondary" sx={{ mb: 2.5, maxWidth: '65ch' }}>
+      <Typography color="text.secondary" sx={{ mb: 2.5 }}>
         {isStaff
           ? `Call-back requests from the website's contact form${allOffices ? '' : ` for the ${profile.office} office`}. Allocate one to a partner and they'll see it too.`
           : 'People who asked Exit for a call back, passed on to you. Call them, then note what happened.'}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Box, Container, Typography, Button, LinearProgress, Stack } from '@mui/material';
 import ReplayIcon from '@mui/icons-material/Replay';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, m } from 'framer-motion';
 import Reveal from '../components/Reveal';
 import SectionHeading from '../components/SectionHeading';
 import { accent, accentSoft, ink, navy } from '../theme';
@@ -30,7 +30,7 @@ function Donut({ mix }) {
         const len = (v / 100) * c, off = acc;
         acc += len;
         return (
-          <motion.circle key={k} cx="100" cy="100" r={r} fill="none" stroke={colors[i]} strokeWidth="26"
+          <m.circle key={k} cx="100" cy="100" r={r} fill="none" stroke={colors[i]} strokeWidth="26"
             strokeDasharray={`${len - 2} ${c}`}
             initial={{ strokeDashoffset: -off + len, opacity: 0 }}
             animate={{ strokeDashoffset: -off, opacity: 1 }}
@@ -58,7 +58,7 @@ export default function RiskQuiz() {
               sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, bgcolor: 'rgba(18,40,74,.06)', '& .MuiLinearProgress-bar': { bgcolor: accent } }} />
             <AnimatePresence mode="wait">
               {!done ? (
-                <motion.div key={step} initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }} transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}>
+                <m.div key={step} initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }} transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}>
                   <Typography variant="overline" color="text.secondary">Question {step + 1} of {questions.length}</Typography>
                   <Typography variant="h4" sx={{ mt: 1, mb: 4, fontSize: { xs: 24, md: 32 } }}>{questions[step][0]}</Typography>
                   <Stack spacing={1.5}>
@@ -75,9 +75,9 @@ export default function RiskQuiz() {
                     ))}
                   </Stack>
                   {step > 0 && <Button size="small" onClick={() => setAnswers(answers.slice(0, -1))} sx={{ mt: 3, color: 'text.secondary' }}>← Back</Button>}
-                </motion.div>
+                </m.div>
               ) : (
-                <motion.div key="result" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6 }}>
+                <m.div key="result" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6 }}>
                   <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'auto 1fr' }, gap: { xs: 3, md: 6 }, alignItems: 'center', justifyItems: { xs: 'center', md: 'start' } }}>
                     <Donut mix={profiles[profile].mix} />
                     <Box sx={{ textAlign: { xs: 'center', md: 'left' } }}>
@@ -104,7 +104,7 @@ export default function RiskQuiz() {
                   <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 4, textAlign: 'center' }}>
                     Indicative only — not investment advice. A detailed risk profiling is done during your consultation.
                   </Typography>
-                </motion.div>
+                </m.div>
               )}
             </AnimatePresence>
           </Box>

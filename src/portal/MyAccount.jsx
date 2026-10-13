@@ -6,6 +6,7 @@ import { money } from '../finance';
 import { line } from '../theme';
 import { fmtDate, shortDate, monthName, Signed, Panel, Field, Pill, Figures, PageTitle, StatusChip, errText, tableHead, phoneText } from './ui';
 import { PasswordPanel } from './Account';
+import Heatmap from './Heatmap';
 
 const pad = { px: { xs: 2, md: 3 } };
 
@@ -87,6 +88,7 @@ export default function MyAccount() {
                 <Typography color="text.secondary" sx={{ ...pad, py: 4, textAlign: 'center' }}>No results in {monthName(a.month)} yet.</Typography>
               ) : (
                 <>
+                  <Heatmap month={a.month} byDay={Object.fromEntries(days.map((d) => [d.date, Number(d.pnl)]))} link={false} />
                   <Box aria-hidden sx={{ ...tableHead, gridTemplateColumns: '1fr auto' }}><span>Date</span><span>Profit / loss</span></Box>
                   <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
                     {days.map((d) => (

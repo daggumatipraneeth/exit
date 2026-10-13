@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Box, Button, CircularProgress, Typography } from '@mui/material';
 import TodayIcon from '@mui/icons-material/TodayOutlined';
 import MonthIcon from '@mui/icons-material/CalendarMonthOutlined';
@@ -14,18 +14,27 @@ import { supabase } from './supabase';
 import { company } from '../config';
 import Login from './Login';
 import Layout from './Layout';
-import Dashboard from './Dashboard';
-import Customers from './Customers';
-import Customer from './Customer';
-import Account, { PasswordPanel } from './Account';
-import DailyEntry from './DailyEntry';
-import Partners, { PartnerDetail } from './Partners';
-import Sign from './Sign';
-import Requests from './Requests';
-import MyAccount from './MyAccount';
-import { NewCustomer } from './Onboarding';
-import MonthView from './MonthView';
-import { Months, Templates, Activity } from './Admin';
+import Account, { PasswordPanel } from './Account'; // the password panel is needed before any page, so it stays in
+
+// Pages load on first use, so a phone only downloads what that person opens. `load` warms a page ahead of time.
+function page(load, name = 'default') {
+  const get = () => load().then((m) => ({ default: m[name] }));
+  return Object.assign(lazy(get), { load: get });
+}
+const Dashboard = page(() => import('./Dashboard'));
+const MonthView = page(() => import('./MonthView'));
+const DailyEntry = page(() => import('./DailyEntry'));
+const Customers = page(() => import('./Customers'));
+const Customer = page(() => import('./Customer'));
+const NewCustomer = page(() => import('./Onboarding'), 'NewCustomer');
+const Requests = page(() => import('./Requests'));
+const Partners = page(() => import('./Partners'));
+const PartnerDetail = page(() => import('./Partners'), 'PartnerDetail');
+const Months = page(() => import('./Admin'), 'Months');
+const Templates = page(() => import('./Admin'), 'Templates');
+const Activity = page(() => import('./Admin'), 'Activity');
+const Sign = page(() => import('./Sign'));
+const MyAccount = page(() => import('./MyAccount'));
 
 const everyone = ['admin', 'employee', 'franchisee'];
 const staff = ['admin', 'employee'];
@@ -58,6 +67,8 @@ function useRoute() {
 function Centered({ children }) {
   return <Box sx={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', p: 2 }}>{children}</Box>;
 }
+const spinner = <Centered><CircularProgress aria-label="Loading" /></Centered>;
+const pageSpinner = <Box sx={{ display: 'grid', placeItems: 'center', py: 10 }}><CircularProgress aria-label="Loading" /></Box>;
 
 export default function PortalApp() {
   if (!supabase) {
@@ -79,6 +90,9 @@ function Portal() {
 
   useEffect(() => {
     if (!session) return setProfile(undefined);
+    // Fetch the likely first page's code while the profile loads (customers get MyAccount, staff the page in the link).
+    MyAccount.load();
+    (pages.find((p) => p.path === path)?.Page ?? Dashboard).load();
     supabase
       .from('profiles')
       .select('full_name, role, franchisee_id, office, franchisees(name, phone, email, profit_share_pct, active)')
@@ -87,10 +101,10 @@ function Portal() {
       .then(({ data }) => setProfile(data ?? null));
   }, [session?.user.id]);
 
-  if (path === 'sign') return <Sign key={id} token={id} />; // public: customers sign without a login; fresh state per link
+  if (path === 'sign') return <Suspense fallback={spinner}><Sign key={id} token={id} /></Suspense>; // public: customers sign without a login; fresh state per link
 
   if (session === undefined || (session && profile === undefined)) {
-    return <Centered><CircularProgress aria-label="Loading" /></Centered>;
+    return spinner;
   }
   if (!session) return <Login key={path} partner={path === 'partner'} />;
   if (!profile) {
@@ -126,7 +140,7 @@ function Portal() {
 
   // Customers get one page and nothing else.
   if (profile.role === 'customer') {
-    return <Layout profile={profile} nav={[]} current=""><MyAccount /></Layout>;
+    return <Layout profile={profile} nav={[]} current=""><Suspense fallback={pageSpinner}><MyAccount /></Suspense></Layout>;
   }
 
   const nav = pages.filter((p) => p.roles.includes(profile.role));
@@ -134,7 +148,17 @@ function Portal() {
   const Page = id === 'new' && current.path === 'customers' ? NewCustomer : (id && current.Detail) || current.Page;
   return (
     <Layout profile={profile} nav={nav} current={current.path}>
-      <Page key={id} profile={profile} id={id} email={session.user.email} />
+      <Suspense fallback={pageSpinner}><Page key={id} profile={profile} id={id} email={session.user.email} /></Suspense>
+      <Prefetch pages={nav} />
     </Layout>
   );
+}
+
+// Once the first page is up, quietly fetch the person's other pages so moving around stays instant.
+function Prefetch({ pages }) {
+  useEffect(() => {
+    const idle = window.requestIdleCallback ?? ((f) => setTimeout(f, 1500));
+    idle(() => pages.forEach((p) => { p.Page.load?.(); p.Detail?.load?.(); }));
+  }, [pages.length]);
+  return null;
 }

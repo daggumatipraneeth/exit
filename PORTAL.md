@@ -21,7 +21,7 @@ Each day Exit enters **one profit/loss figure per partner**, after broker charge
 
 ### Deposits
 
-Staff record **Add money** with the amount added and when it reached Exit's bank account. Money received **before 12:00 noon IST counts from the next day; from 12:00 noon, from the day after**. The server works out the date; the dialog previews it with the bucket increase. Capital is a ledger of movements (deposits, withdrawals, exits, corrections), never edited, only undone (open months only).
+Staff record **Add money** with the amount added and when it reached Exit's bank account. Money **counts from the day after it reaches Exit** (IST): received any time on the 15th, up to midnight, it counts from the 16th; from 00:00 on the 16th, from the 17th. The server works out the date; the dialog previews it with the bucket increase. Capital is a ledger of movements (deposits, withdrawals, exits, corrections), never edited, only undone (open months only).
 
 ### Month close and payouts
 

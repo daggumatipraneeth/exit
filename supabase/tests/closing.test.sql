@@ -19,8 +19,8 @@ select id, 1, now() from customers where franchisee_id = 'fc000000-0000-0000-000
 insert into capital_movements (customer_id, effective_from, amount)
 select id, '2024-01-01', 100000 from customers where franchisee_id = 'fc000000-0000-0000-0000-000000000001';
 insert into capital_movements (customer_id, received_at, amount) values
-  ('cc000000-0000-0000-0000-000000000002', '2024-01-15 11:00+05:30', 50000),  -- from 16 Jan
-  ('cc000000-0000-0000-0000-000000000003', '2024-01-31 14:00+05:30', 20000);  -- from 2 Feb: still pending at the Jan close
+  ('cc000000-0000-0000-0000-000000000002', '2024-01-15 21:00+05:30', 50000),  -- received the 15th: from 16 Jan
+  ('cc000000-0000-0000-0000-000000000003', '2024-02-01 09:00+05:30', 20000);  -- from 2 Feb: still pending at the Jan close
 insert into daily_entries (franchisee_id, trade_date, amount) values
   ('fc000000-0000-0000-0000-000000000001', '2024-01-10', 3000),   -- 4 × 1,00,000: 750 each
   ('fc000000-0000-0000-0000-000000000001', '2024-01-20', -4500);  -- 1,00,000 / 1,50,000 / 1,00,000 / 1,00,000 of 4,50,000

@@ -6,8 +6,9 @@
 -- Capital on a day is the sum of movements in effect by then. Adding, withdrawing and closing are plain
 -- inserts, so nothing ever has to rewrite later rows (the old running totals needed that, see BUG-5).
 --
--- Money that reaches Exit before 12:00 IST counts from the next day; from 12:00 on, from the day after.
--- The server works that out from received_at: the browser never picks the date.
+-- Money counts from the day after the (IST) day it reaches Exit: received any time on the 15th, up to midnight,
+-- it counts from the 16th; received from 00:00 on the 16th, from the 17th. The server works that out from
+-- received_at: the browser never picks the date.
 
 -- India has one time zone and no daylight saving.
 create function today_ist() returns date
@@ -15,8 +16,7 @@ language sql stable as $$ select (now() at time zone 'Asia/Kolkata')::date $$;
 
 create function effective_date(p_received timestamptz) returns date
 language sql stable as $$
-  select (p_received at time zone 'Asia/Kolkata')::date
-       + case when (p_received at time zone 'Asia/Kolkata')::time < time '12:00' then 1 else 2 end
+  select (p_received at time zone 'Asia/Kolkata')::date + 1
 $$;
 
 create type capital_kind as enum ('deposit', 'withdrawal', 'exit', 'correction');

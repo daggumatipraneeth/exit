@@ -1,15 +1,15 @@
--- Deposits: the 12:00 IST cut-off, pro-rated buckets and the daily split by that day's capital.
+-- Deposits: counting from the next day, pro-rated buckets and the daily split by that day's capital.
 -- Every expected figure is worked out by hand in the comment beside it. Run: npx supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
 select plan(24);
 
--- Cut-off: before 12:00 IST → next day; from 12:00 → the day after.
-select is(effective_date('2025-09-15 11:59:59+05:30'), '2025-09-16'::date, '11:59:59 counts from the next day');
-select is(effective_date('2025-09-15 12:00:00+05:30'), '2025-09-17'::date, '12:00:00 counts from the day after');
-select is(effective_date('2025-09-15 06:29:59+00'), '2025-09-16'::date, 'a UTC time is read in IST (06:29:59 UTC = 11:59:59 IST)');
-select is(effective_date('2025-09-30 06:00+05:30'), '2025-10-01'::date, 'last morning of the month counts from the 1st');
-select is(effective_date('2025-09-30 13:00+05:30'), '2025-10-02'::date, 'last afternoon of the month counts from the 2nd');
+-- Counts from the day after the IST day it's received: up to midnight on the 15th → the 16th; from 00:00 on the 16th → the 17th.
+select is(effective_date('2025-09-15 23:59:59+05:30'), '2025-09-16'::date, 'any time on the 15th, up to midnight, counts from the 16th');
+select is(effective_date('2025-09-16 00:00:00+05:30'), '2025-09-17'::date, 'from midnight it is the 16th: counts from the 17th');
+select is(effective_date('2025-09-15 18:29:59+00'), '2025-09-16'::date, 'a UTC time is read in IST (18:29:59 UTC = 23:59:59 IST on the 15th)');
+select is(effective_date('2025-09-15 18:30:00+00'), '2025-09-17'::date, '18:30 UTC is already 00:00 IST on the 16th');
+select is(effective_date('2025-09-30 23:00+05:30'), '2025-10-01'::date, 'last day of the month counts from the 1st');
 
 insert into franchisees (id, name) values
   ('fd000000-0000-0000-0000-000000000001', 'Dep Cap'), ('fd000000-0000-0000-0000-000000000002', 'Dep Split'),
@@ -18,8 +18,8 @@ insert into franchisee_terms values
   ('fd000000-0000-0000-0000-000000000001', 0), ('fd000000-0000-0000-0000-000000000002', 0),
   ('fd000000-0000-0000-0000-000000000003', 0), ('fd000000-0000-0000-0000-000000000004', 0);
 insert into customers (id, franchisee_id, full_name, phone, status) values
-  ('cd000000-0000-0000-0000-00000000000a', 'fd000000-0000-0000-0000-000000000001', 'Before noon', '1', 'active'),
-  ('cd000000-0000-0000-0000-00000000000b', 'fd000000-0000-0000-0000-000000000001', 'After noon', '2', 'active'),
+  ('cd000000-0000-0000-0000-00000000000a', 'fd000000-0000-0000-0000-000000000001', 'Same day', '1', 'active'),
+  ('cd000000-0000-0000-0000-00000000000b', 'fd000000-0000-0000-0000-000000000001', 'After midnight', '2', 'active'),
   ('cd000000-0000-0000-0000-00000000000c', 'fd000000-0000-0000-0000-000000000001', 'October', '3', 'active'),
   ('cd000000-0000-0000-0000-000000000011', 'fd000000-0000-0000-0000-000000000002', 'Split X', '4', 'active'),
   ('cd000000-0000-0000-0000-000000000012', 'fd000000-0000-0000-0000-000000000002', 'Split Y', '5', 'active'),
@@ -31,8 +31,8 @@ insert into capital_movements (customer_id, effective_from, amount) values
   ('cd000000-0000-0000-0000-000000000011', '2025-09-01', 100000), ('cd000000-0000-0000-0000-000000000012', '2025-09-01', 100000),
   ('cd000000-0000-0000-0000-000000000021', '2025-09-01', 100000);
 insert into capital_movements (customer_id, received_at, amount) values
-  ('cd000000-0000-0000-0000-00000000000a', '2025-09-15 11:30+05:30', 50000),  -- counts from 16 Sep
-  ('cd000000-0000-0000-0000-00000000000b', '2025-09-15 12:30+05:30', 50000),  -- counts from 17 Sep
+  ('cd000000-0000-0000-0000-00000000000a', '2025-09-15 18:30+05:30', 50000),  -- received the 15th: counts from 16 Sep
+  ('cd000000-0000-0000-0000-00000000000b', '2025-09-16 00:01+05:30', 50000),  -- received the 16th: counts from 17 Sep
   ('cd000000-0000-0000-0000-00000000000c', '2025-10-15 09:00+05:30', 50000),  -- counts from 16 Oct (31-day month)
   ('cd000000-0000-0000-0000-000000000012', '2025-09-15 10:00+05:30', 100000), -- Y doubles from 16 Sep
   ('cd000000-0000-0000-0000-000000000021', '2025-09-15 10:00+05:30', 50000),  -- Z tops up from 16 Sep
@@ -40,10 +40,10 @@ insert into capital_movements (customer_id, received_at, amount) values
 
 -- The owner's example: ₹1,00,000 on the 1st = ₹6,000; ₹50,000 from the 16th of a 30-day month adds 6% × 50,000 × 15/30 = ₹1,500.
 select is(day_cap('cd000000-0000-0000-0000-00000000000a', 6, '2025-09-15'), 6000.00, 'cap before the deposit starts: 6% of 1,00,000');
-select is(day_cap('cd000000-0000-0000-0000-00000000000a', 6, '2025-09-16'), 7500.00, 'deposit before noon: 6,000 + 1,500 = 7,500 from the 16th');
+select is(day_cap('cd000000-0000-0000-0000-00000000000a', 6, '2025-09-16'), 7500.00, 'received on the 15th: 6,000 + 1,500 = 7,500 from the 16th');
 select is(month_cap('cd000000-0000-0000-0000-00000000000a', '2025-09-01'), 7500.00, 'month bucket 7,500');
--- After noon: counts from the 17th, 14 of 30 days: 6% × 50,000 × 14/30 = 1,400.
-select is(month_cap('cd000000-0000-0000-0000-00000000000b', '2025-09-01'), 7400.00, 'deposit after noon: 6,000 + 1,400 = 7,400');
+-- Received just after midnight (the 16th): counts from the 17th, 14 of 30 days: 6% × 50,000 × 14/30 = 1,400.
+select is(month_cap('cd000000-0000-0000-0000-00000000000b', '2025-09-01'), 7400.00, 'received the 16th: 6,000 + 1,400 = 7,400');
 -- 31-day month, from the 16th = 16 days: 6% × (1,00,000 + 50,000 × 16/31) = 7,548.387… → 7,548.39 (rounded once).
 select is(month_cap('cd000000-0000-0000-0000-00000000000c', '2025-10-01'), 7548.39, '31-day month pro-rates by 16/31');
 -- February 2025 (28 days), new customer from the 11th = 18 days: 6% × 28,000 × 18/28 = 1,080.
@@ -95,11 +95,11 @@ insert into auth.users (id, email) values ('ad000000-0000-0000-0000-000000000001
 insert into profiles (id, role) values ('ad000000-0000-0000-0000-000000000001', 'admin');
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"ad000000-0000-0000-0000-000000000001"}';
-select is(deposit_preview('cd000000-0000-0000-0000-00000000000a', 50000, '2025-09-15 11:30+05:30')::jsonb,
+select is(deposit_preview('cd000000-0000-0000-0000-00000000000a', 50000, '2025-09-15 18:30+05:30')::jsonb,
   '{"effective_from": "2025-09-16", "days": 15, "days_in_month": 30, "cap_added": 1500.00}'::jsonb, 'preview matches the bucket maths');
 -- A person can't choose the start date: it comes from the received time.
 insert into capital_movements (customer_id, received_at, effective_from, amount)
-  values ('cd000000-0000-0000-0000-00000000000c', '2025-10-20 15:00+05:30', '2025-10-01', 1000);
+  values ('cd000000-0000-0000-0000-00000000000c', '2025-10-21 15:00+05:30', '2025-10-01', 1000);
 select is((select effective_from from capital_movements where customer_id = 'cd000000-0000-0000-0000-00000000000c' and amount = 1000),
   '2025-10-22'::date, 'start date is worked out by the server, not taken from the browser');
 select throws_ok($$insert into capital_movements (customer_id, effective_from, amount) values ('cd000000-0000-0000-0000-00000000000c', '2025-10-05', 1000)$$,

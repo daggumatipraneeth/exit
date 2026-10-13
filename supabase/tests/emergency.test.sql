@@ -31,7 +31,7 @@ insert into customers (id, franchisee_id, full_name, phone, plan, status) values
 insert into profiles (id, full_name, role, customer_id) values ('ae000000-0000-0000-0000-000000000002', 'V2 loss', 'customer', 'ce000000-0000-0000-0000-000000000002');
 insert into capital_movements (customer_id, effective_from, amount)
 select id, (select p from t), case when full_name = 'V5 wiped' then 1000 else 100000 end from customers where full_name ~ '^(V|A2|F1|K1)';
--- V6 also sends 50,000 today at 13:00: it counts from the day after tomorrow, so it's still pending.
+-- V6 also sends 50,000 today at 13:00: it counts from tomorrow, so it's still pending.
 insert into capital_movements (customer_id, received_at, amount)
 values ('ce000000-0000-0000-0000-000000000006', ((select today_ist()) + time '13:00') at time zone 'Asia/Kolkata', 50000);
 

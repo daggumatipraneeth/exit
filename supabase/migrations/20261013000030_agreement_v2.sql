@@ -1,5 +1,5 @@
 -- Agreement version 2: a full draft for legal review, matching the money rules the portal enforces
--- (12:00 IST cut-off, pro-rated buckets, carry-forward, fixed plan, month-end close, emergency exit).
+-- (counts from the next day, pro-rated buckets, carry-forward, fixed plan, month-end close, emergency exit).
 -- New fill-ins: {{plan}}, {{plan_terms}}, {{mobile}}, {{bank}} (masked) and {{partner_phone}}.
 
 create or replace function render_agreement(p_agreement uuid) returns text
@@ -56,7 +56,7 @@ values ('Client Trading Agreement v2', $html$
 <h2>3. Capital and deposits</h2>
 <ol>
   <li>Money is accepted only by bank transfer from the Registered Bank Account to Exit's bank account. Exit never accepts cash. The Partner is not authorised to receive money for Exit.</li>
-  <li>Money received by Exit <strong>before 12:00 noon</strong> counts from the next day; money received <strong>at or after 12:00 noon</strong> counts from the day after that. Results before that day do not apply to it.</li>
+  <li>Money counts from the <strong>day after the day Exit receives it</strong> (Indian Standard Time). For example, money received at any time on the 15th, up to midnight, counts from the 16th. Results before that day do not apply to it.</li>
   <li>Exit records each deposit in the Client's account in the Exit portal, with the date and time it was received.</li>
 </ol>
 

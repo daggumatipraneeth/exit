@@ -243,7 +243,7 @@ export function NewCustomer({ profile }) {
             />
             <TextField
               label="Reached Exit's account on" type="datetime-local" value={received} onChange={(e) => setReceived(e.target.value)}
-              slotProps={{ inputLabel: { shrink: true } }} helperText="Before 12:00 noon it counts from the next day; from 12:00 noon, from the day after."
+              slotProps={{ inputLabel: { shrink: true } }} helperText="It counts from the next day: received any time on the 15th, up to midnight, counts from the 16th."
             />
           </Box>
           <Button type="submit" variant="contained" size="large" disabled={busy || !detailsValid(f, profile) || !bankValid(bank)} sx={{ justifySelf: { xs: 'stretch', sm: 'end' } }}>

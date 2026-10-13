@@ -264,7 +264,7 @@ Notes:
 | Rule | How |
 |---|---|
 | Capital | A ledger of movements (`capital_movements`); never edited, only undone in open months |
-| Cut-off | Received before 12:00 IST counts from the next day; from 12:00, from the day after (`effective_date`) |
+| Start date | Counts from the day after it is received, IST (`effective_date`): any time on the 15th up to midnight → the 16th |
 | Bucket | cap % × (capital on the 1st + Σ later deposits × days left ÷ days in month), rounded once (`day_cap`, `month_cap`) |
 | Daily split | Each day's result shared by each customer's capital that day |
 | Emergency exit | Variable: capital + month result + carried loss, floored at 0. Fixed: capital. The partner's paid days become final |
@@ -273,11 +273,11 @@ Notes:
 ### Hand-worked checks (`supabase/tests/deposits.test.sql`, all passing)
 | Case | Expected | System |
 |---|---|---|
-| ₹1L on the 1st + ₹50k received 15 Sep 11:30 (30-day month) | 6,000 + 6% × 50,000 × 15/30 = **7,500** | 7,500.00 |
-| Same, received 12:30 (starts the 17th, 14 days) | 6,000 + 1,400 = **7,400** | 7,400.00 |
+| ₹1L on the 1st + ₹50k received 15 Sep, any time (30-day month) | 6,000 + 6% × 50,000 × 15/30 = **7,500** | 7,500.00 |
+| Same, received 16 Sep 00:01 (starts the 17th, 14 days) | 6,000 + 1,400 = **7,400** | 7,400.00 |
 | 31-day month, starts the 16th (16 days) | 6% × (1,00,000 + 50,000 × 16/31) = **7,548.39** | 7,548.39 |
 | New customer, ₹28,000 received 10 Feb (Feb 2025, starts the 11th) | 6% × 28,000 × 18/28 = **1,080** | 1,080.00 |
-| Cut-off edges | 11:59:59 → next day; 12:00:00 → day after; last day 13:00 → the 2nd | as expected |
+| Midnight edges | 15th 23:59:59 → the 16th; 16th 00:00:00 → the 17th; last day 23:00 → the 1st | as expected |
 | Live preview (Anil, 13 Oct 11:30, ₹50k) | Starts 14 Oct; 6% × 50,000 × 18/31 = **₹1,741.94** | shown in the Add money dialog |
 
 ### Verification

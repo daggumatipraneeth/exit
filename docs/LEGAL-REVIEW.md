@@ -12,12 +12,12 @@ Everything below is a *draft written by the development team, not legal advice*.
 | Terms of use, Privacy policy, Risk disclosure | `src/sections/Legal.jsx`. Live at `/#/terms`, `/#/privacy` and `/#/risk`. |
 
 ## What the agreement commits Exit to (as the system calculates it)
-- **Deposits** are by bank transfer from the registered account only; no cash, and partners never handle money. Money received **before 12:00 noon IST counts from the next day; from 12:00 noon, from the day after**.
+- **Deposits** are by bank transfer from the registered account only; no cash, and partners never handle money. Money **counts from the day after it is received** (IST): received any time on the 15th, up to midnight, it counts from the 16th.
 - **Monthly cap:** cap % × capital on the 1st, plus each later deposit pro rata, as cap % × amount × (days left in the month from its start) ÷ (days in the month).
 - **Sharing:** each day's result, after all trade charges, is shared by each client's capital that day. Profit is credited only up to the client's cap; profit above every cap goes to Exit and the partner.
 - **Profit Share plan:** a loss carries forward and is recovered first. The client never owes more than their capital.
 - **Fixed Monthly Payout plan:** Exit pays the monthly cap every month whatever the result, and returns the principal in full on an emergency exit.
-- **Month close:** months close on their last day (automatically at 11:30 PM IST). Payouts go to the registered account within 7 working days. *This 7-day timeline is a business commitment; please confirm.*
+- **Month close:** months close on their last day (automatically at 11:30 PM IST). Payouts go to the registered account within 7 working days (confirmed by the business).
 - **Withdrawals** are paid with the month's payout. Withdrawing everything closes the account.
 - **Emergency exit** settles immediately on the results entered so far:
   - Profit Share: capital + month result + carried loss, floored at 0.
@@ -36,11 +36,11 @@ Everything below is a *draft written by the development team, not legal advice*.
 | 6 | Medium | **TDS** on profit payouts (e.g. s.194A or another section) and the client's tax treatment. | |
 | 7 | Medium | **Electronic signature:** the portal records a drawn signature with time, IP and device, and stores the exact signed text with a SHA-256 hash. | Consider Aadhaar eSign (IT Act 2000, Second Schedule) for stronger evidence. |
 | 8 | Medium | **Changing terms:** clause 21 allows changes on 30 days' notice. | The portal already shows "Agreement out of date" and lets staff send the new version to sign. Decide whether unsigned clients should be blocked from new deposits. |
-| 9 | Low | **Grievance timelines:** 2 working days to acknowledge, 15 days to resolve. Also a named grievance officer. | Name to be added once appointed. |
+| 9 | Low | **Grievance timelines:** 2 working days to acknowledge, 15 days to resolve (confirmed by the business). Also a named grievance officer. | Name to be added once appointed. |
 | 10 | Low | **Data retention:** 5 years after closure, per PMLA record-keeping. | Confirm the period and that the contact-form retention of 2 years is acceptable. |
 | 11 | Low | **Nomination and death:** the draft closes the account at month end and pays nominees or heirs. | Consider adding a nomination form to onboarding. |
 
 ## Placeholders still to fill
-- Office phone numbers in `src/config.js` (`+91 90000 00001/2`) and the Hyderabad address.
-- SEBI, AMFI and CIN numbers (`config.js`). They are hidden until `VITE_SEBI_REGISTERED=true`.
+- Office phone numbers in `src/config.js` (`+91 90000 00001/2`); the business will supply them.
+- SEBI, AMFI and CIN numbers (`config.js`): registration not received yet, so they stay hidden (`VITE_SEBI_REGISTERED` off).
 - The grievance officer's name and email.

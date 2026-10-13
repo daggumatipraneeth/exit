@@ -1,4 +1,4 @@
-// Money in and out of one customer: the capital ledger with Add money (12:00 cut-off, pro-rated bucket preview),
+// Money in and out of one customer: the capital ledger with Add money (counts from the next day, pro-rated bucket preview),
 // and the emergency exit. All the maths is on the server; these screens only show what it worked out.
 import { useEffect, useState } from 'react';
 import {
@@ -126,7 +126,7 @@ export function AddMoneyDialog({ customer: c, onClose, onSaved }) {
         <TextField
           label="Reached Exit's account on" type="datetime-local" value={received} onChange={(e) => setReceived(e.target.value)}
           slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: nowLocal() } }}
-          helperText="Before 12:00 noon it counts from the next day; from 12:00 noon, from the day after."
+          helperText="It counts from the next day: received any time on the 15th, up to midnight, counts from the 16th."
         />
         {preview && (
           <Alert severity="info">

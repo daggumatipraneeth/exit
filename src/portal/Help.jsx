@@ -10,7 +10,7 @@ const bank = ['Why must the bank account be the one the money comes from?',
   'This keeps money safe from mistakes and fraud. If the customer sends money from a different account, update the bank details first.'];
 
 const cut = ['When does new money start counting?',
-  'Money that reaches Exit before 12:00 noon counts from the next day; at or after 12:00 noon, from the day after. ' +
+  'Money counts from the day after it reaches Exit: received any time on the 15th, up to midnight, it counts from the 16th. ' +
   'From then on it shares in each day\'s result, and adds to that month\'s bucket pro rata for the days left in the month.'];
 
 const emergency = ['What is an emergency exit?',
@@ -28,7 +28,7 @@ const partner = [
     'The account number is 9 to 18 digits with no spaces. Copy both from the cheque book or passbook, and type the account number twice to catch typos.'],
   ['How does a customer add more money?',
     'They transfer it from their registered bank account and you tell the Exit office the amount and the time it arrived. ' +
-    'Money that arrives before 12:00 noon counts from the next day; from 12:00 noon, from the day after. ' +
+    'It counts from the day after it arrives: any time on the 15th, up to midnight, counts from the 16th. ' +
     'That month\'s bucket grows pro rata: with a 6% cap, ₹50,000 counting from the 16th of a 30-day month adds ₹1,500. Customers cannot add money from the app.'],
   cut,
   emergency,
@@ -46,7 +46,7 @@ const customer = [
   ['What happens in a loss month?', 'There is no payout that month. The loss is made up from the next months\' profit first, then payouts restart.'],
   ['How do I withdraw?', 'Use Request withdrawal and enter the amount. It is sent with the next monthly payout to your bank account. Withdrawing everything closes your account.'],
   ['I need my money now.', 'Use Request emergency exit. Exit pays you straight away instead of at month end: your capital plus this month\'s result so far (fixed plan: your capital in full), and your account closes.'],
-  ['How do I add more money?', 'Transfer it from your registered bank account and tell your partner. Money that reaches Exit before 12:00 noon counts from the next day; after 12:00 noon, from the day after.'],
+  ['How do I add more money?', 'Transfer it from your registered bank account and tell your partner. Money counts from the day after it reaches Exit.'],
   ['How do I change my bank account or mobile number?', 'Contact your partner. For your safety these can only be changed by Exit.'],
   ['I forgot my password.', 'Ask your partner to reset it. You can change it any time on this page.'],
 ];

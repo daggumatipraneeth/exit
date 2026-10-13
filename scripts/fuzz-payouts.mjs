@@ -19,8 +19,8 @@ const prevMonth = (m) => { const x = new Date(`${m}T00:00:00Z`); x.setUTCMonth(x
 const daysBetween = (a, b) => Math.round((new Date(`${b}T00:00:00Z`) - new Date(`${a}T00:00:00Z`)) / 86400e3);
 const M = monthOf(TODAY), PM = prevMonth(M);
 
-// Effective date from an IST received date + time: before 12:00 → +1 day, from 12:00 → +2.
-const effective = (date, hhmmss) => addDays(date, hhmmss < '12:00:00' ? 1 : 2);
+// Money counts from the day after the IST day it's received, whatever the time.
+const effective = (date) => addDays(date, 1);
 
 // ---------- exact money ----------
 const B = BigInt;
@@ -42,14 +42,14 @@ function scenario(seed) {
   const deposits = [];
   const pmDays = daysBetween(PM, M), mDaysSoFar = daysBetween(M, TODAY) + 1;
   for (const c of customers) {
-    // first deposit somewhere in the previous month (some on its very first moments, some late, some on the last afternoon)
+    // first deposit somewhere in the previous month (some on the day before it, some on its last day)
     const d = addDays(PM, r() < 0.35 ? -1 : int(0, pmDays - 1));
-    deposits.push({ c: c.i, date: d, time: pick(['09:15:00', '11:59:59', '12:00:00', '15:30:00']), amount: int(1, 40) * 5000 });
+    deposits.push({ c: c.i, date: d, time: pick(['00:00:00', '09:15:00', '12:00:00', '23:59:59']), amount: int(1, 40) * 5000 });
     const extra = int(0, 2);
     for (let k = 0; k < extra; k++) {
       const inM = r() < 0.5;
       const date = inM ? addDays(M, int(0, mDaysSoFar - 1)) : addDays(PM, int(0, pmDays - 1));
-      deposits.push({ c: c.i, date, time: pick(['08:00:00', '11:30:00', '12:00:00', '13:45:00']), amount: int(1, 20) * 2500 });
+      deposits.push({ c: c.i, date, time: pick(['00:00:01', '11:30:00', '18:29:59', '23:59:59']), amount: int(1, 20) * 2500 });
     }
   }
   const amt = () => (r() < 0.65 ? 1 : -1) * Number((r() * 30000).toFixed(2)) + (r() < 0.1 ? 0.01 : 0);

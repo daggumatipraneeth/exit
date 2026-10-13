@@ -311,15 +311,16 @@ begin
 end $$;
 
 -- What an emergency exit would pay right now. The customer, their partner or staff may look.
-create function emergency_figures(p_customer uuid) returns json
+create function emergency_figures(p_customer uuid default null) returns json
 language plpgsql stable security definer set search_path = public as $$
 declare
+  v_customer uuid := coalesce(p_customer, my_customer_id());
   c customers;
   m date := date_trunc('month', today_ist())::date;
   v_through date; v_result numeric; v_carried numeric; v_capital numeric;
 begin
-  select * into c from customers where id = p_customer;
-  if not found or not (can_see_customer(p_customer) or p_customer = my_customer_id()) then
+  select * into c from customers where id = v_customer;
+  if not found or not (can_see_customer(v_customer) or v_customer = my_customer_id()) then
     raise exception 'You cannot see this customer';
   end if;
   v_through := (select max(trade_date) from daily_entries

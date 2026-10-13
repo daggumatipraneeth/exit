@@ -1,5 +1,7 @@
 // Small pieces shared by portal pages.
-import { Box, Typography, Chip, Button, Link, IconButton } from '@mui/material';
+import { useState } from 'react';
+import { Box, Typography, Chip, Button, Link, IconButton, Popover } from '@mui/material';
+import InfoIcon from '@mui/icons-material/InfoOutlined';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
 import ChevronRight from '@mui/icons-material/ChevronRight';
@@ -71,10 +73,10 @@ const tones = {
   neutral: ['#EDF1F5', '#4A5670'],
   bad: ['#FBE6E4', '#9B2C20'],
 };
-export function Pill({ label, tone = 'neutral' }) {
+export function Pill({ label, tone = 'neutral', small }) {
   const [bg, fg] = tones[tone];
   return (
-    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', height: 24, px: 1.25, borderRadius: 999, bgcolor: bg, color: fg, fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
+    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', height: small ? 20 : 24, px: small ? 1 : 1.25, borderRadius: 999, bgcolor: bg, color: fg, fontSize: small ? 11.5 : 12.5, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
       {label}
     </Box>
   );
@@ -88,9 +90,9 @@ const statusLook = {
   rejected: ['Rejected', 'bad'],
   closed: ['Closed', 'neutral'],
 };
-export function StatusChip({ status }) {
+export function StatusChip({ status, small }) {
   const [label, tone] = statusLook[status];
-  return <Pill label={label} tone={tone} />;
+  return <Pill label={label} tone={tone} small={small} />;
 }
 
 export function CapMeter({ covered, cap, thick }) {
@@ -117,6 +119,24 @@ export function CapMeter({ covered, cap, thick }) {
 }
 
 // Row of figures inside one panel, divided by rules; stacks on phones.
+// An (i) after a label: tap or click for a short explanation. A popover, not a hover tooltip, so it works on phones.
+export function InfoTip({ text, label }) {
+  const [anchor, setAnchor] = useState(null);
+  return (
+    <>
+      <IconButton size="small" aria-label={`What is ${label}?`} onClick={(e) => setAnchor(e.currentTarget)} sx={{ p: 0.5, ml: 0.25, my: -0.5, verticalAlign: 'middle', color: 'text.secondary' }}>
+        <InfoIcon sx={{ fontSize: 16 }} />
+      </IconButton>
+      <Popover
+        open={!!anchor} anchorEl={anchor} onClose={() => setAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }} slotProps={{ paper: { sx: { p: 2, maxWidth: 300 } } }}
+      >
+        <Typography variant="body2">{text}</Typography>
+      </Popover>
+    </>
+  );
+}
+
 export function Figures({ items }) {
   return (
     <Box
@@ -126,7 +146,7 @@ export function Figures({ items }) {
         '& > *:not(:last-child)': { borderBottom: { xs: `1px solid ${line}`, sm: 'none' }, borderRight: { sm: `1px solid ${line}` } },
       }}
     >
-      {items.map(({ label, value, note }) => (
+      {items.map(({ label, value, note, info }) => (
         <Box
           key={label}
           sx={{
@@ -134,7 +154,7 @@ export function Figures({ items }) {
             display: { xs: 'grid', sm: 'block' }, gridTemplateColumns: '1fr auto', alignItems: 'baseline', columnGap: 2,
           }}
         >
-          <Typography variant="body2" color="text.secondary">{label}</Typography>
+          <Typography variant="body2" color="text.secondary">{label}{info && <InfoTip text={info} label={label} />}</Typography>
           <Typography component="div" sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem', md: '1.75rem' }, fontWeight: 700, letterSpacing: '-0.02em', mt: { sm: 0.25 }, textAlign: { xs: 'right', sm: 'left' } }}>
             {value}
           </Typography>
@@ -182,8 +202,11 @@ export function PageTitle({ children, action }) {
 
 // ‹ day › picker that sits beside a page title. Phones show a short date ("12 Oct") with the native
 // date input laid invisibly over it, so a tap still opens the phone's calendar.
+// The native date and month pickers. At least 16px, or iPhones zoom in when one is tapped and the page then pans about.
+export const pickerField = { font: 'inherit', fontSize: 16, fontWeight: 600, color: ink, border: `1px solid ${line}`, borderRadius: 1.5, bgcolor: '#fff', px: 1.5, height: 40 };
+
 export function DayNav({ date, setDate, label = 'Choose a day' }) {
-  const field = { font: 'inherit', fontWeight: 600, color: ink, border: `1px solid ${line}`, borderRadius: 1.5, bgcolor: '#fff', px: 1.5, height: 40 };
+  const field = pickerField;
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, mr: { xs: -1, sm: 0 } }}>
       <IconButton aria-label="Previous day" onClick={() => setDate(shift(date, -1))}><ChevronLeft /></IconButton>

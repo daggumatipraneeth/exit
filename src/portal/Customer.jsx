@@ -81,8 +81,8 @@ export default function Customer({ profile, id }) {
           {active && <>
           <Figures
             items={[
-              { label: `Credited in ${monthName(`${month}-01`)}`, value: <Signed value={sum(days, 'credited')} sx={{ fontWeight: 700 }} /> },
-              { label: 'Bucket this month', value: latest ? money(latest.cap) : '–', note: `${Number(c.cap_pct)}% of capital` },
+              { label: `Credited in ${monthName(`${month}-01`)}`, value: <Signed value={sum(days, 'credited')} sx={{ fontWeight: 700 }} />, info: "The customer's share of the month's results so far: profit until their bucket is full, and their share of any loss." },
+              { label: 'Bucket this month', value: latest ? money(latest.cap) : '–', note: `${Number(c.cap_pct)}% of capital`, info: 'The most profit this customer can receive this month: their cap % of the capital they had on the 1st. Profit above it goes to the partner and Exit.' },
             ]}
           />
 

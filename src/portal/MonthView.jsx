@@ -8,7 +8,7 @@ import { supabase, fetchAll } from './supabase';
 import { money } from '../finance';
 import { accent, ink, line, loss } from '../theme';
 import {
-  today, fmtDate, monthName, sum, tone, Signed, Panel, PageTitle, Figures, Pairs, Pill, CapMeter, ShowMore, PAGE_ROWS,
+  today, pickerField, fmtDate, monthName, sum, tone, Signed, Panel, PageTitle, Figures, Pairs, Pill, CapMeter, ShowMore, PAGE_ROWS,
   rowLink, tableHead, tableRow,
 } from './ui';
 import { hiddenCharge } from './Dashboard';
@@ -44,7 +44,7 @@ const shiftMonth = (m, n) => { const d = new Date(`${m}T00:00`); d.setMonth(d.ge
 // ‹ month › beside the title, like the day picker on Today: phones show "Oct 2026" with the native month input
 // laid invisibly over it, so a tap still opens the phone's picker.
 function MonthNav({ month, setMonth }) {
-  const field = { font: 'inherit', fontWeight: 600, color: ink, border: `1px solid ${line}`, borderRadius: 1.5, bgcolor: '#fff', px: 1.5, height: 40 };
+  const field = pickerField;
   const last = `${today().slice(0, 7)}-01`;
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, mr: { xs: -1, sm: 0 } }}>
@@ -113,14 +113,17 @@ function Heatmap({ month, byDay }) {
           return has ? <Tooltip key={d} title={`${fmtDate(d)} · ${money(v, true)}`} disableInteractive>{cell}</Tooltip> : <Box key={d}>{cell}</Box>;
         })}
       </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mt: 2, color: 'text.secondary', fontSize: 12.5 }}>
-        <span>Loss</span>
-        {[-4, -3, -2, -1].map((s) => <Box key={s} sx={{ width: 18, height: 12, borderRadius: 0.5, border: `1px solid ${line}`, bgcolor: shade(s, 4) }} />)}
-        {[1, 2, 3, 4].map((s) => <Box key={s} sx={{ width: 18, height: 12, borderRadius: 0.5, border: `1px solid ${line}`, bgcolor: shade(s, 4) }} />)}
-        <span>Profit</span>
-        <Box sx={{ width: 18, height: 12, borderRadius: 0.5, border: `1px solid ${line}`, bgcolor: '#fff', ml: 2 }} />
-        <span>No trading</span>
-        <Box component="span" sx={{ ml: { md: 'auto' }, width: { xs: 1, md: 'auto' } }}>Tap a day to see its details.</Box>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 3, rowGap: 1, mt: 2, color: 'text.secondary', fontSize: 12.5, '& > *': { display: 'flex', alignItems: 'center', gap: 0.75 } }}>
+        <Box>
+          <span>Loss</span>
+          {[-4, -3, -2, -1, 1, 2, 3, 4].map((s) => <Box key={s} sx={{ width: 18, height: 12, borderRadius: 0.5, border: `1px solid ${line}`, bgcolor: shade(s, 4) }} />)}
+          <span>Profit</span>
+        </Box>
+        <Box>
+          <Box sx={{ width: 18, height: 12, borderRadius: 0.5, border: `1px solid ${line}`, bgcolor: '#fff' }} />
+          <span>No trading</span>
+        </Box>
+        <Box sx={{ ml: { md: 'auto' } }}>Tap a day to see its details.</Box>
       </Box>
     </Box>
   );
@@ -207,17 +210,34 @@ export default function MonthView({ profile }) {
   const bold = { fontWeight: 700 };
   const ofInvested = (v, what) => (invested > 0 ? <><Pct value={pct(v, invested)} /> {what}</> : null);
   const figures = [
-    { label: 'Invested', value: money(invested), note: `${customers.length} ${customers.length === 1 ? 'customer' : 'customers'}` },
-    { label: total < 0 ? 'Total loss' : 'Total profit', value: <Signed value={total} sx={bold} />, note: ofInvested(total, 'of invested') },
+    {
+      label: 'Invested', value: money(invested), note: `${customers.length} ${customers.length === 1 ? 'customer' : 'customers'}`,
+      info: "Each customer's capital on the 1st of the month (or their first deposit, if they joined during the month). A month's buckets are worked out on this.",
+    },
+    {
+      label: total < 0 ? 'Total loss' : 'Total profit', value: <Signed value={total} sx={bold} />, note: ofInvested(total, 'of invested'),
+      info: staff ? 'Everything entered this month, before the hidden charge.' : "This month's results on your customers' money, after charges.",
+    },
     {
       label: staff ? 'Credited to customers' : 'Credited to your customers',
       value: <Signed value={toCustomers} sx={bold} />, note: ofInvested(toCustomers, 'return for customers'),
+      info: "Profit goes to customers first, in proportion to their capital, until each one's monthly bucket is full. Losses are taken the same way.",
     },
     ...(staff ? [
-      { label: 'Partners earned', value: <Signed value={sum(days, 'partner_income')} signed={false} sx={bold} /> },
-      { label: 'Exit earned', value: money(hiddenCharge(entries, days) + sum(days, 'exit_share')) },
+      {
+        label: 'Partners earned', value: <Signed value={sum(days, 'partner_income')} signed={false} sx={bold} />,
+        info: "Partners' share of profit once all of their customers' buckets are full.",
+      },
+      {
+        label: 'Exit earned', value: money(hiddenCharge(entries, days) + sum(days, 'exit_share')),
+        info: 'The hidden charge on profitable days, plus Exit’s share of profit above full buckets.',
+      },
     ] : [
-      { label: 'You earned', value: <Signed value={sum(days, 'partner_income')} signed={false} sx={bold} /> },
+      {
+        label: `Your earnings for ${fmtDate(month, { month: 'short', year: 'numeric' })}`, value: <Signed value={sum(days, 'partner_income')} signed={false} sx={bold} />,
+        note: <>Exit's share: {money(sum(days, 'exit_share'))}</>,
+        info: "You earn once every customer's monthly bucket is full: the profit above that is split between you and Exit by your profit share.",
+      },
     ]),
   ];
 

@@ -76,7 +76,7 @@ export default function Layout({ profile, nav, current, children }) {
   const inMore = (items) => items.some((p) => p.path === current);
 
   const tab = (active) => ({
-    borderRadius: 0, px: 1.5, fontWeight: 500, whiteSpace: 'nowrap', transition: 'none',
+    borderRadius: 0, px: 1.5, fontWeight: active ? 600 : 500, whiteSpace: 'nowrap', transition: 'none', color: active ? accent : 'inherit',
     boxShadow: active ? `inset 0 -2px 0 ${accent}` : 'none',
     '&:hover': { bgcolor: 'transparent', boxShadow: `inset 0 -2px 0 ${active ? accent : line}` },
   });
@@ -110,7 +110,7 @@ export default function Layout({ profile, nav, current, children }) {
       </Container>
 
       <Paper square elevation={0} sx={{ display: { xs: nav.length ? 'block' : 'none', md: 'none' }, position: 'fixed', zIndex: 10, bottom: 0, left: 0, right: 0, borderTop: `1px solid ${line}`, pb: 'env(safe-area-inset-bottom)' }}>
-        <BottomNavigation showLabels value={inMore(phoneMore) ? 'more' : current} sx={{ '& .Mui-selected': { color: accent } }}>
+        <BottomNavigation showLabels value={inMore(phoneMore) ? 'more' : current} sx={{ '& .MuiBottomNavigationAction-root.Mui-selected': { color: accent } }}>
           {phoneMain.map((p) => (
             <BottomNavigationAction key={p.path} value={p.path} label={p.short ?? p.label} icon={<p.icon />} href={`#/${p.path}`} sx={{ minWidth: 0 }} />
           ))}

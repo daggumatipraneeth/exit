@@ -31,6 +31,7 @@ export default function MyAccount() {
   if (!a) return null;
 
   const fixed = a.plan === 'fixed';
+  const invested = 'Your money with Exit now. Each month is worked out on the amount you had on the 1st.';
   const days = a.days ?? [];
   const latest = days[0];
   const active = a.status === 'active';
@@ -47,18 +48,23 @@ export default function MyAccount() {
         <Box sx={{ display: 'grid', gap: { xs: 3, md: 4 }, minWidth: 0 }}>
           <Figures
             items={fixed ? [
-              { label: 'Amount invested', value: money(a.invested) },
-              { label: `Fixed payout for ${monthName(a.month)}`, value: money(a.fixed_payout), note: 'Paid at the end of the month' },
+              { label: 'Amount invested', value: money(a.invested), info: invested },
+              {
+                label: `Fixed payout for ${monthName(a.month)}`, value: money(a.fixed_payout), note: 'Paid at the end of the month',
+                info: 'On the fixed plan you get this amount every month, whatever the trading result.',
+              },
             ] : [
               {
                 label: latest ? `Latest day (${fmtDate(latest.date, { day: 'numeric', month: 'short' })})` : 'Latest day',
                 value: latest ? <Signed value={latest.pnl} sx={{ fontWeight: 700 }} /> : '–',
+                info: 'Your share of the most recent trading day, after charges.',
               },
               {
                 label: `${monthName(a.month)} so far`,
                 value: <Signed value={a.month_pnl} sx={{ fontWeight: 700 }} />,
+                info: 'Your result for the month so far. A profit is paid after the month ends; a loss is made up from later profit before payouts restart.',
               },
-              { label: 'Amount invested', value: money(a.invested) },
+              { label: 'Amount invested', value: money(a.invested), info: invested },
             ]}
           />
 

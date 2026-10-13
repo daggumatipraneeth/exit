@@ -1,8 +1,9 @@
 // Help drawer (opened from the account menu): plain-language answers for whoever is logged in.
-import { Box, Drawer, IconButton, Typography, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
+import { Box, Drawer, IconButton, Typography } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import { company } from '../config';
+import { line } from '../theme';
 
 const bank = ['Why must the bank account be the one the money comes from?',
   'Exit pays every payout and withdrawal back to the same account the money came from, and to no other account. ' +
@@ -62,11 +63,20 @@ export default function Help({ role, open, onClose }) {
           <IconButton aria-label="Close help" onClick={onClose}><CloseIcon /></IconButton>
         </Box>
         <Box sx={{ px: 1.5, pb: 2 }}>
+          {/* Native <details>: opens instantly, even on slow phones (MUI's animated Accordion lagged there). */}
           {items.map(([q, a]) => (
-            <Accordion key={q} disableGutters elevation={0} slotProps={{ transition: { timeout: 150 } }} sx={{ '&::before': { display: 'none' } }}>
-              <AccordionSummary expandIcon={<ExpandMore />}><Typography sx={{ fontWeight: 500 }}>{q}</Typography></AccordionSummary>
-              <AccordionDetails><Typography color="text.secondary">{a}</Typography></AccordionDetails>
-            </Accordion>
+            <Box
+              component="details" key={q}
+              sx={{
+                borderBottom: `1px solid ${line}`,
+                '& > summary': { display: 'flex', alignItems: 'center', gap: 1, listStyle: 'none', cursor: 'pointer', px: 2, py: 1.75, fontWeight: 500 },
+                '& > summary::-webkit-details-marker': { display: 'none' },
+                '&[open] > summary svg': { transform: 'rotate(180deg)' },
+              }}
+            >
+              <summary><Box component="span" sx={{ flex: 1 }}>{q}</Box><ExpandMore sx={{ color: 'text.secondary' }} /></summary>
+              <Typography color="text.secondary" sx={{ px: 2, pb: 2 }}>{a}</Typography>
+            </Box>
           ))}
           <Typography variant="body2" color="text.secondary" sx={{ px: 2, mt: 2 }}>
             Still stuck? Call the Exit office on {company.phone}.

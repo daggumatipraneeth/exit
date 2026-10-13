@@ -1,6 +1,6 @@
 // On a customer's page (staff and their partner): the customer's own login, and their payouts and withdrawal.
 import { useEffect, useState } from 'react';
-import { Box, Typography, Button, Alert } from '@mui/material';
+import { Box, Typography, Button, Alert, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import { supabase } from './supabase';
 import { money } from '../finance';
 import { line } from '../theme';
@@ -13,12 +13,14 @@ export function CustomerLogin({ customer: c }) {
   const [made, setMade] = useState(null); // the password just set, to hand over
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [asking, setAsking] = useState(false);
 
   useEffect(() => {
     supabase.rpc('customer_login_id', { p_customer: c.id }).then(({ data }) => setLoginId(data ?? null));
   }, [c.id]);
 
   async function go() {
+    setAsking(false);
     setBusy(true);
     setError('');
     const password = tempPassword();
@@ -45,11 +47,25 @@ export function CustomerLogin({ customer: c }) {
             <Typography variant="body2" color="text.secondary">Share this privately. The customer can change the password after logging in.</Typography>
           </>
         ) : (
-          <Button variant={loginId ? 'outlined' : 'contained'} onClick={go} disabled={busy} sx={{ justifySelf: 'start' }}>
+          <Button variant={loginId ? 'outlined' : 'contained'} onClick={() => setAsking(true)} disabled={busy} sx={{ justifySelf: 'start' }}>
             {loginId ? 'Reset password' : 'Create login'}
           </Button>
         )}
       </Box>
+      <Dialog open={asking} onClose={() => setAsking(false)} fullWidth maxWidth="xs">
+        <DialogTitle>{loginId ? `Reset ${c.full_name}'s password?` : `Create a login for ${c.full_name}?`}</DialogTitle>
+        <DialogContent>
+          <Typography color="text.secondary">
+            {loginId
+              ? 'Their current password stops working straight away. You get a new temporary password to share with them.'
+              : `They log in with mobile ${mobile10(c.phone)} and a temporary password you share with them. They choose their own password at first login.`}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAsking(false)}>Cancel</Button>
+          <Button variant="contained" onClick={go}>{loginId ? 'Reset password' : 'Create login'}</Button>
+        </DialogActions>
+      </Dialog>
     </Panel>
   );
 }

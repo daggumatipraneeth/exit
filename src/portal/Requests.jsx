@@ -40,7 +40,7 @@ function RequestRow({ r, onOpen }) {
 }
 
 // Everything about one request: how to reach them, what they asked, allocation, notes and status.
-function RequestPanel({ r, partners, onClose, onChanged }) {
+function RequestPanel({ r, open, partners, onClose, onChanged }) {
   const [notes, setNotes] = useState(r.notes ?? '');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -57,7 +57,8 @@ function RequestPanel({ r, partners, onClose, onChanged }) {
 
   const [label, tone] = statusLook[r.status];
   return (
-    <Drawer anchor="right" open onClose={onClose} slotProps={{ paper: { sx: { width: { xs: '100%', sm: 460 } } } }}>
+    // appear: a Drawer that mounts already open skips its slide-in unless told otherwise.
+    <Drawer anchor="right" open={open} onClose={onClose} slotProps={{ paper: { sx: { width: { xs: '100%', sm: 460 } } }, transition: { appear: true } }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2.5, py: 1.5, borderBottom: `1px solid ${line}` }}>
         <Typography variant="h6" component="h2" sx={{ flex: 1, minWidth: 0 }} noWrap>{r.name}</Typography>
         <Pill label={label} tone={tone} />
@@ -155,6 +156,7 @@ export default function Requests({ profile }) {
   const [partners, setPartners] = useState(null);
   const [adding, setAdding] = useState(false);
   const [openId, setOpenId] = useState(null);
+  const [shownId, setShownId] = useState(null); // stays set while the panel slides out
   const [rows, setRows] = useState(null);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('new');
@@ -201,14 +203,14 @@ export default function Requests({ profile }) {
           </Typography>
         )}
         <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
-          {list.slice(0, limit).map((r) => <RequestRow key={r.id} r={r} onOpen={(x) => setOpenId(x.id)} />)}
+          {list.slice(0, limit).map((r) => <RequestRow key={r.id} r={r} onOpen={(x) => { setOpenId(x.id); setShownId(x.id); }} />)}
         </Box>
         <ShowMore shown={limit} total={list.length} onMore={() => setLimit(limit + PAGE_ROWS)} />
       </Panel>
       {/* Reads the request from the latest list, so it shows each change straight after saving. */}
-      {openId && rows.some((r) => r.id === openId) && (() => {
-        const r = rows.find((x) => x.id === openId);
-        return <RequestPanel key={r.id} r={r} partners={partners} onClose={() => setOpenId(null)} onChanged={load} />;
+      {shownId && rows.some((r) => r.id === shownId) && (() => {
+        const r = rows.find((x) => x.id === shownId);
+        return <RequestPanel key={r.id} r={r} open={openId === r.id} partners={partners} onClose={() => setOpenId(null)} onChanged={load} />;
       })()}
       {adding && (
         <AddRequestDialog

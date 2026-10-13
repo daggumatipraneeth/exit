@@ -48,11 +48,11 @@ export default function Login({ partner }) {
   return (
     <Box sx={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', px: 2, py: 6 }}>
       <Box sx={{ width: '100%', maxWidth: 400 }}>
-        <Box component="a" href="./" aria-label={`${company.short} home`} sx={{ display: 'inline-flex', mb: 5 }}>
-          <Box component="img" src="media/Exit256.png" alt="Exit" sx={{ height: 40 }} />
-        </Box>
         <Box component="form" key={page.title} onSubmit={submit} noValidate sx={{ bgcolor: '#fff', border: `1px solid ${line}`, borderRadius: 2, p: { xs: 3, sm: 4 } }}>
-          <Typography variant="h5" component="h1" sx={{ fontWeight: 700, mb: 3 }}>{page.title}</Typography>
+          <Box component="a" href="./" aria-label={`${company.short} home`} sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+            <Box component="img" src="media/Exit256.png" alt="Exit" sx={{ height: 40 }} />
+          </Box>
+          <Typography variant="h5" component="h1" sx={{ fontWeight: 700, mb: 3, textAlign: 'center' }}>{page.title}</Typography>
           <Stack spacing={2}>
             {error && <Alert severity="error">{error}</Alert>}
             <TextField
@@ -64,11 +64,14 @@ export default function Login({ partner }) {
             <Button type="submit" variant="contained" size="large" disabled={busy || !page.ready(id) || !password}>Log in</Button>
           </Stack>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2.5 }}>{page.forgot}</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            For registration or account issues, contact support on{' '}
+            <Link href={`tel:${company.phone.replace(/\s/g, '')}`} sx={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{company.phone}</Link>.
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 3, pt: 2.5, borderTop: `1px solid ${line}`, textAlign: 'center' }}>
+            <Link href={page.other[1]} onClick={() => setError('')} sx={{ fontWeight: 600 }}>{page.other[0]}</Link>
+          </Typography>
         </Box>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
-          <Link href={page.other[1]} onClick={() => setError('')} sx={{ fontWeight: 500 }}>{page.other[0]}</Link>
-          {partner && ` · Want to become a partner? Call ${company.phone}.`}
-        </Typography>
       </Box>
     </Box>
   );

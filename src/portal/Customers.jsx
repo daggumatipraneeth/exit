@@ -5,9 +5,9 @@ import AddIcon from '@mui/icons-material/Add';
 import { supabase, fetchAll } from './supabase';
 import { money } from '../finance';
 import { line } from '../theme';
-import { today, monthName, Panel, PageTitle, CapMeter, StatusChip, FilterChips, ShowMore, PAGE_ROWS, rowLink, tableHead, tableRow, Inline, phoneText } from './ui';
+import { today, monthName, Panel, PageTitle, CapMeter, StatusChip, FilterChips, ShowMore, PAGE_ROWS, rowLink, tableHead, tableRow, Inline } from './ui';
 
-const cols = { xs: '1fr auto', md: '1.4fr 0.8fr 0.9fr 1.6fr' };
+const cols = { xs: '1fr auto', md: '2fr 0.9fr 1.6fr' };
 const onboarding = ['draft', 'awaiting_signature', 'pending_approval'];
 
 export default function Customers({ profile }) {
@@ -80,7 +80,7 @@ export default function Customers({ profile }) {
           aria-hidden
           sx={{ ...tableHead, gridTemplateColumns: cols.md, columnGap: 4 }}
         >
-          <span>Customer</span><span>Status</span><Box sx={{ textAlign: 'right' }}>Capital</Box><span>{monthName(month)} cap</span>
+          <span>Customer</span><Box sx={{ textAlign: 'right' }}>Capital</Box><span>{monthName(month)} cap</span>
         </Box>
         {list.length === 0 && (
           <Typography color="text.secondary" sx={{ px: { xs: 2, md: 3 }, py: 4, textAlign: 'center' }}>
@@ -95,16 +95,18 @@ export default function Customers({ profile }) {
                 href={`#/customers/${c.id}`}
                 sx={{
                   ...rowLink, columnGap: { xs: 2, md: 4 }, rowGap: { xs: 0.5, md: 1 }, gridTemplateColumns: cols,
-                  gridTemplateAreas: { xs: '"name capital" "name status" "cap cap"', md: '"name status capital cap"' },
+                  gridTemplateAreas: { xs: '"name capital" "cap cap"', md: '"name capital cap"' },
                   ...tableRow,
                 }}
               >
                 <Box sx={{ gridArea: 'name', minWidth: 0 }}>
-                  <Typography sx={{ fontWeight: 600 }} noWrap>{c.full_name}</Typography>
-                  <Inline items={staff ? [phoneText(c.phone), c.franchisees.name] : [phoneText(c.phone)]} />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                    <Typography sx={{ fontWeight: 600 }} noWrap>{c.full_name}</Typography>
+                    <StatusChip status={c.status} small />
+                  </Box>
+                  {staff && <Inline items={[c.franchisees.name]} />}
                 </Box>
-                <Box sx={{ gridArea: 'status', justifySelf: { xs: 'end', md: 'start' }, alignSelf: { xs: 'start', md: 'center' } }}><StatusChip status={c.status} /></Box>
-                <Box sx={{ gridArea: 'capital', textAlign: 'right', fontWeight: 500, alignSelf: { xs: 'end', md: 'center' } }}>
+                <Box sx={{ gridArea: 'capital', textAlign: 'right', fontWeight: 500 }}>
                   {c.capital ? money(c.capital) : '–'}
                 </Box>
                 <Box sx={{ gridArea: 'cap', mt: { xs: 0.75, md: 0 } }}>

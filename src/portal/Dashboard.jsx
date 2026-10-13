@@ -64,21 +64,39 @@ export default function Dashboard({ profile, id }) {
   const dayEntries = entries.filter((e) => e.trade_date === date);
   const exitDay = hiddenCharge(dayEntries, day) + sum(day, 'exit_share');
 
+  const share = Number(profile.franchisees?.profit_share_pct ?? 0);
   const figures = staff
     ? [
-      { label: sum(dayEntries, 'amount') < 0 ? 'Total loss today' : 'Total profit today', value: <Signed value={sum(dayEntries, 'amount')} sx={bold} /> },
-      { label: 'Credited to customers', value: <Signed value={sum(day, 'to_customers')} sx={bold} /> },
-      { label: 'Partners earned today', value: <Signed value={sum(day, 'partner_income')} signed={false} sx={bold} /> },
-      { label: 'Exit earned today', value: money(exitDay) },
+      {
+        label: sum(dayEntries, 'amount') < 0 ? 'Total loss today' : 'Total profit today', value: <Signed value={sum(dayEntries, 'amount')} sx={bold} />,
+        info: "What was entered for every partner today, before the hidden charge.",
+      },
+      {
+        label: 'Credited to customers', value: <Signed value={sum(day, 'to_customers')} sx={bold} />,
+        info: "Profit goes to customers first, in proportion to their capital, until each one's monthly bucket is full. A loss is taken from customers the same way.",
+      },
+      {
+        label: 'Partners earned today', value: <Signed value={sum(day, 'partner_income')} signed={false} sx={bold} />,
+        info: "Once all of a partner's customers have full buckets, the extra profit is split: the partner gets their profit share and Exit keeps the rest.",
+      },
+      { label: 'Exit earned today', value: money(exitDay), info: 'The hidden charge on profitable days, plus Exit’s share of profit above full buckets.' },
     ]
     : [
-      { label: "Today's result", value: <Signed value={sum(day, 'net')} sx={bold} /> },
-      { label: 'Credited to your customers', value: <Signed value={sum(day, 'to_customers')} sx={bold} /> },
+      { label: "Today's result", value: <Signed value={sum(day, 'net')} sx={bold} />, info: "Today's profit or loss on your customers' money, after charges." },
       {
-        label: 'You earned today', value: <Signed value={sum(day, 'partner_income')} signed={false} sx={bold} />,
-        note: sum(day, 'overflow') > 0 ? <>Exit's share {money(sum(day, 'exit_share'))}</> : 'Starts when every bucket is full',
+        label: 'Credited to your customers', value: <Signed value={sum(day, 'to_customers')} sx={bold} />,
+        info: "Profit goes to your customers first, in proportion to their capital, until each one's monthly bucket is full. A loss is taken from them the same way.",
       },
-      { label: `You earned in ${monthName(date)}`, value: <Signed value={sum(month, 'partner_income')} signed={false} sx={bold} />, note: <>Exit's share {money(sum(month, 'exit_share'))}</> },
+      {
+        label: 'Your earnings today', value: <Signed value={sum(day, 'partner_income')} signed={false} sx={bold} />,
+        note: sum(day, 'overflow') > 0 && <>Exit's share: {money(sum(day, 'exit_share'))}</>,
+        info: `You earn once every customer's monthly bucket is full. The profit above that is split: ${share}% to you, the rest to Exit. Until the buckets are full, this stays at ₹0.`,
+      },
+      {
+        label: `Your earnings for ${fmtDate(date, { month: 'short', year: 'numeric' })}`, value: <Signed value={sum(month, 'partner_income')} signed={false} sx={bold} />,
+        note: <>Exit's share: {money(sum(month, 'exit_share'))}</>,
+        info: 'Your share of profit above full buckets, added up for this month so far.',
+      },
     ];
 
   return (

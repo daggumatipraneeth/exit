@@ -5,6 +5,7 @@ import { Box, Typography, Alert, Tooltip, IconButton } from '@mui/material';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
 import ChevronRight from '@mui/icons-material/ChevronRight';
 import { supabase, fetchAll } from './supabase';
+import { capitalOn } from './Capital';
 import { money } from '../finance';
 import { accent, ink, line, loss } from '../theme';
 import {
@@ -16,12 +17,11 @@ import { hiddenCharge } from './Dashboard';
 const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const iso = (d) => d.toLocaleDateString('en-CA');
 
-// Amount invested for the month, the same rule as payouts (capital_for_month in _calc.sql): the amount in force
-// on the 1st, or the first deposit that month for someone who joined mid-month.
-function investedIn(history, month, end) {
-  const before = history.filter((k) => k.effective_from <= month).sort((a, b) => b.effective_from.localeCompare(a.effective_from))[0];
-  const joined = history.filter((k) => k.effective_from > month && k.effective_from < end).sort((a, b) => a.effective_from.localeCompare(b.effective_from))[0];
-  return Number((before ?? joined)?.amount ?? 0);
+// Amount invested for the month, the same rule as the server's capital_for_month: capital on the 1st, or for
+// someone who started during the month, their capital on their first day.
+function investedIn(moves, month, end) {
+  const first = moves.map((m) => m.effective_from).filter((d) => d > month && d < end).sort()[0];
+  return capitalOn(moves, month) || (first ? capitalOn(moves, first) : 0);
 }
 
 // Return as a % of the amount invested, coloured like the amount it comes from.
@@ -152,7 +152,7 @@ export default function MonthView({ profile }) {
       fetchAll((o) => supabase.from('franchisee_days').select('*, franchisees(name)', o).gte('trade_date', month).lt('trade_date', end).order('trade_date').order('franchisee_id')),
       staff ? fetchAll((o) => supabase.from('daily_entries').select('franchisee_id, trade_date, amount', o).gte('trade_date', month).lt('trade_date', end).order('trade_date').order('franchisee_id')) : { data: [] },
       fetchAll((o) => supabase.from('customer_month_progress').select('customer_id, cap, covered, credited', o).eq('month', month).order('customer_id')),
-      fetchAll((o) => supabase.from('customers').select('id, full_name, franchisee_id, franchisees(name), customer_capital(effective_from, amount)', o).order('id')),
+      fetchAll((o) => supabase.from('customers').select('id, full_name, franchisee_id, franchisees(name), capital_movements(effective_from, amount)', o).order('id')),
       fetchAll((o) => supabase.from('settlements').select('payout_total, paid_at', o).eq('month', month).order('customer_id')),
       supabase.from('closed_months').select('month').eq('month', month),
     ]).then(([days, entries, progress, customers, settled, closed]) => {
@@ -164,7 +164,7 @@ export default function MonthView({ profile }) {
         days: days.data, entries: entries.data, settled: settled.data, closed: closed.data.length > 0,
         customers: progress.data.map((p) => {
           const c = who[p.customer_id] ?? {};
-          return { ...p, ...c, invested: investedIn(c.customer_capital ?? [], month, end) };
+          return { ...p, ...c, invested: investedIn(c.capital_movements ?? [], month, end) };
         }).sort((a, b) => (a.full_name ?? '').localeCompare(b.full_name ?? '')),
       });
     });
@@ -216,7 +216,7 @@ export default function MonthView({ profile }) {
     },
     {
       label: total < 0 ? 'Total loss' : 'Total profit', value: <Signed value={total} sx={bold} />, note: ofInvested(total, 'of invested'),
-      info: staff ? 'Everything entered this month, before the hidden charge.' : "This month's results on your customers' money, after charges.",
+      info: staff ? 'Everything entered this month, before trade charges.' : "This month's results on your customers' money, after charges.",
     },
     {
       label: staff ? 'Credited to customers' : 'Credited to your customers',
@@ -230,7 +230,7 @@ export default function MonthView({ profile }) {
       },
       {
         label: 'Exit earned', value: money(hiddenCharge(entries, days) + sum(days, 'exit_share')),
-        info: 'The hidden charge on profitable days, plus Exit’s share of profit above full buckets.',
+        info: 'Trade charges on profitable days, plus Exit’s share of profit above full buckets.',
       },
     ] : [
       {

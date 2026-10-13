@@ -3,6 +3,7 @@ import { Box, Typography, TextField, InputAdornment, Alert, Button } from '@mui/
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import { supabase, fetchAll } from './supabase';
+import { capitalOn } from './Capital';
 import { money } from '../finance';
 import { line } from '../theme';
 import { today, monthName, Panel, PageTitle, CapMeter, StatusChip, FilterChips, ShowMore, PAGE_ROWS, rowLink, tableHead, tableRow, Inline } from './ui';
@@ -23,7 +24,7 @@ export default function Customers({ profile }) {
   useEffect(() => {
     Promise.all([
       fetchAll((o) => supabase.from('customers')
-        .select('id, full_name, phone, status, franchisees(name), customer_capital(effective_from, amount)', o)
+        .select('id, full_name, phone, status, franchisees(name), capital_movements(effective_from, amount)', o)
         .order('full_name').order('id')),
       fetchAll((o) => supabase.from('customer_month_progress').select('customer_id, cap, covered', o).eq('month', month).order('customer_id')),
     ]).then(([c, p]) => {
@@ -32,7 +33,8 @@ export default function Customers({ profile }) {
       const progress = Object.fromEntries(p.data.map((r) => [r.customer_id, r]));
       setCustomers(c.data.map((x) => ({
         ...x,
-        capital: x.customer_capital.toSorted((a, b) => b.effective_from.localeCompare(a.effective_from))[0]?.amount,
+        // Capital now; for someone whose money hasn't started counting yet, what they've put in.
+        capital: capitalOn(x.capital_movements, today()) || capitalOn(x.capital_movements, '9999-12-31'),
         progress: progress[x.id],
       })));
     });

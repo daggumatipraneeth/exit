@@ -57,8 +57,8 @@ function PartnerDialog({ partner, onClose, onSaved }) {
           <TextField label="Phone" value={f.phone ?? ''} onChange={set('phone')} type="tel" />
           <TextField label="Email" value={f.email ?? ''} onChange={set('email')} type="email" />
           <TextField
-            label="Hidden charge" required type="number" value={f.hidden_charge_pct} onChange={set('hidden_charge_pct')} error={badPct(f.hidden_charge_pct)}
-            helperText={badPct(f.hidden_charge_pct) ? outOfRange : 'Taken from each profitable day before the partner sees it. Partners never see this. Changes apply to new days only.'}
+            label="Trade charges" required type="number" value={f.hidden_charge_pct} onChange={set('hidden_charge_pct')} error={badPct(f.hidden_charge_pct)}
+            helperText={badPct(f.hidden_charge_pct) ? outOfRange : 'Brokerage, taxes and regulatory charges, taken from each profitable day before it is shared. Not shown to partners or customers. Changes apply to new days only.'}
             slotProps={{ htmlInput: { min: 0, max: 100, step: 0.5 }, input: { endAdornment: <InputAdornment position="end">%</InputAdornment> } }}
           />
           <TextField
@@ -456,7 +456,7 @@ export function PartnerDetail({ id }) {
           <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: '1fr 1fr', px: { xs: 2, md: 3 }, py: 2.5 }}>
             <Field label="Phone">{phoneText(f.phone)}</Field>
             <Field label="Email">{f.email}</Field>
-            <Field label="Hidden charge">{f.hidden_charge_pct === '' ? 'Not set' : `${Number(f.hidden_charge_pct)}% of profitable days`}</Field>
+            <Field label="Trade charges">{f.hidden_charge_pct === '' ? 'Not set' : `${Number(f.hidden_charge_pct)}% of profitable days`}</Field>
             <Field label="Profit split">{`${share}% partner / ${100 - share}% Exit`}</Field>
             <Field label="Active customers">{String(customers)}</Field>
             <Field label="Status">{f.active ? 'Active' : 'Inactive (sees nothing)'}</Field>

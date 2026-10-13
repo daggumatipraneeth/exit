@@ -3,12 +3,12 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Box, Typography, Button, Alert, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, Stack, InputAdornment,
 } from '@mui/material';
-import Papa from 'papaparse';
 import { supabase, fetchAll } from './supabase';
 import { money } from '../finance';
 import { line } from '../theme';
 import { today, monthName, shortDate, Panel, PageTitle, Signed, Pairs, errText, Pill } from './ui';
 import { AgreementFrame } from './Sign';
+import { downloadPayoutCsv } from './Capital';
 
 export function Months() {
   const [rows, setRows] = useState(null);
@@ -16,14 +16,19 @@ export function Months() {
   const [paid, setPaid] = useState({}); // month → { total, count, unpaid }
   const [confirm, setConfirm] = useState(null); // { month, close } or { month, pay }
   const [error, setError] = useState('');
+  const [emergencies, setEmergencies] = useState([]);
   const thisMonth = `${today().slice(0, 7)}-01`;
+  const lastDay = new Date(new Date(`${thisMonth}T00:00`).setMonth(new Date(`${thisMonth}T00:00`).getMonth() + 1) - 864e5).toLocaleDateString('en-CA');
 
   function load() {
     Promise.all([
       supabase.from('month_totals').select('*').order('month', { ascending: false }),
       supabase.from('closed_months').select('month, closed_at'),
       fetchAll((o) => supabase.from('settlements').select('month, payout_total, paid_at', o).gt('payout_total', 0).order('month').order('customer_id')),
-    ]).then(([d, c, s]) => {
+      supabase.from('emergency_exits').select('id, customer_id, status, requested_at, processed_at, payout, paid_at, customers(full_name)')
+        .or('status.eq.requested,and(status.eq.processed,paid_at.is.null)').order('requested_at'),
+    ]).then(([d, c, s, em]) => {
+      setEmergencies(em.data ?? []);
       if (d.error || c.error || s.error) return setError(errText(d.error ?? c.error ?? s.error));
       const by = {};
       for (const r of s.data) {
@@ -49,14 +54,7 @@ export function Months() {
   async function download(month) {
     const { data, error } = await supabase.rpc('payout_file', { p_month: month });
     if (error) return setError(errText(error));
-    const missing = data.filter((r) => !r.account_number).map((r) => r.customer);
-    const csv = Papa.unparse({
-      fields: ['Beneficiary name', 'Account number', 'IFSC', 'Amount', 'Narration', 'Customer', 'Partner'],
-      data: data.map((r) => [r.beneficiary_name, r.account_number, r.ifsc, Number(r.amount).toFixed(2), r.narration, r.customer, r.partner]),
-    });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-    a.download = `exit-payouts-${month.slice(0, 7)}.csv`; a.click(); URL.revokeObjectURL(a.href);
+    const missing = downloadPayoutCsv(data, `exit-payouts-${month.slice(0, 7)}.csv`);
     if (missing.length) setError(`No bank details for: ${missing.join(', ')}. Add them on each customer's page, then download again.`);
   }
 
@@ -70,7 +68,26 @@ export function Months() {
         Once a month's figures are final: <strong>Close month</strong> (works out every customer's payout and withdrawal),
         <strong> Download payout file</strong> and send it to the bank, then <strong>Mark paid</strong> once the bank confirms.
         A closed month can't be edited. It can be reopened only until it is marked paid.
+        Each month <strong>closes automatically at 11:30 PM on its last day</strong>; close it yourself earlier that day if the
+        last results are already in. Buckets start fresh on the 1st either way.
       </Typography>
+      {emergencies.length > 0 && (
+        <Panel title="Emergency exits" sx={{ mb: 3 }}>
+          <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
+            {emergencies.map((x) => (
+              <Box component="li" key={x.id} sx={{ display: 'flex', alignItems: 'center', gap: 2, px: { xs: 2, md: 3 }, py: 1.5, '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` } }}>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography component="a" href={`#/customers/${x.customer_id}`} sx={{ fontWeight: 600, color: 'inherit' }}>{x.customers?.full_name}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {x.status === 'requested' ? `Requested ${shortDate(x.requested_at)}: open the customer to pay it out` : `Paid out ${shortDate(x.processed_at)}, ${money(x.payout)}`}
+                  </Typography>
+                </Box>
+                <Pill tone={x.status === 'requested' ? 'attention' : 'progress'} label={x.status === 'requested' ? 'Requested' : 'To be paid'} />
+              </Box>
+            ))}
+          </Box>
+        </Panel>
+      )}
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
       <Panel>
         {rows.length === 0 && <Typography color="text.secondary" sx={{ p: 4, textAlign: 'center' }}>No results entered yet.</Typography>}
@@ -105,7 +122,7 @@ export function Months() {
                   )}
                   {isClosed && pay && <Button size="small" variant="outlined" onClick={() => download(r.month)}>Download payout file</Button>}
                   {isClosed && pay?.unpaid > 0 && <Button size="small" variant="contained" onClick={() => setConfirm({ month: r.month, pay: true })}>Mark paid</Button>}
-                  {settled ? null : !isClosed && r.month === thisMonth ? <Pill tone="progress" label="In progress" /> : (
+                  {settled ? null : !isClosed && r.month === thisMonth && today() < lastDay ? <Pill tone="progress" label={`Closes ${shortDate(lastDay)}, 11:30 PM`} /> : (
                     <Button size="small" variant={isClosed ? 'text' : 'outlined'} onClick={() => setConfirm({ month: r.month, close: !isClosed })}>
                       {isClosed ? 'Reopen' : 'Close month'}
                     </Button>
@@ -139,7 +156,11 @@ export function Months() {
   );
 }
 
-const sample = { full_name: 'Anil Varma', pan: 'ABCDE1234F', franchisee: 'Ravi Kumar Associates', cap_pct: '6', capital: '₹1,00,000', date: '7 October 2026' };
+const sample = {
+  full_name: 'Anil Varma', pan: 'ABCDE1234F', franchisee: 'Ravi Kumar Associates', cap_pct: '6', capital: '₹1,00,000', date: '7 October 2026',
+  plan: 'Profit Share', mobile: '+91 98480 10001', bank: 'Anil Varma · account ending 0001 · IFSC SBIN0001234', partner_phone: '+91 90000 11111',
+  plan_terms: 'The Client has chosen the <strong>Profit Share</strong> plan. (The paragraph for the customer’s plan appears here.)',
+};
 const fill = (body) => body.replace(/\{\{(\w+)\}\}/g, (m, k) => sample[k] ?? m);
 
 export function Templates() {
@@ -210,9 +231,9 @@ export function Templates() {
 }
 
 const tableNames = {
-  customers: 'Customer', daily_entries: 'Daily entry', franchisee_terms: 'Hidden charge', customer_capital: 'Capital', customer_documents: 'KYC document',
+  customers: 'Customer', daily_entries: 'Daily entry', franchisee_terms: 'Trade charges', capital_movements: 'Capital', customer_documents: 'KYC document',
   agreements: 'Agreement', franchisees: 'Partner', profiles: 'Login', closed_months: 'Month', agreement_templates: 'Agreement template',
-  consultation_requests: 'Call-back request', settlements: 'Payout', withdrawal_requests: 'Withdrawal request',
+  consultation_requests: 'Call-back request', settlements: 'Payout', withdrawal_requests: 'Withdrawal request', emergency_exits: 'Emergency exit',
 };
 const verbs = { INSERT: 'added', UPDATE: 'changed', DELETE: 'removed', PASSWORD: 'password reset' };
 const quiet = new Set(['entered_at', 'uploaded_at', 'created_at', 'rendered_html_enc', 'signature_png', 'html_sha256', 'body', 'sign_token', 'pan_hash',
@@ -269,8 +290,10 @@ export function Activity() {
         }).join('; ');
     } else if (r.table_name === 'daily_entries') {
       detail = `${row.trade_date}, ${money(row.amount, true)}`;
-    } else if (r.table_name === 'customer_capital') {
-      detail = `${money(row.amount)} from ${row.effective_from}`;
+    } else if (r.table_name === 'capital_movements') {
+      detail = `${row.kind} ${money(row.amount, true)}, counts from ${row.effective_from}`;
+    } else if (r.table_name === 'emergency_exits') {
+      detail = row.status === 'processed' ? `paid out ${money(row.payout)}` : row.status;
     } else if (r.table_name === 'customer_documents') {
       detail = row.kind?.replace(/_/g, ' ');
     }

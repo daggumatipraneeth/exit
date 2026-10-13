@@ -9,6 +9,15 @@ const bank = ['Why must the bank account be the one the money comes from?',
   'Exit pays every payout and withdrawal back to the same account the money came from, and to no other account. ' +
   'This keeps money safe from mistakes and fraud. If the customer sends money from a different account, update the bank details first.'];
 
+const cut = ['When does new money start counting?',
+  'Money that reaches Exit before 12:00 noon counts from the next day; at or after 12:00 noon, from the day after. ' +
+  'From then on it shares in each day\'s result, and adds to that month\'s bucket pro rata for the days left in the month.'];
+
+const emergency = ['What is an emergency exit?',
+  'If a customer needs their money before the month ends, they (or their partner) ask for an emergency exit and Exit pays it out straight away. ' +
+  'Profit share: capital plus this month\'s result so far, less any loss carried from earlier months (never below zero). ' +
+  'Fixed plan: capital in full, no payout for the part-month. The account then closes.'];
+
 const partner = [
   ['How do I add a customer?',
     'Customers → Add customer. Fill in the name, the 10-digit mobile number, the PAN and the bank details, plus the amount invested and the date it reached Exit. ' +
@@ -18,8 +27,11 @@ const partner = [
     'IFSC is 11 characters: 4 letters, then a zero, then 6 letters or digits (e.g. SBIN0001234). People often type the letter O instead of the zero. ' +
     'The account number is 9 to 18 digits with no spaces. Copy both from the cheque book or passbook, and type the account number twice to catch typos.'],
   ['How does a customer add more money?',
-    'They transfer it from their registered bank account. Tell the Exit office the amount and date; Exit updates the amount invested. ' +
-    'Customers cannot add money from the app.'],
+    'They transfer it from their registered bank account and you tell the Exit office the amount and the time it arrived. ' +
+    'Money that arrives before 12:00 noon counts from the next day; from 12:00 noon, from the day after. ' +
+    'That month\'s bucket grows pro rata: with a 6% cap, ₹50,000 counting from the 16th of a 30-day month adds ₹1,500. Customers cannot add money from the app.'],
+  cut,
+  emergency,
   ['How do I give a customer a login?',
     'Open the customer (approved customers only) → Customer login → Create login. Share the mobile number and temporary password privately. ' +
     'If they forget it, use Reset password on the same page.'],
@@ -33,22 +45,26 @@ const customer = [
   ['When do I get paid?', 'After each month ends, Exit closes the month and sends your payout to your bank account. You see it here as "Processing", then "Paid".'],
   ['What happens in a loss month?', 'There is no payout that month. The loss is made up from the next months\' profit first, then payouts restart.'],
   ['How do I withdraw?', 'Use Request withdrawal and enter the amount. It is sent with the next monthly payout to your bank account. Withdrawing everything closes your account.'],
-  ['How do I add more money?', 'Contact your partner. You cannot add money from the app.'],
+  ['I need my money now.', 'Use Request emergency exit. Exit pays you straight away instead of at month end: your capital plus this month\'s result so far (fixed plan: your capital in full), and your account closes.'],
+  ['How do I add more money?', 'Transfer it from your registered bank account and tell your partner. Money that reaches Exit before 12:00 noon counts from the next day; after 12:00 noon, from the day after.'],
   ['How do I change my bank account or mobile number?', 'Contact your partner. For your safety these can only be changed by Exit.'],
   ['I forgot my password.', 'Ask your partner to reset it. You can change it any time on this page.'],
 ];
 
 const staff = [
   ['What happens at month end?',
-    'Months → Close month works out each customer\'s payout: profit up to their cap (variable plan) or the fixed amount (fixed plan), plus any withdrawal. ' +
-    'Then Download payout file and upload it to the bank. When the bank confirms, Mark paid.'],
+    'Each month closes automatically at 11:30 PM on its last day (or close it yourself that day from Months). Closing works out each customer\'s payout: ' +
+    'profit up to their bucket (variable plan) or the bucket amount (fixed plan), plus any withdrawal. ' +
+    'Then Download payout file and upload it to the bank. When the bank confirms, Mark paid. Buckets start fresh on the 1st.'],
   ['Variable or fixed plan?',
     'Variable: the customer gets the month\'s profit up to their cap; a loss carries forward and is recovered first. ' +
     'Fixed: the customer gets the cap every month, whatever the result; Exit absorbs any shortfall.'],
   ['Can I undo a month close?', 'Yes, Reopen, as long as it is not marked paid. Withdrawals go back to pending and capital is restored.'],
   ['The payout file says a customer has no bank details.', 'Add them on the customer\'s page (Bank account → Add), then download the file again.'],
   bank,
-  ['How do I record a deposit?', 'On the customer\'s page, Capital → Change: enter the new total and the date the money arrived.'],
+  ['How do I record a deposit?', 'On the customer\'s page, Capital → Add money: enter only the new amount and when it reached Exit\'s account. The dialog shows when it starts counting and how much it adds to this month\'s bucket.'],
+  cut,
+  emergency,
 ];
 
 const byRole = { admin: staff, employee: staff, franchisee: partner, customer };

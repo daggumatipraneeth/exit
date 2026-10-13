@@ -109,10 +109,12 @@ export default function MyAccount() {
             ) : (
               <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
                 {a.payouts.map((p) => (
-                  <Box component="li" key={p.month} sx={{ display: 'flex', alignItems: 'center', gap: 2, ...pad, py: 1.5, '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` } }}>
+                  <Box component="li" key={`${p.month}${p.emergency}`} sx={{ display: 'flex', alignItems: 'center', gap: 2, ...pad, py: 1.5, '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` } }}>
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography sx={{ fontWeight: 500 }}>{monthName(p.month)}</Typography>
-                      {Number(p.withdrawal) > 0 && (
+                      {p.emergency ? (
+                        <Typography variant="body2" color="text.secondary">Emergency exit: your capital and this month's result</Typography>
+                      ) : Number(p.withdrawal) > 0 && (
                         <Typography variant="body2" color="text.secondary">Includes withdrawal of {money(p.withdrawal)}</Typography>
                       )}
                     </Box>
@@ -169,10 +171,10 @@ export default function MyAccount() {
             {(a.deposits ?? []).length > 0 && (
               <Box sx={{ ...pad, pb: 2 }}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>Money invested</Typography>
-                {a.deposits.toReversed().map((d) => (
-                  <Box key={d.date} sx={{ display: 'flex', justifyContent: 'space-between', py: 0.75, borderTop: `1px solid ${line}` }}>
-                    <span>From {shortDate(d.date)}</span>
-                    <Box component="span" sx={{ fontWeight: 500 }}>{money(d.amount)}</Box>
+                {a.deposits.toReversed().map((d, i) => (
+                  <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, py: 0.75, borderTop: `1px solid ${line}` }}>
+                    <span>{{ deposit: 'Added', withdrawal: 'Withdrawn', exit: 'Paid back', correction: 'Correction' }[d.kind]}, counts from {shortDate(d.date)}</span>
+                    <Box component="span" sx={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{money(d.amount, true)}</Box>
                   </Box>
                 ))}
               </Box>
@@ -182,12 +184,74 @@ export default function MyAccount() {
             </Typography>
           </Panel>
 
+          {active && <EmergencyExit a={a} onChanged={load} />}
+
           <PasswordPanel email={email} />
         </Box>
       </Box>
 
       {withdrawing && <WithdrawDialog max={Number(a.withdrawable)} note={lossNote} onClose={() => setWithdrawing(false)} onSaved={() => { setWithdrawing(false); load(); }} />}
     </>
+  );
+}
+
+// For when the customer needs the money now: Exit pays out at once on the results so far and closes the account.
+function EmergencyExit({ a, onChanged }) {
+  const [asking, setAsking] = useState(false);
+  const [reason, setReason] = useState('');
+  const [figures, setFigures] = useState(null);
+  const [error, setError] = useState('');
+  const requested = a.emergency?.status === 'requested';
+
+  async function open() {
+    setAsking(true);
+    const { data } = await supabase.rpc('emergency_figures');
+    setFigures(data);
+  }
+  async function call(fn, args) {
+    const { error } = await supabase.rpc(fn, args);
+    if (error) return setError(errText(error));
+    setAsking(false); onChanged();
+  }
+
+  return (
+    <Panel title="Emergency exit">
+      <Box sx={{ ...pad, py: 2.5, display: 'grid', gap: 1.5 }}>
+        {error && <Alert severity="error">{error}</Alert>}
+        {requested ? (
+          <>
+            <Typography>You asked for an emergency exit on {shortDate(a.emergency.requested_at)}. Exit will contact you and pay it out.</Typography>
+            <Button variant="outlined" onClick={() => call('cancel_emergency_exit', {})} sx={{ justifySelf: 'start' }}>Cancel request</Button>
+          </>
+        ) : (
+          <>
+            <Typography variant="body2" color="text.secondary">
+              Need your money now? Exit pays it out straight away instead of at month end, and your account closes.
+            </Typography>
+            <Button variant="outlined" color="error" onClick={open} sx={{ justifySelf: 'start' }}>Request emergency exit</Button>
+          </>
+        )}
+      </Box>
+      <Dialog open={asking} onClose={() => setAsking(false)} fullWidth maxWidth="xs">
+        <DialogTitle>Request an emergency exit?</DialogTitle>
+        <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
+          {figures && (
+            <Alert severity="info">
+              {a.plan === 'fixed'
+                ? <>You would get your capital back in full: <strong>{money(figures.payout)}</strong>. There is no fixed payout for the part of this month.</>
+                : <>On today's figures you would get about <strong>{money(figures.payout)}</strong>: your capital plus this month's result so far
+                  {Number(figures.carried) < 0 ? ', less the loss carried from earlier months' : ''}. The final amount uses the results up to the day Exit pays it.</>}
+            </Alert>
+          )}
+          <TextField label="Reason (optional)" multiline minRows={2} value={reason} onChange={(e) => setReason(e.target.value)} />
+          <Typography variant="body2" color="text.secondary">Your account closes once it is paid out.</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAsking(false)}>Cancel</Button>
+          <Button variant="contained" color="error" onClick={() => call('request_emergency_exit', { p_reason: reason })}>Request</Button>
+        </DialogActions>
+      </Dialog>
+    </Panel>
   );
 }
 

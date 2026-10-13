@@ -9,7 +9,7 @@ const cols = { xs: '1fr auto', md: '1.3fr 0.8fr 1.9fr 0.8fr' };
 const head = { ...tableHead, columnGap: 4 };
 const bold = { fontWeight: 700 };
 
-// The hidden charge Exit took on profitable days (entered amount minus what the partner sees). Staff only.
+// Trade charges (brokerage, taxes, regulatory fees) taken on profitable days: entered amount minus what the partner sees. Staff only.
 export const hiddenCharge = (entries, days) => entries.reduce((t, e) => {
   const d = days.find((x) => x.franchisee_id === e.franchisee_id && x.trade_date === e.trade_date);
   return t + (d && Number(e.amount) > 0 ? Number(e.amount) - Number(d.net) : 0);
@@ -69,7 +69,7 @@ export default function Dashboard({ profile, id }) {
     ? [
       {
         label: sum(dayEntries, 'amount') < 0 ? 'Total loss today' : 'Total profit today', value: <Signed value={sum(dayEntries, 'amount')} sx={bold} />,
-        info: "What was entered for every partner today, before the hidden charge.",
+        info: "What was entered for every partner today, before trade charges.",
       },
       {
         label: 'Credited to customers', value: <Signed value={sum(day, 'to_customers')} sx={bold} />,
@@ -79,7 +79,7 @@ export default function Dashboard({ profile, id }) {
         label: 'Partners earned today', value: <Signed value={sum(day, 'partner_income')} signed={false} sx={bold} />,
         info: "Once all of a partner's customers have full buckets, the extra profit is split: the partner gets their profit share and Exit keeps the rest.",
       },
-      { label: 'Exit earned today', value: money(exitDay), info: 'The hidden charge on profitable days, plus Exit’s share of profit above full buckets.' },
+      { label: 'Exit earned today', value: money(exitDay), info: 'Trade charges on profitable days, plus Exit’s share of profit above full buckets.' },
     ]
     : [
       { label: "Today's result", value: <Signed value={sum(day, 'net')} sx={bold} />, info: "Today's profit or loss on your customers' money, after charges." },

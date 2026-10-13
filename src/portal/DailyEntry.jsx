@@ -152,7 +152,7 @@ function HandEntry({ date, partners, closed }) {
                 <Box sx={{ minWidth: 0 }}>
                   <Typography sx={{ fontWeight: 600 }}>{p.name}</Typography>
                   <Typography variant="caption" color="text.secondary" component="div">
-                    Hidden charge {Number(p.franchisee_terms?.hidden_charge_pct ?? 0)}%, partner keeps {Number(p.profit_share_pct)}% above buckets
+                    Trade charges {Number(p.franchisee_terms?.hidden_charge_pct ?? 0)}%, partner keeps {Number(p.profit_share_pct)}% above buckets
                   </Typography>
                   {shares && (
                     <Typography variant="caption" color="text.secondary" component="div">

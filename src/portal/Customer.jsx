@@ -4,7 +4,8 @@ import { supabase } from './supabase';
 import { money } from '../finance';
 import { ink, line } from '../theme';
 import { today, pickerField, fmtDate, shortDate, monthName, sum, Signed, Panel, Field, CapMeter, StatusChip, Figures, BackLink, tableHead, phoneText } from './ui';
-import { OnboardingSteps, Documents, EditDetailsDialog, CapitalDialog, AgreementDialog, BankDialog, canEdit, latestSigned } from './Onboarding';
+import { OnboardingSteps, Documents, EditDetailsDialog, AgreementDialog, BankDialog, canEdit, latestSigned, SigningLink } from './Onboarding';
+import { CapitalPanel, AddMoneyDialog, EmergencyPanel } from './Capital';
 import { CustomerLogin, CustomerPayouts } from './CustomerAccount';
 
 const cols = { xs: '1fr auto', md: '1.2fr 1fr 1fr' };
@@ -19,7 +20,7 @@ export default function Customer({ profile, id }) {
 
   function load() {
     supabase.from('customers')
-      .select('id, franchisee_id, full_name, phone, email, dob, address, cap_pct, plan, bank_holder, bank_ifsc, bank_last4, status, reject_reason, created_at, franchisees(name), customer_capital(effective_from, amount), customer_documents(kind, path, mime, uploaded_at), agreements(id, sign_token, token_expires_at, signed_at, signer_name)')
+      .select('id, franchisee_id, full_name, phone, email, dob, address, cap_pct, plan, bank_holder, bank_ifsc, bank_last4, status, reject_reason, created_at, franchisees(name), capital_movements(id, kind, amount, received_at, effective_from), customer_documents(kind, path, mime, uploaded_at), agreements(id, sign_token, token_expires_at, signed_at, signer_name, template_version)')
       .eq('id', id)
       .maybeSingle()
       .then(async ({ data, error }) => {
@@ -27,7 +28,8 @@ export default function Customer({ profile, id }) {
         if (!data) return setError('This customer does not exist or is not yours.');
         // PAN and Aadhaar are encrypted; this function decrypts them only for permitted viewers.
         const { data: pii } = await supabase.rpc('customer_pii', { p_customer: id });
-        setC({ ...data, pan: pii?.[0]?.pan ?? null, aadhaar_last4: pii?.[0]?.aadhaar_last4 ?? null });
+        const { data: t } = await supabase.from('agreement_templates').select('version').order('version', { ascending: false }).limit(1).maybeSingle();
+        setC({ ...data, pan: pii?.[0]?.pan ?? null, aadhaar_last4: pii?.[0]?.aadhaar_last4 ?? null, latestVersion: t?.version });
       });
   }
   useEffect(load, [id]);
@@ -50,11 +52,14 @@ export default function Customer({ profile, id }) {
   if (error) return <Alert severity="error">{error}</Alert>;
   if (!c || !days) return null;
 
-  const capital = c.customer_capital.toSorted((a, b) => b.effective_from.localeCompare(a.effective_from));
+  const signed = latestSigned(c.agreements);
+  const moves = c.capital_movements;
   const latest = days[0];
   const active = c.status === 'active';
+  const live = active || c.status === 'closed'; // has results to show rather than onboarding steps
+  const isAdmin = profile.role === 'admin';
+  const outdated = active && signed && c.latestVersion > signed.template_version;
   const edit = canEdit(profile, c);
-  const signed = latestSigned(c.agreements);
   const documents = <Documents customer={c} docs={c.customer_documents} edit={edit} onChanged={load} />;
 
   return (
@@ -69,20 +74,20 @@ export default function Customer({ profile, id }) {
 
       <Box sx={{ display: 'grid', gap: { xs: 3, md: 4 }, gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 1fr) 340px' }, alignItems: 'start' }}>
         <Box sx={{ display: 'grid', gap: { xs: 3, md: 4 }, minWidth: 0 }}>
-          {!active && (
+          {!live && (
             <>
               <OnboardingSteps
-                customer={c} profile={profile} capital={capital} agreements={c.agreements}
+                customer={c} profile={profile} capital={moves} agreements={c.agreements}
                 onEdit={() => setDialog('edit')} onCapital={() => setDialog('capital')} onBank={() => setDialog('bank')} onChanged={load}
               />
               {documents}
             </>
           )}
-          {active && <>
+          {live && <>
           <Figures
             items={[
               { label: `Credited in ${monthName(`${month}-01`)}`, value: <Signed value={sum(days, 'credited')} sx={{ fontWeight: 700 }} />, info: "The customer's share of the month's results so far: profit until their bucket is full, and their share of any loss." },
-              { label: 'Bucket this month', value: latest ? money(latest.cap) : '–', note: `${Number(c.cap_pct)}% of capital`, info: 'The most profit this customer can receive this month: their cap % of the capital they had on the 1st. Profit above it goes to the partner and Exit.' },
+              { label: 'Bucket this month', value: latest ? money(latest.cap) : '–', note: `${Number(c.cap_pct)}% of capital`, info: 'The most profit this customer can receive this month: their cap % of the capital they had on the 1st, plus a pro-rated share for money added during the month. Profit above it goes to the partner and Exit.' },
             ]}
           />
 
@@ -176,39 +181,30 @@ export default function Customer({ profile, id }) {
 
           {active && <CustomerLogin customer={c} />}
 
-          <Panel title="Capital and cap" action={edit && <Button size="small" onClick={() => setDialog('capital')}>Change</Button>}>
-            <Box sx={{ px: { xs: 2, md: 3 }, py: 2.5, display: 'grid', gap: 2 }}>
-              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-                <Field label="Current capital">{capital[0] && money(capital[0].amount)}</Field>
-                <Field label="Monthly cap">{`${Number(c.cap_pct)}% of capital`}</Field>
-                <Field label="Plan">{c.plan === 'fixed' ? 'Fixed monthly payout' : 'Profit share'}</Field>
-              </Box>
-              {capital.length > 0 && (
-                <Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>History</Typography>
-                  {capital.map((k) => (
-                    <Box key={k.effective_from} sx={{ display: 'flex', justifyContent: 'space-between', py: 0.75, borderTop: `1px solid ${line}` }}>
-                      <span>From {shortDate(k.effective_from)}</span>
-                      <Box component="span" sx={{ fontWeight: 500 }}>{money(k.amount)}</Box>
-                    </Box>
-                  ))}
-                </Box>
-              )}
-            </Box>
-          </Panel>
+          <CapitalPanel customer={c} moves={moves} canAdd={(staff && c.status !== 'closed') || edit} isAdmin={isAdmin} onChanged={load} />
+
+          {(active || c.status === 'closed') && <EmergencyPanel customer={c} isAdmin={isAdmin} onChanged={load} />}
 
           {signed && (
             <Panel title="Agreement" action={<Button size="small" onClick={() => setDialog('agreement')}>View</Button>}>
-              <Typography variant="body2" color="text.secondary" sx={{ px: { xs: 2, md: 3 }, py: 2 }}>
-                Signed by {signed.signer_name} on {shortDate(signed.signed_at)}.
-              </Typography>
+              <Box sx={{ px: { xs: 2, md: 3 }, py: 2, display: 'grid', gap: 1.5 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Signed by {signed.signer_name} on {shortDate(signed.signed_at)} (version {signed.template_version}).
+                </Typography>
+                {outdated && (
+                  <>
+                    <Alert severity="warning">Agreement out of date: version {c.latestVersion} has newer terms. Ask the customer to sign it.</Alert>
+                    {staff && <SigningLink customer={c} agreements={c.agreements} onChanged={load} />}
+                  </>
+                )}
+              </Box>
             </Panel>
           )}
         </Box>
       </Box>
 
       {dialog === 'edit' && <EditDetailsDialog customer={c} profile={profile} onClose={() => setDialog(null)} onSaved={reload} />}
-      {dialog === 'capital' && <CapitalDialog customer={c} onClose={() => setDialog(null)} onSaved={reload} />}
+      {dialog === 'capital' && <AddMoneyDialog customer={c} onClose={() => setDialog(null)} onSaved={reload} />}
       {dialog === 'agreement' && <AgreementDialog customerId={c.id} onClose={() => setDialog(null)} />}
       {dialog === 'bank' && <BankDialog customer={c} onClose={() => setDialog(null)} onSaved={reload} />}
     </>

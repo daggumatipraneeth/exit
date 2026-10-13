@@ -16,16 +16,14 @@ set local role authenticated;
 set local request.jwt.claims = '{"sub":"b1000000-0000-0000-0000-000000000001"}';
 
 select throws_like($$select create_signing_link('c1000000-0000-0000-0000-000000000001')$$,
-  '%PAN number, Aadhaar last 4 digits, capital, PAN card photo, Aadhaar front photo, Aadhaar back photo%', 'link needs complete KYC');
+  '%PAN number, capital, bank details%', 'link needs PAN, capital and bank details');
 
-select set_customer_pii('c1000000-0000-0000-0000-000000000001', 'ABCDE9999Z', '4321');
-insert into customer_capital values ('c1000000-0000-0000-0000-000000000001', '2026-01-01', 250000);
-insert into customer_documents (customer_id, kind, path) values
-  ('c1000000-0000-0000-0000-000000000001', 'pan', 'c1000000-0000-0000-0000-000000000001/pan'),
-  ('c1000000-0000-0000-0000-000000000001', 'aadhaar_front', 'c1000000-0000-0000-0000-000000000001/aadhaar_front'),
-  ('c1000000-0000-0000-0000-000000000001', 'aadhaar_back', 'c1000000-0000-0000-0000-000000000001/aadhaar_back');
+-- Aadhaar and the KYC photos are optional.
+select set_customer_pii('c1000000-0000-0000-0000-000000000001', 'ABCDE9999Z', null);
+insert into capital_movements (customer_id, received_at, amount) values ('c1000000-0000-0000-0000-000000000001', '2025-12-31 10:00+05:30', 250000);
+select set_customer_bank('c1000000-0000-0000-0000-000000000001', 'Sita Devi', '1234 5678 9012', 'sbin0001234');
 
-select lives_ok($$select create_signing_link('c1000000-0000-0000-0000-000000000001')$$, 'partner creates link once KYC is complete');
+select lives_ok($$select create_signing_link('c1000000-0000-0000-0000-000000000001')$$, 'partner creates link once PAN, capital and bank are in');
 select is((select status from customers where id = 'c1000000-0000-0000-0000-000000000001'), 'awaiting_signature'::customer_status, 'status moves to awaiting signature');
 select throws_ok($$insert into agreements (customer_id, template_version) values ('c1000000-0000-0000-0000-000000000001', 1)$$,
   '42501', null, 'partners cannot create agreements directly');

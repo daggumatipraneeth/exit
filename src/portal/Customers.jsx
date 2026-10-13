@@ -3,11 +3,12 @@ import { Box, Typography, TextField, InputAdornment, Alert, Button } from '@mui/
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import { supabase, fetchAll } from './supabase';
+import { capitalOn } from './Capital';
 import { money } from '../finance';
 import { line } from '../theme';
 import { today, monthName, Panel, PageTitle, CapMeter, StatusChip, FilterChips, ShowMore, PAGE_ROWS, rowLink, tableHead, tableRow, Inline } from './ui';
 
-const cols = { xs: '1fr auto', md: '1.4fr 0.8fr 0.9fr 1.6fr' };
+const cols = { xs: '1fr auto', md: '2fr 0.9fr 1.6fr' };
 const onboarding = ['draft', 'awaiting_signature', 'pending_approval'];
 
 export default function Customers({ profile }) {
@@ -23,7 +24,7 @@ export default function Customers({ profile }) {
   useEffect(() => {
     Promise.all([
       fetchAll((o) => supabase.from('customers')
-        .select('id, full_name, phone, status, franchisees(name), customer_capital(effective_from, amount)', o)
+        .select('id, full_name, phone, status, franchisees(name), capital_movements(effective_from, amount)', o)
         .order('full_name').order('id')),
       fetchAll((o) => supabase.from('customer_month_progress').select('customer_id, cap, covered', o).eq('month', month).order('customer_id')),
     ]).then(([c, p]) => {
@@ -32,7 +33,8 @@ export default function Customers({ profile }) {
       const progress = Object.fromEntries(p.data.map((r) => [r.customer_id, r]));
       setCustomers(c.data.map((x) => ({
         ...x,
-        capital: x.customer_capital.toSorted((a, b) => b.effective_from.localeCompare(a.effective_from))[0]?.amount,
+        // Capital now; for someone whose money hasn't started counting yet, what they've put in.
+        capital: capitalOn(x.capital_movements, today()) || capitalOn(x.capital_movements, '9999-12-31'),
         progress: progress[x.id],
       })));
     });
@@ -80,7 +82,7 @@ export default function Customers({ profile }) {
           aria-hidden
           sx={{ ...tableHead, gridTemplateColumns: cols.md, columnGap: 4 }}
         >
-          <span>Customer</span><span>Status</span><Box sx={{ textAlign: 'right' }}>Capital</Box><span>{monthName(month)} cap</span>
+          <span>Customer</span><Box sx={{ textAlign: 'right' }}>Capital</Box><span>{monthName(month)} cap</span>
         </Box>
         {list.length === 0 && (
           <Typography color="text.secondary" sx={{ px: { xs: 2, md: 3 }, py: 4, textAlign: 'center' }}>
@@ -95,16 +97,18 @@ export default function Customers({ profile }) {
                 href={`#/customers/${c.id}`}
                 sx={{
                   ...rowLink, columnGap: { xs: 2, md: 4 }, rowGap: { xs: 0.5, md: 1 }, gridTemplateColumns: cols,
-                  gridTemplateAreas: { xs: '"name capital" "name status" "cap cap"', md: '"name status capital cap"' },
+                  gridTemplateAreas: { xs: '"name capital" "cap cap"', md: '"name capital cap"' },
                   ...tableRow,
                 }}
               >
                 <Box sx={{ gridArea: 'name', minWidth: 0 }}>
-                  <Typography sx={{ fontWeight: 600 }} noWrap>{c.full_name}</Typography>
-                  <Inline items={staff ? [c.phone, c.franchisees.name] : [c.phone]} />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                    <Typography sx={{ fontWeight: 600 }} noWrap>{c.full_name}</Typography>
+                    <StatusChip status={c.status} small />
+                  </Box>
+                  {staff && <Inline items={[c.franchisees.name]} />}
                 </Box>
-                <Box sx={{ gridArea: 'status', justifySelf: { xs: 'end', md: 'start' }, alignSelf: { xs: 'start', md: 'center' } }}><StatusChip status={c.status} /></Box>
-                <Box sx={{ gridArea: 'capital', textAlign: 'right', fontWeight: 500, alignSelf: { xs: 'end', md: 'center' } }}>
+                <Box sx={{ gridArea: 'capital', textAlign: 'right', fontWeight: 500 }}>
                   {c.capital ? money(c.capital) : '–'}
                 </Box>
                 <Box sx={{ gridArea: 'cap', mt: { xs: 0.75, md: 0 } }}>

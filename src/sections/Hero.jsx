@@ -6,6 +6,7 @@ import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import MarketCanvas from '../components/MarketCanvas';
 import Stats from './Stats';
 import { accent, accentSoft, ink, bg, navy } from '../theme';
+import { company } from '../config';
 
 const ease = [0.22, 1, 0.36, 1];
 const headline = [['Build', 'wealth', 'with'], ['clarity.', 'Exit', 'with'], ['confidence.']];
@@ -123,14 +124,14 @@ export default function Hero() {
       </Box>
       <Box sx={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(18,40,74,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(18,40,74,.04) 1px, transparent 1px)', backgroundSize: '64px 64px', maskImage: 'radial-gradient(ellipse at center, #000 20%, transparent 75%)' }} />
 
-      <Container maxWidth="lg" sx={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      <Container maxWidth={false} sx={{ px: { xs: 2.5, md: 6, lg: 10 }, position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.15fr .85fr' }, gap: { xs: 8, md: 6 }, alignItems: 'center', flex: 1, pb: { xs: 8, md: 6 } }}>
           <Box>
             <Chip
               component={motion.div}
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease }}
               icon={<Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'success.main', ml: '10px !important', boxShadow: '0 0 0 4px rgba(15,157,107,.18)' }} />}
-              label="SEBI-registered advisory · Guntur & Hyderabad"
+              label={company.sebiRegistered ? 'SEBI-registered advisory · Guntur & Hyderabad' : 'Guntur & Hyderabad'}
               sx={{ bgcolor: '#fff', border: '1px solid rgba(18,40,74,.1)', fontWeight: 500, mb: 3, height: 34 }}
             />
             <Typography variant="h1" component="h1" sx={{ fontSize: { xs: '2.9rem', sm: '3.8rem', md: '4.6rem' } }}>

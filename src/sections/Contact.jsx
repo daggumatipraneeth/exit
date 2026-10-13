@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Container, Typography, TextField, MenuItem, Button, Stack, Alert } from '@mui/material';
+import { Box, Container, Typography, TextField, MenuItem, Button, Stack, Alert, Link } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import MailIcon from '@mui/icons-material/MailOutlined';
 import PhoneIcon from '@mui/icons-material/PhoneOutlined';
@@ -62,7 +62,7 @@ export default function Contact() {
 
   return (
     <Box id="contact" component="section" sx={{ py: { xs: 10, md: 16 }, bgcolor: '#F7F9F8', scrollMarginTop: 64 }}>
-      <Container maxWidth="lg">
+      <Container maxWidth={false} sx={{ px: { xs: 2.5, md: 6, lg: 10 } }}>
         <Reveal>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '5fr 7fr' }, borderRadius: 5, overflow: 'hidden', boxShadow: '0 50px 100px -50px rgba(18,40,74,.5)' }}>
             <Box sx={{ position: 'relative', p: { xs: 4, md: 6 }, color: '#fff', background: `linear-gradient(160deg, ${navy}, ${ink})`, overflow: 'hidden' }}>
@@ -107,7 +107,7 @@ export default function Contact() {
                 {sending ? 'Sending…' : 'Request a call back'}
               </Button>
               <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 2 }}>
-                We respect your privacy. Your details are used only to contact you about your enquiry.
+                By sending this you agree that Exit may use these details to contact you about your enquiry, as set out in our <Link href="#/privacy">Privacy policy</Link>.
               </Typography>
             </Box>
           </Box>

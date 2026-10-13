@@ -12,7 +12,7 @@ insert into profiles (id, role) values ('a4000000-0000-0000-0000-000000000001', 
 -- The leaver created a customer and an entry, then the month was closed.
 insert into customers (id, franchisee_id, full_name, phone, status, created_by) values
   ('c4000000-0000-0000-0000-000000000001', 'f4000000-0000-0000-0000-000000000001', 'Kept Customer', '1', 'active', 'a4000000-0000-0000-0000-000000000001');
-insert into customer_capital values ('c4000000-0000-0000-0000-000000000001', '2020-01-01', 100000);
+insert into capital_movements (customer_id, effective_from, amount) values ('c4000000-0000-0000-0000-000000000001', '2020-01-01', 100000);
 insert into daily_entries (franchisee_id, trade_date, amount, entered_by) values
   ('f4000000-0000-0000-0000-000000000001', '2020-06-01', 1000, 'a4000000-0000-0000-0000-000000000001');
 insert into closed_months (month) values ('2020-06-01');

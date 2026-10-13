@@ -1,31 +1,31 @@
 import { useEffect, useState } from 'react';
-import { Box, Typography, IconButton, Alert, Button } from '@mui/material';
-import ChevronLeft from '@mui/icons-material/ChevronLeft';
-import ChevronRight from '@mui/icons-material/ChevronRight';
+import { Box, Typography, Alert, Button } from '@mui/material';
 import { supabase, fetchAll } from './supabase';
+import { line } from '../theme';
 import { money } from '../finance';
-import { ink, line } from '../theme';
-import { today, shift, fmtDate, monthName, sum, Signed, Panel, CapMeter, Figures, Pairs, ShowMore, PAGE_ROWS, rowLink, tableHead, tableRow } from './ui';
+import { today, shift, fmtDate, monthName, sum, Signed, Panel, CapMeter, Figures, Pairs, ShowMore, PAGE_ROWS, rowLink, tableHead, tableRow, PageTitle, DayNav } from './ui';
 
 const cols = { xs: '1fr auto', md: '1.3fr 0.8fr 1.9fr 0.8fr' };
 const head = { ...tableHead, columnGap: 4 };
 const bold = { fontWeight: 700 };
 
-// The hidden charge Exit took on profitable days (entered amount minus what the partner sees). Staff only.
-const hiddenCharge = (entries, days) => entries.reduce((t, e) => {
+// Trade charges (brokerage, taxes, regulatory fees) taken on profitable days: entered amount minus what the partner sees. Staff only.
+export const hiddenCharge = (entries, days) => entries.reduce((t, e) => {
   const d = days.find((x) => x.franchisee_id === e.franchisee_id && x.trade_date === e.trade_date);
   return t + (d && Number(e.amount) > 0 ? Number(e.amount) - Number(d.net) : 0);
 }, 0);
 
-export default function Dashboard({ profile }) {
+export default function Dashboard({ profile, id }) {
   const staff = profile.role !== 'franchisee';
-  const [date, setDate] = useState(null);
+  // #/today/2026-10-12 opens that day (from Month at a glance); otherwise the latest day with results.
+  const [date, setDate] = useState(/^\d{4}-\d{2}-\d{2}$/.test(id ?? '') ? id : null);
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [limit, setLimit] = useState(PAGE_ROWS);
 
   // Open on the latest day that has results.
   useEffect(() => {
+    if (date) return;
     supabase.from('franchisee_days').select('trade_date').order('trade_date', { ascending: false }).limit(1)
       .then(({ data, error }) => (error ? setError(error.message) : setDate(data[0]?.trade_date ?? today())));
   }, []);
@@ -63,45 +63,49 @@ export default function Dashboard({ profile }) {
   const partnerName = Object.fromEntries(month.map((d) => [d.franchisee_id, d.franchisees.name]));
   const dayEntries = entries.filter((e) => e.trade_date === date);
   const exitDay = hiddenCharge(dayEntries, day) + sum(day, 'exit_share');
-  const exitMonth = hiddenCharge(entries, month) + sum(month, 'exit_share');
 
+  const share = Number(profile.franchisees?.profit_share_pct ?? 0);
   const figures = staff
     ? [
-      { label: `Entered for ${day.length} ${day.length === 1 ? 'partner' : 'partners'}`, value: <Signed value={sum(dayEntries, 'amount')} sx={bold} />, note: <>After hidden charge {money(sum(day, 'net'))}</> },
-      { label: 'Credited to customers', value: <Signed value={sum(day, 'to_customers')} sx={bold} /> },
-      { label: 'Partners earned today', value: <Signed value={sum(day, 'partner_income')} signed={false} sx={bold} /> },
-      { label: 'Exit earned today', value: money(exitDay), note: <>{monthName(date)}: {money(exitMonth)}</> },
+      {
+        label: sum(dayEntries, 'amount') < 0 ? 'Total loss today' : 'Total profit today', value: <Signed value={sum(dayEntries, 'amount')} sx={bold} />,
+        info: "What was entered for every partner today, before trade charges.",
+      },
+      {
+        label: 'Credited to customers', value: <Signed value={sum(day, 'to_customers')} sx={bold} />,
+        info: "Profit goes to customers first, in proportion to their capital, until each one's monthly bucket is full. A loss is taken from customers the same way.",
+      },
+      {
+        label: 'Partners earned today', value: <Signed value={sum(day, 'partner_income')} signed={false} sx={bold} />,
+        info: "Once all of a partner's customers have full buckets, the extra profit is split: the partner gets their profit share and Exit keeps the rest.",
+      },
+      { label: 'Exit earned today', value: money(exitDay), info: 'Trade charges on profitable days, plus Exit’s share of profit above full buckets.' },
     ]
     : [
-      { label: "Today's result", value: <Signed value={sum(day, 'net')} sx={bold} /> },
-      { label: 'Credited to your customers', value: <Signed value={sum(day, 'to_customers')} sx={bold} /> },
+      { label: "Today's result", value: <Signed value={sum(day, 'net')} sx={bold} />, info: "Today's profit or loss on your customers' money, after charges." },
       {
-        label: 'You earned today', value: <Signed value={sum(day, 'partner_income')} signed={false} sx={bold} />,
-        note: sum(day, 'overflow') > 0 ? <>Exit's share {money(sum(day, 'exit_share'))}</> : 'Starts when every bucket is full',
+        label: 'Credited to your customers', value: <Signed value={sum(day, 'to_customers')} sx={bold} />,
+        info: "Profit goes to your customers first, in proportion to their capital, until each one's monthly bucket is full. A loss is taken from them the same way.",
       },
-      { label: `You earned in ${monthName(date)}`, value: <Signed value={sum(month, 'partner_income')} signed={false} sx={bold} />, note: <>Exit's share {money(sum(month, 'exit_share'))}</> },
+      {
+        label: 'Your earnings today', value: <Signed value={sum(day, 'partner_income')} signed={false} sx={bold} />,
+        note: sum(day, 'overflow') > 0 && <>Exit's share: {money(sum(day, 'exit_share'))}</>,
+        info: `You earn once every customer's monthly bucket is full. The profit above that is split: ${share}% to you, the rest to Exit. Until the buckets are full, this stays at ₹0.`,
+      },
+      {
+        label: `Your earnings for ${fmtDate(date, { month: 'short', year: 'numeric' })}`, value: <Signed value={sum(month, 'partner_income')} signed={false} sx={bold} />,
+        note: <>Exit's share: {money(sum(month, 'exit_share'))}</>,
+        info: 'Your share of profit above full buckets, added up for this month so far.',
+      },
     ];
 
   return (
     <>
-      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 2, rowGap: 1.5, mb: 3 }}>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 700, letterSpacing: '-0.02em', fontSize: { xs: '1.6rem', md: '2.1rem' }, flex: '1 1 auto' }}>
-          {fmtDate(date)}
-        </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <IconButton aria-label="Previous day" onClick={() => setDate(shift(date, -1))}><ChevronLeft /></IconButton>
-          <Box
-            component="input"
-            type="date"
-            aria-label="Choose a day"
-            value={date}
-            max={today()}
-            onChange={(e) => e.target.value && setDate(e.target.value)}
-            sx={{ font: 'inherit', fontWeight: 600, color: ink, border: `1px solid ${line}`, borderRadius: 1.5, bgcolor: '#fff', px: 1.5, py: 0.75, minHeight: 40 }}
-          />
-          <IconButton aria-label="Next day" disabled={date >= today()} onClick={() => setDate(shift(date, 1))}><ChevronRight /></IconButton>
-        </Box>
-      </Box>
+      <PageTitle action={<DayNav date={date} setDate={setDate} />}>
+        {/* Phones: the picker already shows the date, so the title is just the weekday and fits on the same row. */}
+        <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>{fmtDate(date)}</Box>
+        <Box component="span" sx={{ display: { sm: 'none' } }}>{fmtDate(date, { weekday: 'long' })}</Box>
+      </PageTitle>
 
       {day.length === 0 ? (
         <Panel sx={{ px: { xs: 2, md: 3 }, py: 5, textAlign: 'center' }}>

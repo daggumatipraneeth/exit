@@ -12,13 +12,14 @@ import UploadIcon from '@mui/icons-material/FileUploadOutlined';
 import { supabase, fetchAll, kycUpload, kycObjectUrl } from './supabase';
 import { money } from '../finance';
 import { accent, line } from '../theme';
-import { today, shortDate, Panel, PageTitle, FormPage, BackLink, errText } from './ui';
+import { today, shortDate, Panel, PageTitle, BackLink, errText, IST, istNowInput, istInputToISO } from './ui';
 import { AgreementFrame } from './Sign';
 
+// Photos are optional for now (the PAN number itself is required); the third value marks required ones.
 export const docKinds = [
-  ['pan', 'PAN card', true],
-  ['aadhaar_front', 'Aadhaar front', true],
-  ['aadhaar_back', 'Aadhaar back', true],
+  ['pan', 'PAN card', false],
+  ['aadhaar_front', 'Aadhaar front', false],
+  ['aadhaar_back', 'Aadhaar back', false],
   ['photo', 'Customer photo', false],
 ];
 const editable = ['draft', 'awaiting_signature'];
@@ -26,23 +27,33 @@ export const latestSigned = (agreements) =>
   agreements.filter((a) => a.signed_at).sort((a, b) => b.signed_at.localeCompare(a.signed_at))[0];
 export const canEdit = (profile, c) => profile.role !== 'franchisee' || editable.includes(c.status);
 
-const blank = { full_name: '', phone: '', email: '', dob: '', address: '', pan: '', aadhaar_last4: '', franchisee_id: '', cap_pct: 6 };
+const blank = { full_name: '', phone: '', email: '', dob: '', address: '', pan: '', aadhaar_last4: '', franchisee_id: '', cap_pct: 6, plan: 'variable' };
+
+// Indian mobile: 10 digits starting 6-9, with or without +91. Customers log in with it.
+export const mobile10 = (v) => (v ?? '').replace(/\D/g, '').replace(/^(91|0)(?=\d{10}$)/, '');
+const mobileOk = (v) => /^[6-9]\d{9}$/.test(mobile10(v));
 
 function DetailsFields({ f, setF, profile, partners }) {
   const set = (k, fn = (v) => v) => (e) => setF({ ...f, [k]: fn(e.target.value) });
   const panOk = !f.pan || /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(f.pan);
   return (
     <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' } }}>
-      <TextField label="Full name (as on PAN)" required value={f.full_name} onChange={set('full_name')} sx={{ gridColumn: '1 / -1' }} />
-      <TextField label="Phone" required type="tel" value={f.phone} onChange={set('phone')} autoComplete="off" />
+      <TextField label="Full name" required value={f.full_name} onChange={set('full_name')} sx={{ gridColumn: '1 / -1' }}
+        helperText="As on the customer's bank account or PAN card." />
+      <TextField
+        label="Mobile number" required type="tel" value={f.phone} onChange={set('phone')} autoComplete="off"
+        error={!!f.phone && !mobileOk(f.phone)}
+        helperText={f.phone && !mobileOk(f.phone) ? 'Enter a 10-digit mobile number, e.g. 9848012345' : 'The customer logs in with this number, so check it carefully.'}
+        slotProps={{ htmlInput: { inputMode: 'tel' } }}
+      />
       <TextField label="Email" type="email" value={f.email ?? ''} onChange={set('email')} autoComplete="off" />
       <TextField label="Date of birth" type="date" value={f.dob ?? ''} onChange={set('dob')} slotProps={{ inputLabel: { shrink: true } }} />
       <TextField
-        label="PAN" value={f.pan ?? ''} onChange={set('pan', (v) => v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10))}
+        label="PAN" required value={f.pan ?? ''} onChange={set('pan', (v) => v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10))}
         error={!panOk} helperText={panOk ? 'Like ABCDE1234F' : 'PAN is 5 letters, 4 digits, 1 letter'}
       />
       <TextField
-        label="Aadhaar, last 4 digits only" value={f.aadhaar_last4 ?? ''} onChange={set('aadhaar_last4', (v) => v.replace(/\D/g, '').slice(0, 4))}
+        label="Aadhaar, last 4 digits (optional)" value={f.aadhaar_last4 ?? ''} onChange={set('aadhaar_last4', (v) => v.replace(/\D/g, '').slice(0, 4))}
         helperText="We never store the full Aadhaar number." slotProps={{ htmlInput: { inputMode: 'numeric' }, input: { startAdornment: <InputAdornment position="start">XXXX XXXX</InputAdornment> } }}
       />
       {profile.role !== 'franchisee' && (
@@ -50,6 +61,15 @@ function DetailsFields({ f, setF, profile, partners }) {
           {(partners ?? []).filter((p) => p.active || p.id === f.franchisee_id).map((p) => (
             <MenuItem key={p.id} value={p.id}>{p.active ? p.name : `${p.name} (inactive)`}</MenuItem>
           ))}
+        </TextField>
+      )}
+      {profile.role !== 'franchisee' && (
+        <TextField
+          select label="Plan" value={f.plan} onChange={set('plan')}
+          helperText={f.plan === 'fixed' ? 'Paid the monthly cap every month, even in a loss month.' : "Paid the month's profit, up to the cap. Losses carry forward."}
+        >
+          <MenuItem value="variable">Profit share (variable)</MenuItem>
+          <MenuItem value="fixed">Fixed monthly payout</MenuItem>
         </TextField>
       )}
       {profile.role !== 'franchisee' && (
@@ -64,7 +84,7 @@ function DetailsFields({ f, setF, profile, partners }) {
 }
 
 const detailsValid = (f, profile) =>
-  f.full_name.trim() && f.phone.trim() && (!f.pan || /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(f.pan)) &&
+  f.full_name.trim() && mobileOk(f.phone) && /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(f.pan ?? '') &&
   (!f.aadhaar_last4 || f.aadhaar_last4.length === 4) && (profile.role === 'franchisee' || f.franchisee_id);
 
 const toRow = (f, profile) => {
@@ -73,7 +93,7 @@ const toRow = (f, profile) => {
     address: f.address || null,
     franchisee_id: profile.role === 'franchisee' ? profile.franchisee_id : f.franchisee_id,
   };
-  if (profile.role !== 'franchisee') row.cap_pct = Number(f.cap_pct);
+  if (profile.role !== 'franchisee') { row.cap_pct = Number(f.cap_pct); row.plan = f.plan; }
   return row;
 };
 
@@ -81,6 +101,79 @@ const friendly = (e) => errText(e);
 
 // PAN and Aadhaar are stored encrypted, through a permission-checked database function.
 const savePii = (id, f) => supabase.rpc('set_customer_pii', { p_customer: id, p_pan: f.pan || null, p_aadhaar_last4: f.aadhaar_last4 || null });
+
+// Bank account: the customer pays in from it and every payout goes back to it.
+const blankBank = { bank_holder: '', account: '', account2: '', bank_ifsc: '' };
+const ifscOk = (v) => /^[A-Z]{4}0[A-Z0-9]{6}$/.test(v);
+const accountOk = (v) => /^[0-9]{9,18}$/.test(v);
+const bankValid = (b) => b.bank_holder.trim().length >= 3 && accountOk(b.account) && b.account === b.account2 && ifscOk(b.bank_ifsc);
+const saveBank = (id, b) => supabase.rpc('set_customer_bank', { p_customer: id, p_holder: b.bank_holder, p_account: b.account, p_ifsc: b.bank_ifsc });
+
+function BankFields({ b, setB }) {
+  const set = (k, fn = (v) => v) => (e) => setB({ ...b, [k]: fn(e.target.value) });
+  const digits = (v) => v.replace(/\D/g, '').slice(0, 18);
+  const mismatch = b.account2 && b.account !== b.account2;
+  const badIfsc = b.bank_ifsc.length === 11 && !ifscOk(b.bank_ifsc);
+  return (
+    <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' } }}>
+      <Alert severity="info" sx={{ gridColumn: '1 / -1' }}>
+        Use the account the customer sends the money from. Payouts and withdrawals go back to this same account only.
+      </Alert>
+      <TextField
+        label="Account holder name" required value={b.bank_holder} onChange={set('bank_holder')} sx={{ gridColumn: '1 / -1' }}
+        helperText="Exactly as printed on the passbook or cheque book."
+      />
+      <TextField
+        label="Account number" required value={b.account} onChange={set('account', digits)} autoComplete="off"
+        error={!!b.account && !accountOk(b.account)}
+        helperText={b.account && !accountOk(b.account) ? 'Account numbers are 9 to 18 digits.' : 'Digits only, no spaces.'}
+        slotProps={{ htmlInput: { inputMode: 'numeric' } }}
+      />
+      <TextField
+        label="Re-enter account number" required value={b.account2} onChange={set('account2', digits)} autoComplete="off"
+        error={!!mismatch} helperText={mismatch ? "The two numbers don't match." : 'Type it again to catch mistakes.'}
+        slotProps={{ htmlInput: { inputMode: 'numeric' } }}
+      />
+      <TextField
+        label="IFSC" required value={b.bank_ifsc} onChange={set('bank_ifsc', (v) => v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11))}
+        error={badIfsc}
+        helperText={badIfsc ? "That isn't a valid IFSC. The 5th character is always zero (0)." : '11 characters, e.g. SBIN0001234. Printed on the cheque book and passbook.'}
+      />
+    </Box>
+  );
+}
+
+export function BankDialog({ customer, onClose, onSaved }) {
+  const [b, setB] = useState({ ...blankBank, bank_holder: customer.bank_holder ?? customer.full_name, bank_ifsc: customer.bank_ifsc ?? '' });
+  const [error, setError] = useState('');
+
+  async function save() {
+    const { error } = await saveBank(customer.id, b);
+    if (error) return setError(errText(error));
+    onSaved();
+  }
+
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>Bank details</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ pt: 1 }}>
+          {error && <Alert severity="error">{error}</Alert>}
+          {customer.bank_last4 && (
+            <Typography variant="body2" color="text.secondary">
+              On file now: XXXX {customer.bank_last4} · {customer.bank_ifsc}. Enter the full details again to change them.
+            </Typography>
+          )}
+          <BankFields b={b} setB={setB} />
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="contained" disabled={!bankValid(b)} onClick={save}>Save bank details</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
 
 // null while loading. Includes inactive partners so a customer's current partner always shows;
 // those can't be newly chosen.
@@ -96,7 +189,9 @@ export function NewCustomer({ profile }) {
   const partners = usePartners(profile);
   const [f, setF] = useState(blank);
   const [capital, setCapital] = useState('');
-  const [capitalFrom, setCapitalFrom] = useState(today());
+  // When the money reached Exit, as a local <input type="datetime-local"> value (default: now).
+  const [received, setReceived] = useState(istNowInput);
+  const [bank, setBank] = useState(blankBank);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -109,45 +204,54 @@ export function NewCustomer({ profile }) {
     }
     const { data, error } = await supabase.from('customers').insert({ ...toRow(f, profile), status: 'draft' }).select('id').single();
     if (error) { setBusy(false); return setError(friendly(error)); }
+    const { error: bankError } = await saveBank(data.id, bank);
+    if (bankError) {
+      setBusy(false);
+      return setError(`The customer was saved, but not the bank details: ${friendly(bankError)} Add them from the customer page.`);
+    }
     if (f.pan || f.aadhaar_last4) {
       const { error } = await savePii(data.id, f);
       if (error) { setBusy(false); return setError(friendly(error)); }
     }
     if (Number(capital) > 0) {
-      const { error } = await supabase.from('customer_capital').insert({ customer_id: data.id, effective_from: capitalFrom || today(), amount: Number(capital) });
+      const { error } = await supabase.from('capital_movements').insert({ customer_id: data.id, kind: 'deposit', amount: Number(capital), received_at: istInputToISO(received) });
       if (error) { setBusy(false); return setError(errText(error)); }
     }
     window.location.hash = `#/customers/${data.id}`;
   }
 
   return (
-    <FormPage>
+    <>
       <BackLink href="#/customers">All customers</BackLink>
       <PageTitle>Add customer</PageTitle>
       <Panel>
         <Box component="form" onSubmit={save} sx={{ px: { xs: 2, md: 3 }, py: 3, display: 'grid', gap: 2 }}>
           <Typography color="text.secondary">
-            Start with the basics. You can save now and add documents and the signing link on the next screen.
+            Name, mobile number, PAN and bank details are required. Aadhaar and document photos are optional for now.
+            After saving, send the signing link from the next screen.
           </Typography>
           {error && <Alert severity="error">{error}</Alert>}
           <DetailsFields f={f} setF={setF} profile={profile} partners={partners} />
+          <Typography variant="h6" component="h2" sx={{ fontSize: '1.05rem', mt: 1 }}>Bank account</Typography>
+          <BankFields b={bank} setB={setBank} />
+          <Typography variant="h6" component="h2" sx={{ fontSize: '1.05rem', mt: 1 }}>Money invested</Typography>
           <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: '2fr 1fr' } }}>
             <TextField
               label="Capital" type="number" value={capital} onChange={(e) => setCapital(e.target.value)}
-              helperText="Amount the customer is investing. The monthly cap is a % of this."
+              helperText="The amount received in Exit's account from the customer's bank account above."
               slotProps={{ htmlInput: { min: 1, inputMode: 'decimal' }, input: { startAdornment: <InputAdornment position="start">₹</InputAdornment> } }}
             />
             <TextField
-              label="Capital from" type="date" value={capitalFrom} onChange={(e) => setCapitalFrom(e.target.value)}
-              slotProps={{ inputLabel: { shrink: true } }} helperText="The customer shares in results from this day."
+              label="Reached Exit's account on (India time)" type="datetime-local" value={received} onChange={(e) => setReceived(e.target.value)}
+              slotProps={{ inputLabel: { shrink: true } }} helperText="It counts from the next day: received any time on the 15th, up to midnight, counts from the 16th."
             />
           </Box>
-          <Button type="submit" variant="contained" size="large" disabled={busy || !detailsValid(f, profile)} sx={{ justifySelf: { xs: 'stretch', sm: 'end' } }}>
+          <Button type="submit" variant="contained" size="large" disabled={busy || !detailsValid(f, profile) || !bankValid(bank)} sx={{ justifySelf: { xs: 'stretch', sm: 'end' } }}>
             Save and continue
           </Button>
         </Box>
       </Panel>
-    </FormPage>
+    </>
   );
 }
 
@@ -178,41 +282,6 @@ export function EditDetailsDialog({ customer, profile, onClose, onSaved }) {
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button variant="contained" disabled={!detailsValid(f, profile)} onClick={save}>Save details</Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
-
-export function CapitalDialog({ customer, onClose, onSaved }) {
-  const [amount, setAmount] = useState('');
-  const [from, setFrom] = useState(today());
-  const [error, setError] = useState('');
-
-  async function save() {
-    const { error } = await supabase.from('customer_capital').upsert({ customer_id: customer.id, effective_from: from, amount: Number(amount) }, { onConflict: 'customer_id,effective_from' });
-    if (error) return setError(errText(error));
-    onSaved();
-  }
-
-  return (
-    <Dialog open onClose={onClose} fullWidth maxWidth="xs">
-      <DialogTitle>Set capital</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ pt: 1 }}>
-          {error && <Alert severity="error">{error}</Alert>}
-          <TextField
-            label="Capital" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus
-            slotProps={{ htmlInput: { min: 1, inputMode: 'decimal' }, input: { startAdornment: <InputAdornment position="start">₹</InputAdornment> } }}
-          />
-          <TextField
-            label="From" type="date" value={from} onChange={(e) => setFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }}
-            helperText="A month's cap uses the capital in force on the 1st of that month."
-          />
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button variant="contained" disabled={!(Number(amount) > 0) || !from} onClick={save}>Save capital</Button>
       </DialogActions>
     </Dialog>
   );
@@ -301,7 +370,7 @@ export function Documents({ customer, docs, edit, onChanged }) {
                     <span key={v.path}>
                       {i > 0 && ', '}
                       <Link component="button" type="button" sx={{ fontSize: 'inherit', verticalAlign: 'baseline' }} onClick={() => openVersion(v.path)}>
-                        {shortDate(v.uploaded_at.slice(0, 10))}
+                        {shortDate(v.uploaded_at)}
                       </Link>
                     </span>
                   ))}
@@ -338,7 +407,7 @@ export function AgreementDialog({ customerId, onClose }) {
             <AgreementFrame html={agreement.html} />
             {agreement.signature_png && <Box component="img" src={agreement.signature_png} alt="Customer's signature" sx={{ maxWidth: 320, width: '100%', mt: 2, borderBottom: `1px solid ${line}` }} />}
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
-              Signed by {agreement.signer_name} on {new Date(agreement.signed_at).toLocaleString('en-IN')}
+              Signed by {agreement.signer_name} on {new Date(agreement.signed_at).toLocaleString('en-IN', { timeZone: IST })}
               {agreement.signer_ip && ` from IP ${agreement.signer_ip}`}.
             </Typography>
             {agreement.html_sha256 && <Typography variant="caption" color="text.secondary" sx={{ overflowWrap: 'anywhere', display: 'block', mt: 0.5 }}>Fingerprint (SHA-256): {agreement.html_sha256}</Typography>}
@@ -363,29 +432,19 @@ function Step({ done, title, children }) {
 }
 
 // The onboarding checklist shown until the customer is active.
-export function OnboardingSteps({ customer: c, profile, capital, docs, agreements, onEdit, onCapital, onChanged }) {
-  const [msg, setMsg] = useState(null);
+// The signing link for a customer: make one, then send it on WhatsApp or copy it. Also used to send an active
+// customer a newer version of the agreement (they stay active while it waits for their signature).
+export function SigningLink({ customer: c, agreements, onChanged, canCreate = true, disabled = false }) {
   const [copied, setCopied] = useState(false);
-  const edit = canEdit(profile, c);
-  const isAdmin = profile.role === 'admin';
-  const detailsDone = c.pan && c.aadhaar_last4;
-  const docsDone = docKinds.filter(([, , req]) => req).every(([k]) => docs.some((d) => d.kind === k));
-  const lastSigned = latestSigned(agreements);
-  // After a rejection is reopened the customer signs again, so an older signature doesn't count.
-  const signed = ['pending_approval', 'active'].includes(c.status) ? lastSigned : null;
+  const [error, setError] = useState('');
   const pending = agreements.find((a) => !a.signed_at && new Date(a.token_expires_at) > new Date());
   const link = pending && `${window.location.href.split('#')[0]}#/sign/${pending.sign_token}`;
   const wa = link && `https://wa.me/${c.phone.replace(/\D/g, '').replace(/^(\d{10})$/, '91$1')}?text=${encodeURIComponent(`Hello ${c.full_name}, please read and sign your Exit agreement here: ${link}`)}`;
 
-  async function createLink() {
-    setMsg(null);
+  async function create() {
+    setError('');
     const { error } = await supabase.rpc('create_signing_link', { p_customer: c.id });
-    if (error) return setMsg(['error', errText(error)]);
-    onChanged();
-  }
-  async function setStatus(status) {
-    const { error } = await supabase.from('customers').update({ status }).eq('id', c.id);
-    if (error) return setMsg(['error', errText(error)]);
+    if (error) return setError(errText(error));
     onChanged();
   }
   async function copy() {
@@ -395,47 +454,86 @@ export function OnboardingSteps({ customer: c, profile, capital, docs, agreement
   }
 
   return (
+    <Box>
+      {error && <Alert severity="error" sx={{ mb: 1 }}>{error}</Alert>}
+      {link ? (
+        <>
+          <Typography variant="body2" color="text.secondary">Send this link to the customer. It works until {shortDate(pending.token_expires_at)}.</Typography>
+          <Box sx={{ mt: 1, p: 1.25, bgcolor: '#F8FAFC', border: `1px solid ${line}`, borderRadius: 1.5, fontSize: 13, overflowWrap: 'anywhere' }}>{link}</Box>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+            <Button size="small" variant="contained" color="success" startIcon={<WhatsAppIcon />} href={wa} target="_blank" rel="noreferrer">Send on WhatsApp</Button>
+            <Button size="small" variant="outlined" startIcon={<CopyIcon />} onClick={copy}>{copied ? 'Copied' : 'Copy link'}</Button>
+            {canCreate && <Button size="small" onClick={create}>Make a new link</Button>}
+          </Box>
+        </>
+      ) : canCreate && (
+        <Button size="small" variant="contained" onClick={create} disabled={disabled} sx={{ mt: 1 }}>Create signing link</Button>
+      )}
+    </Box>
+  );
+}
+
+export function OnboardingSteps({ customer: c, profile, capital, agreements, onEdit, onCapital, onBank, onChanged }) {
+  const [msg, setMsg] = useState(null);
+  const [rejecting, setRejecting] = useState(false);
+  const edit = canEdit(profile, c);
+  const isAdmin = profile.role === 'admin';
+  const bankDone = !!c.bank_last4;
+  const lastSigned = latestSigned(agreements);
+  // After a rejection is reopened, or the terms change after signing, the customer signs again,
+  // so an older signature doesn't count.
+  const signed = ['pending_approval', 'active'].includes(c.status) ? lastSigned : null;
+  const pending = agreements.find((a) => !a.signed_at && new Date(a.token_expires_at) > new Date());
+  async function setStatus(status, reject_reason) {
+    const { error } = await supabase.from('customers').update({ status, ...(reject_reason && { reject_reason }) }).eq('id', c.id);
+    if (error) return setMsg(['error', errText(error)]);
+    onChanged();
+  }
+  return (
     <Panel title="Onboarding">
       <Box sx={{ px: { xs: 2, md: 3 }, py: 0.5 }}>
         {msg && <Alert severity={msg[0]} sx={{ mt: 2 }}>{msg[1]}</Alert>}
         {c.status === 'rejected' && (
           <Alert severity="error" sx={{ mt: 2 }} action={profile.role !== 'franchisee' && <Button color="inherit" size="small" onClick={() => setStatus('draft')}>Reopen</Button>}>
-            Exit rejected this application.
+            Exit rejected this application{c.reject_reason ? `: ${c.reject_reason}` : '.'}
           </Alert>
         )}
         <Box component="ol" sx={{ listStyle: 'none', m: 0, p: 0 }}>
-          <Step done={detailsDone} title="Customer details">
-            <Typography variant="body2" color="text.secondary">{detailsDone ? 'PAN and Aadhaar added.' : 'Add PAN and the last 4 digits of Aadhaar.'}</Typography>
+          <Step done={!!c.pan} title="Customer details">
+            <Typography variant="body2" color="text.secondary">
+              {c.pan ? 'Name, mobile and PAN added.' : 'Add the PAN number (required).'}
+            </Typography>
             {edit && <Button size="small" onClick={onEdit} sx={{ ml: -1, mt: 0.5, px: 1 }}>Edit details</Button>}
           </Step>
-          <Step done={capital.length > 0} title="Capital">
-            <Typography variant="body2" color="text.secondary">{capital[0] ? `${money(capital[0].amount)} from ${shortDate(capital[0].effective_from)}` : 'How much the customer is investing.'}</Typography>
-            {edit && <Button size="small" onClick={onCapital} sx={{ ml: -1, mt: 0.5, px: 1 }}>{capital.length ? 'Change capital' : 'Set capital'}</Button>}
+          <Step done={bankDone} title="Bank details">
+            <Typography variant="body2" color="text.secondary">
+              {bankDone ? `${c.bank_holder} · XXXX ${c.bank_last4} · ${c.bank_ifsc}` : 'Required. The account the money comes from; payouts go back to it.'}
+            </Typography>
+            {edit && <Button size="small" onClick={onBank} sx={{ ml: -1, mt: 0.5, px: 1 }}>{bankDone ? 'Change bank details' : 'Add bank details'}</Button>}
           </Step>
-          <Step done={docsDone} title="KYC documents">
-            <Typography variant="body2" color="text.secondary">{docsDone ? 'PAN and Aadhaar photos uploaded.' : 'Upload the PAN card and both sides of a masked Aadhaar in the documents section.'}</Typography>
+          <Step done={capital.length > 0} title="Capital">
+            <Typography variant="body2" color="text.secondary">
+              {capital.length
+                ? `${money(capital.reduce((t, m) => t + Number(m.amount), 0))}, counting from ${shortDate(capital.map((m) => m.effective_from).sort()[0])}`
+                : 'How much the customer is investing.'}
+            </Typography>
+            {edit && <Button size="small" onClick={onCapital} sx={{ ml: -1, mt: 0.5, px: 1 }}>Add money</Button>}
           </Step>
           <Step done={!!signed} title="Customer signs the agreement">
             {signed ? (
-              <Typography variant="body2" color="text.secondary">Signed by {signed.signer_name} on {shortDate(signed.signed_at.slice(0, 10))}.</Typography>
-            ) : link ? (
-              <>
-                <Typography variant="body2" color="text.secondary">Send this link to the customer. It works until {shortDate(pending.token_expires_at.slice(0, 10))}.</Typography>
-                <Box sx={{ mt: 1, p: 1.25, bgcolor: '#F8FAFC', border: `1px solid ${line}`, borderRadius: 1.5, fontSize: 13, overflowWrap: 'anywhere' }}>{link}</Box>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                  <Button size="small" variant="contained" color="success" startIcon={<WhatsAppIcon />} href={wa} target="_blank" rel="noreferrer">Send on WhatsApp</Button>
-                  <Button size="small" variant="outlined" startIcon={<CopyIcon />} onClick={copy}>{copied ? 'Copied' : 'Copy link'}</Button>
-                  {edit && <Button size="small" onClick={createLink}>Make a new link</Button>}
-                </Box>
-              </>
+              <Typography variant="body2" color="text.secondary">Signed by {signed.signer_name} on {shortDate(signed.signed_at)}.</Typography>
             ) : (
               <>
-                <Typography variant="body2" color="text.secondary">
-                  {lastSigned
-                    ? `Signed earlier on ${shortDate(lastSigned.signed_at.slice(0, 10))}, before the application was reopened. Create a new link so the customer signs again.`
+                {!pending && <Typography variant="body2" color="text.secondary">
+                  {c.status === 'rejected'
+                    ? 'Exit has to reopen the application before the customer can sign again.'
+                    : lastSigned
+                    ? `Signed earlier on ${shortDate(lastSigned.signed_at)}, but the application was reopened or its terms changed since. Create a new link so the customer signs again.`
                     : 'When the steps above are done, create a link for the customer to read and sign on their phone.'}
-                </Typography>
-                {edit && <Button size="small" variant="contained" onClick={createLink} disabled={!detailsDone || !capital.length || !docsDone} sx={{ mt: 1 }}>Create signing link</Button>}
+                </Typography>}
+                {c.status !== 'rejected' && (
+                  <SigningLink customer={c} agreements={agreements} onChanged={onChanged} canCreate={edit} disabled={!c.pan || !bankDone || !capital.length} />
+                )}
               </>
             )}
           </Step>
@@ -445,7 +543,7 @@ export function OnboardingSteps({ customer: c, profile, capital, docs, agreement
                 <Typography variant="body2" color="text.secondary">Check the documents and the signed agreement, then approve.</Typography>
                 <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
                   <Button size="small" variant="contained" onClick={() => setStatus('active')}>Approve customer</Button>
-                  <Button size="small" color="error" variant="outlined" onClick={() => setStatus('rejected')}>Reject</Button>
+                  <Button size="small" color="error" variant="outlined" onClick={() => setRejecting(true)}>Reject</Button>
                 </Box>
               </>
             ) : (
@@ -456,6 +554,27 @@ export function OnboardingSteps({ customer: c, profile, capital, docs, agreement
           </Step>
         </Box>
       </Box>
+      {rejecting && <RejectDialog customer={c} onClose={() => setRejecting(false)} onReject={(reason) => { setRejecting(false); setStatus('rejected', reason); }} />}
     </Panel>
+  );
+}
+
+// The partner sees the reason on the customer page, so they know what to fix.
+function RejectDialog({ customer, onClose, onReject }) {
+  const [reason, setReason] = useState('');
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>Reject {customer.full_name}?</DialogTitle>
+      <DialogContent>
+        <TextField
+          label="Reason" required multiline minRows={2} fullWidth autoFocus value={reason} onChange={(e) => setReason(e.target.value)}
+          helperText="The partner sees this, e.g. 'PAN photo is unreadable, upload a clearer one.'" sx={{ mt: 1 }}
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button color="error" variant="contained" disabled={!reason.trim()} onClick={() => onReject(reason.trim())}>Reject application</Button>
+      </DialogActions>
+    </Dialog>
   );
 }

@@ -4,22 +4,53 @@ The landing page (`index.html`) is unchanged. The portal is a second page, `port
 [Supabase](https://supabase.com): Postgres, logins, private file storage and one server function.
 
 - **Partners** see each day's results for their customers, onboard new customers, and send signing links.
-- **Exit staff** enter daily results (by hand or CSV), and see every partner and customer.
+- **Exit staff** enter daily results, and see every partner and customer.
 - **Exit admins** also approve customers, manage partners and logins, close months, edit the agreement, and see the activity log.
-- **Customers** never log in. They open a signing link, read the agreement and sign on their phone.
+- **Customers** sign the agreement from a link on their phone. Once approved, their partner can give them a login (mobile number + password) to a one-page view of their daily profit/loss, payouts, account details and withdrawal requests. They never see their cap %, bucket or whether the cap is reached.
 
 All money maths runs inside the database (`supabase/migrations/*_calc.sql`). The browser only displays results.
 
 ## Payout rules
 
-Each day Exit enters **one profit/loss figure per partner**, after broker charges. Or use **Split a total** on Daily entry: type the day's total once and each partner's figure is filled in, in proportion to their customers' capital on that day (counted the same way payouts count it). Check the figures, then save. Then, for each partner:
+Each day Exit enters **one profit/loss figure per partner**, after broker charges. Or use **Split a total** on Daily entry: type the day's total once and each partner's figure is filled in, in proportion to their customers' capital on that day. Check the figures, then save. Then, for each partner:
 
-1. **Hidden charge.** On a profitable day Exit takes the partner's hidden charge, for example 20%. The partner sees only what's left: ₹1,00,000 shows as ₹80,000. Losses carry no charge. Partners can never read the entered figure or the charge %.
-2. **Customer buckets.** Each customer has a monthly bucket of cap % × capital (default 6%). The partner's amount is shared among the customers in proportion to their capital until the buckets are full. If one bucket fills early, its extra goes to the customers who still have room.
+1. **Trade charges.** On a profitable day Exit takes the partner's trade-charge % (brokerage, taxes and regulatory charges, for example 20%) before sharing. The partner sees only what's left: ₹1,00,000 shows as ₹80,000. Losses carry no charge. Partners and customers never see the entered figure or the %.
+2. **Customer buckets.** Each customer has a monthly bucket of cap % × capital on the 1st (default 6%), plus a pro-rated share for money added during the month: cap % × amount × (days left from the day it starts counting) ÷ (days in the month). Example: ₹1,00,000 on the 1st gives ₹6,000; ₹50,000 counting from the 16th of a 30-day month adds ₹1,500, so ₹7,500. Each day's amount is shared among customers in proportion to **their capital that day** until buckets are full. If one bucket fills early, its extra goes to the customers who still have room.
 3. **Profit share.** Once every bucket is full, the rest is split by the partner's profit share, for example 70% to the partner and 30% to Exit. Partners see both figures.
-4. **Losses.** A loss comes out of the customers' buckets in proportion to their capital. Partner income already earned is kept. Later profit refills the buckets before the partner earns again.
+4. **Losses.** A loss comes out of the customers' buckets in proportion to their capital that day. Partner income already earned is kept. Later profit refills the buckets before the partner earns again.
 
-Buckets reset on the 1st of each month. Amounts are rounded to whole paise so every split adds up exactly. The hidden charge and profit share are copied onto each day when it's first entered, so changing them later only affects new days.
+### Deposits
+
+Staff record **Add money** with the amount added and when it reached Exit's bank account. Money **counts from the day after it reaches Exit** (IST): received any time on the 15th, up to midnight, it counts from the 16th; from 00:00 on the 16th, from the 17th. The server works out the date; the dialog previews it with the bucket increase. Capital is a ledger of movements (deposits, withdrawals, exits, corrections), never edited, only undone (open months only).
+
+### Month close and payouts
+
+Each month **closes automatically at 11:30 PM IST on its last day** (a pg_cron job), unless an admin already closed it that day from the Months page. Closing works out each customer's payout:
+
+- **Variable plan** (default): the month's result, after recovering any loss carried from earlier months. A negative balance is carried forward; nothing is paid.
+- **Fixed plan**: the month's (pro-rated) bucket every month, whatever the result. Exit absorbs any shortfall.
+- **Withdrawals**: an open request is paid too, capped at capital on the 1st of next month less any carried loss. Capital drops by that amount from the 1st; withdrawing everything pays back all capital (including money not yet counting) and closes the account.
+
+Then **Download payout file** (CSV for the bank's bulk payment: beneficiary, account, IFSC, amount), and **Mark paid** once the bank confirms. A month can be reopened only until it's marked paid. Money comes in from, and goes back to, the customer's registered bank account only.
+
+### Emergency exit
+
+A customer (in their app) or their partner can ask; an admin sees the figures on the customer's page and pays out at once:
+
+- **Variable plan**: capital + this month's result so far (up to the last entered day) + any carried loss, never below ₹0.
+- **Fixed plan**: capital in full; no payout for the part-month.
+
+The account closes, and that partner's days up to the last result included become **final**: they can't be edited, and later changes (another customer's cap %, a backdated deposit) don't alter them. Earlier months must be closed first. The payout has its own bank file and Mark paid, and never appears in a month's payout file.
+
+Buckets start fresh on the 1st of each month. Paise are split with exact integer arithmetic so every split adds up exactly. Trade charges and profit share are copied onto each day when it's first entered, so changing them later only affects new days.
+
+### Checking the books
+
+`select * from check_books();` lists any broken money rule (no rows = the books balance); it's read-only and safe on live data. On the local stack only:
+
+- `node scripts/fuzz-payouts.mjs 200`: random multi-month, multi-partner scenarios through the real functions, checked against an independent simulator.
+- `node scripts/stress-concurrency.mjs`: many sessions saving, depositing, closing and paying out at once; the books must still balance. It writes to the database, so `npx supabase db reset` afterwards.
+- `node scripts/coverage.mjs`: statement and branch coverage of the database code (tests plus fuzz).
 
 ## Run it locally
 
@@ -46,6 +77,7 @@ Test logins all use the password `password123`:
 | admin@exit.local | Exit admin |
 | staff@exit.local | Exit staff |
 | ravi@exit.local, priya@exit.local | Partners |
+| mobile `9848010001` | Customer (Anil Varma) |
 
 Other local addresses:
 
@@ -54,7 +86,7 @@ Other local addresses:
 Other commands:
 
 ```bash
-npm run db:test         # 65 database tests: payouts, security, onboarding, record keeping, encryption
+npm run db:test         # 134 database tests: payouts, settlements, security, onboarding, record keeping, encryption
 npm run db:reset        # wipe and reload test data
 node src/finance.check.js
 ```
@@ -97,6 +129,7 @@ node src/finance.check.js
 6. **Connect the website** (GitHub → Settings → Secrets and variables → Actions → Variables). Add these two values from Dashboard → Project Settings → API:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY` (the publishable or anon key, never the service key)
+   - `VITE_SEBI_REGISTERED`: leave unset until SEBI registration is granted. Set it to `true` (and fill in the numbers in `src/config.js`) to show the registration chip, the "Regulated" pillar, the footer numbers and the SEBI disclaimer.
 
    The next push to `main` deploys the portal. Without these variables the portal page says it isn't set up yet, and the landing page still works.
 

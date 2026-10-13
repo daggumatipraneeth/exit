@@ -28,7 +28,7 @@ export default function Nav() {
         color: ink,
       }}
     >
-      <Container maxWidth="lg">
+      <Container maxWidth={false} sx={{ px: { xs: 2.5, md: 6, lg: 10 } }}>
         <Toolbar disableGutters sx={{ height: { xs: 64, md: 76 } }}>
           <Box component="a" href="#top" sx={{ display: 'flex' }} aria-label="Exit home">
             <Box component="img" src="media/Exit256.png" alt="Exit" sx={{ height: { xs: 36, md: 42 } }} />
@@ -55,7 +55,7 @@ export default function Nav() {
             ))}
           </Box>
           <Button color="inherit" href="portal.html" sx={{ display: { xs: 'none', sm: 'inline-flex' }, mr: 1, fontWeight: 500 }}>
-            Partner login
+            Login
           </Button>
           <Button variant="contained" href="#contact" sx={{ display: { xs: 'none', sm: 'inline-flex' } }}>
             Book consultation
@@ -91,7 +91,7 @@ export default function Nav() {
             Book consultation
           </Button>
           <Button fullWidth variant="outlined" href="portal.html" sx={{ mt: 1.5, color: '#fff', borderColor: 'rgba(255,255,255,.5)', '&:hover': { borderColor: '#fff' } }}>
-            Partner login
+            Login
           </Button>
         </Box>
       </Drawer>

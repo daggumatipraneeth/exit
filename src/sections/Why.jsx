@@ -6,13 +6,14 @@ import GavelIcon from '@mui/icons-material/GavelOutlined';
 import Reveal from '../components/Reveal';
 import SectionHeading from '../components/SectionHeading';
 import { accentBright, ink, navy } from '../theme';
+import { company } from '../config';
 
 const pillars = [
   [InsightsIcon, 'Research first', 'Every recommendation is backed by fundamental and technical research — never tips, never noise.'],
   [VisibilityIcon, 'Radical transparency', 'Clear fees, clear reasoning, clear reports. You always know what you own and why.'],
   [HandshakeIcon, 'A dedicated advisor', 'One person who knows your family and goals, available in person in Guntur and Hyderabad.'],
-  [GavelIcon, 'Regulated & compliant', 'SEBI and AMFI registered, with processes built around investor protection.'],
-];
+  company.sebiRegistered && [GavelIcon, 'Regulated & compliant', 'SEBI and AMFI registered, with processes built around investor protection.'],
+].filter(Boolean);
 
 const steps = ['Discover', 'Plan', 'Invest', 'Review'];
 
@@ -21,10 +22,10 @@ export default function Why() {
     <Box id="why" component="section" sx={{ position: 'relative', py: { xs: 10, md: 16 }, bgcolor: ink, color: '#fff', overflow: 'hidden', scrollMarginTop: 64 }}>
       <Box sx={{ position: 'absolute', top: '-20%', left: '-10%', width: 600, height: 600, borderRadius: '50%', background: `radial-gradient(${navy}, transparent 70%)` }} />
       <Box sx={{ position: 'absolute', bottom: '-30%', right: '-10%', width: 700, height: 700, borderRadius: '50%', background: `radial-gradient(${accentBright}22, transparent 65%)` }} />
-      <Container maxWidth="lg" sx={{ position: 'relative' }}>
+      <Container maxWidth={false} sx={{ px: { xs: 2.5, md: 6, lg: 10 }, position: 'relative' }}>
         <SectionHeading light overline="Why Exit" title="Advice that knows when to enter — and when to exit" subtitle="A great exit is planned from day one. We build every portfolio with the end goal in sight." />
 
-        <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' } }}>
+        <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: `repeat(${pillars.length}, 1fr)` } }}>
           {pillars.map(([Icon, title, text], i) => (
             <Reveal key={title} delay={i * 0.12} style={{ height: '100%' }}>
               <Box sx={{

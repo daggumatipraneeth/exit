@@ -32,6 +32,8 @@ jobs:
           # Repository variables (Settings > Secrets and variables > Actions > Variables). Both are public by design.
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          # Set to 'true' once SEBI registration is granted (and fill in src/config.js).
+          VITE_SEBI_REGISTERED: ${{ vars.VITE_SEBI_REGISTERED }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

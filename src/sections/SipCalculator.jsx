@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Container, Typography, Slider, ToggleButton, ToggleButtonGroup, Stack, Button } from '@mui/material';
+import { Box, Container, Typography, Slider, ToggleButton, ToggleButtonGroup, Stack, Button, Link } from '@mui/material';
 import Reveal from '../components/Reveal';
 import SectionHeading from '../components/SectionHeading';
 import { sipValue, lumpValue, inr } from '../finance';
@@ -62,7 +62,7 @@ export default function SipCalculator() {
 
   return (
     <Box id="calculator" component="section" sx={{ py: { xs: 10, md: 16 }, scrollMarginTop: 64 }}>
-      <Container maxWidth="lg">
+      <Container maxWidth={false} sx={{ px: { xs: 2.5, md: 6, lg: 10 } }}>
         <SectionHeading overline="Plan your future" title="See what discipline can do" subtitle="Move the sliders to see how a steady SIP or a one-time investment could grow over time." />
         <Reveal>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '5fr 7fr' }, borderRadius: 5, overflow: 'hidden', bgcolor: '#fff', border: '1px solid rgba(18,40,74,.08)', boxShadow: '0 40px 80px -50px rgba(18,40,74,.45)' }}>
@@ -79,7 +79,7 @@ export default function SipCalculator() {
               <Field label="Time period" value={years} display={`${years} yrs`} min={1} max={40} onChange={(_, v) => setYears(v)} aria-label="Years" />
               <Field label="Expected return (p.a.)" value={rate} display={`${rate}%`} min={1} max={30} step={0.5} onChange={(_, v) => setRate(v)} aria-label="Expected return" />
               <Typography variant="caption" color="text.secondary">
-                For illustration only. Returns are not guaranteed; mutual fund investments are subject to market risks.
+                For illustration only. Returns are not guaranteed; mutual fund investments are subject to market risks. <Link href="#/risk">Read the risk disclosure</Link>.
               </Typography>
             </Stack>
 

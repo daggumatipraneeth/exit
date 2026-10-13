@@ -22,7 +22,7 @@ insert into customers (id, franchisee_id, full_name, phone, status, cap_pct) val
   ('c0000000-0000-0000-0000-000000000011', 'f0000000-0000-0000-0000-000000000004', 'X', '6', 'active', 6),
   ('c0000000-0000-0000-0000-000000000012', 'f0000000-0000-0000-0000-000000000004', 'Y', '7', 'active', 6),
   ('c0000000-0000-0000-0000-000000000013', 'f0000000-0000-0000-0000-000000000004', 'Z', '8', 'active', 6);
-insert into customer_capital values
+insert into capital_movements (customer_id, effective_from, amount) values
   ('c0000000-0000-0000-0000-00000000000a', '2020-01-01', 100000), ('c0000000-0000-0000-0000-00000000000b', '2020-01-01', 200000),
   ('c0000000-0000-0000-0000-00000000000c', '2020-01-01', 100000),
   ('c0000000-0000-0000-0000-00000000000d', '2020-01-01', 100000), ('c0000000-0000-0000-0000-00000000000e', '2020-01-01', 100000),
@@ -99,7 +99,7 @@ select is((select net from franchisee_days where franchisee_id = 'f0000000-0000-
           'changing the hidden charge does not rewrite existing days');
 
 -- Capital change recomputes the bucket size for open months.
-insert into customer_capital values ('c0000000-0000-0000-0000-00000000000a', '2020-04-01', 400000);
+insert into capital_movements (customer_id, effective_from, amount) values ('c0000000-0000-0000-0000-00000000000a', '2020-04-01', 300000); -- 1,00,000 → 4,00,000
 select is((select cap from customer_days where customer_id = 'c0000000-0000-0000-0000-00000000000a' and trade_date = '2020-04-01'),
           24000.00::numeric(14,2), 'capital change recomputes bucket');
 

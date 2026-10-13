@@ -6,7 +6,7 @@ import { accentBright, ink } from '../theme';
 export default function Footer() {
   return (
     <Box component="footer" sx={{ bgcolor: ink, color: 'rgba(255,255,255,.7)', pt: { xs: 8, md: 12 }, pb: 5 }}>
-      <Container maxWidth="lg">
+      <Container maxWidth={false} sx={{ px: { xs: 2.5, md: 6, lg: 10 } }}>
         <Box sx={{ display: 'grid', gap: 6, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '2fr 1fr 1fr 1fr' } }}>
           <Box>
             <Box component="img" src="media/Exit256.png" alt="Exit" sx={{ height: 44, filter: 'brightness(0) invert(1)' }} />
@@ -30,18 +30,25 @@ export default function Footer() {
 
         <Divider sx={{ my: 5, borderColor: 'rgba(255,255,255,.08)' }} />
 
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={{ xs: 1, md: 4 }} sx={{ fontSize: 12, color: 'rgba(255,255,255,.55)' }}>
-          <span>SEBI Reg. No.: {company.sebiReg}</span>
-          <span>AMFI ARN: {company.amfiArn}</span>
-          <span>CIN: {company.cin}</span>
-        </Stack>
-        <Typography variant="caption" component="p" sx={{ mt: 2.5, color: 'rgba(255,255,255,.45)', lineHeight: 1.8 }}>
+        {company.sebiRegistered && (
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={{ xs: 1, md: 4 }} sx={{ fontSize: 12, color: 'rgba(255,255,255,.55)', mb: 2.5 }}>
+            <span>SEBI Reg. No.: {company.sebiReg}</span>
+            <span>AMFI ARN: {company.amfiArn}</span>
+            <span>CIN: {company.cin}</span>
+          </Stack>
+        )}
+        <Typography variant="caption" component="p" sx={{ color: 'rgba(255,255,255,.45)', lineHeight: 1.8 }}>
           Investments in securities market are subject to market risks. Read all the related documents carefully before investing.
-          Mutual fund investments are subject to market risks; read all scheme-related documents carefully. Registration granted by SEBI
-          and certification from NISM in no way guarantee performance of the intermediary or provide any assurance of returns to investors.
-          Past performance is not indicative of future returns. Portfolio figures and projections shown on this site are illustrative.
+          Mutual fund investments are subject to market risks; read all scheme-related documents carefully.
+          {company.sebiRegistered && ' Registration granted by SEBI and certification from NISM in no way guarantee performance of the intermediary or provide any assurance of returns to investors.'}
+          {' '}Past performance is not indicative of future returns. Portfolio figures and projections shown on this site are illustrative.
         </Typography>
-        <Typography variant="caption" component="p" sx={{ mt: 3, color: 'rgba(255,255,255,.4)' }}>
+        <Stack direction="row" sx={{ mt: 3, gap: 3, flexWrap: 'wrap', fontSize: 13 }}>
+          <Link href="#/terms" color="inherit" underline="hover">Terms of use</Link>
+          <Link href="#/privacy" color="inherit" underline="hover">Privacy policy</Link>
+          <Link href="#/risk" color="inherit" underline="hover">Risk disclosure</Link>
+        </Stack>
+        <Typography variant="caption" component="p" sx={{ mt: 2, color: 'rgba(255,255,255,.4)' }}>
           © {new Date().getFullYear()} {company.name}. All rights reserved.
         </Typography>
       </Container>

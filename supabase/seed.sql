@@ -1,6 +1,7 @@
 -- Local dev data only. Every login uses the password: password123
 --   admin@exit.local (admin) · staff@exit.local (employee)
 --   ravi@exit.local (franchisee, Guntur) · priya@exit.local (franchisee, Hyderabad)
+--   mobile 9848010001 (customer Anil Varma, Ravi's customer)
 
 create function pg_temp.add_user(p_id uuid, p_email text) returns void language sql as $$
   insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -32,20 +33,7 @@ insert into profiles (id, full_name, email, role, franchisee_id) values
   ('00000000-0000-0000-0000-0000000000f1', 'Ravi Kumar', 'ravi@exit.local', 'franchisee', '10000000-0000-0000-0000-000000000001'),
   ('00000000-0000-0000-0000-0000000000f2', 'Priya Reddy', 'priya@exit.local', 'franchisee', '10000000-0000-0000-0000-000000000002');
 
-insert into agreement_templates (title, body) values ('Client Trading Agreement v1', $html$
-<h2>Client Trading Agreement</h2>
-<p><strong>DRAFT, needs legal review before use.</strong></p>
-<p>This agreement is made on {{date}} between <strong>Exit Stock Broker Private Limited</strong> ("Exit"),
-its partner <strong>{{franchisee}}</strong> ("Partner"), and <strong>{{full_name}}</strong> (PAN {{pan}}) ("Client").</p>
-<ol>
-  <li>The Client places capital of <strong>{{capital}}</strong> with Exit for trading.</li>
-  <li>The Client's payout in any calendar month is capped at <strong>{{cap_pct}}%</strong> of capital.
-      Returns above the cap are shared between the Partner and Exit.</li>
-  <li>Brokerage, statutory and other charges are deducted before any payout is calculated.</li>
-  <li>Trading involves risk of loss. Losses reduce the Client's payout for that month. Returns are not guaranteed.</li>
-  <li>The Client confirms the KYC documents submitted are true and their own.</li>
-</ol>
-$html$);
+-- The agreement template comes from the migrations (20261013000030_agreement_v2.sql).
 
 -- 10 customers, 5 per franchisee, active, with capital from the start of last month.
 insert into customers (id, franchisee_id, full_name, phone, pan_enc, pan_hash, aadhaar_enc, status)
@@ -60,14 +48,23 @@ select ('20000000-0000-0000-0000-0000000000' || lpad(i::text, 2, '0'))::uuid,
        'active'
 from generate_series(1, 10) i;
 
-insert into customer_capital (customer_id, effective_from, amount)
-select id, (date_trunc('month', current_date) - interval '1 month')::date,
+insert into capital_movements (customer_id, kind, effective_from, amount)
+select id, 'deposit', (date_trunc('month', current_date) - interval '1 month')::date,
        (array[100000, 250000, 500000, 150000, 300000, 200000, 400000, 120000, 750000, 180000])[row_number() over (order by id)]
 from customers;
+
+-- Bank details for every seeded customer.
+update customers set bank_holder = full_name, bank_ifsc = 'SBIN0001234',
+       bank_account_enc = pii_encrypt('3000000000' || right(phone, 2)), bank_last4 = '00' || right(phone, 2);
 
 -- Seeded customers count as signed, so later edits by admin pass the approval rule.
 insert into agreements (customer_id, template_version, rendered_html_enc, signer_name, signed_at)
 select id, 1, pii_encrypt('<p>Seeded test agreement</p>'), full_name, now() from customers;
+
+-- Anil Varma's own login: mobile 9848010001.
+select pg_temp.add_user('00000000-0000-0000-0000-0000000000c1', '9848010001@customer.exit');
+insert into profiles (id, full_name, role, customer_id)
+values ('00000000-0000-0000-0000-0000000000c1', 'Anil Varma', 'customer', '20000000-0000-0000-0000-000000000001');
 
 -- One customer mid-onboarding for Ravi.
 insert into customers (franchisee_id, full_name, phone, email, status)
@@ -79,7 +76,7 @@ select setseed(0.42);
 insert into daily_entries (franchisee_id, trade_date, amount)
 select f.id, d::date, round((t.capital * (random() * 0.0165 - 0.0033))::numeric, 2)
 from franchisees f
-cross join lateral (select sum(k.amount) capital from customer_capital k join customers c on c.id = k.customer_id where c.franchisee_id = f.id) t
+cross join lateral (select sum(k.amount) capital from capital_movements k join customers c on c.id = k.customer_id where c.franchisee_id = f.id) t
 cross join generate_series(date_trunc('month', current_date) - interval '1 month', current_date, interval '1 day') d
 where extract(isodow from d) < 6
 order by d, f.id;

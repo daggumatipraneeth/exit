@@ -64,7 +64,7 @@ export function Months() {
   return (
     <>
       <PageTitle>Months</PageTitle>
-      <Typography color="text.secondary" sx={{ mb: 3, maxWidth: '65ch' }}>
+      <Typography color="text.secondary" sx={{ mb: 3 }}>
         Once a month's figures are final: <strong>Close month</strong> (works out every customer's payout and withdrawal),
         <strong> Download payout file</strong> and send it to the bank, then <strong>Mark paid</strong> once the bank confirms.
         A closed month can't be edited. It can be reopened only until it is marked paid.
@@ -190,7 +190,7 @@ export function Templates() {
         Agreement
       </PageTitle>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      <Typography color="text.secondary" sx={{ mb: 3, maxWidth: '70ch' }}>
+      <Typography color="text.secondary" sx={{ mb: 3 }}>
         New signing links use the latest version. Agreements already signed keep the exact text the customer saw. Fill-ins:{' '}
         <code>{'{{full_name}} {{pan}} {{franchisee}} {{capital}} {{cap_pct}} {{date}}'}</code>.
       </Typography>

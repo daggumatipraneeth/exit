@@ -34,6 +34,10 @@ export default function MyAccount() {
   const days = a.days ?? [];
   const latest = days[0];
   const active = a.status === 'active';
+  // A loss in the month that closes next comes off the withdrawal at that close.
+  const next = a.next_close;
+  const lossNote = !fixed && next && Number(next.result) < 0 &&
+    `Your ${monthName(next.month)} result so far is ${money(next.result)}. It is taken off what you can withdraw when ${monthName(next.month)} closes.`;
 
   return (
     <>
@@ -134,6 +138,7 @@ export default function MyAccount() {
                     <Typography variant="body2" color="text.secondary">
                       You can withdraw up to {money(a.withdrawable)}. The money is sent with the next monthly payout.
                     </Typography>
+                    {lossNote && <Alert severity="info">{lossNote}</Alert>}
                     <Button variant="contained" onClick={() => setWithdrawing(true)} disabled={Number(a.withdrawable) <= 0} sx={{ justifySelf: 'start' }}>
                       Request withdrawal
                     </Button>
@@ -175,12 +180,12 @@ export default function MyAccount() {
         </Box>
       </Box>
 
-      {withdrawing && <WithdrawDialog max={Number(a.withdrawable)} onClose={() => setWithdrawing(false)} onSaved={() => { setWithdrawing(false); load(); }} />}
+      {withdrawing && <WithdrawDialog max={Number(a.withdrawable)} note={lossNote} onClose={() => setWithdrawing(false)} onSaved={() => { setWithdrawing(false); load(); }} />}
     </>
   );
 }
 
-function WithdrawDialog({ max, onClose, onSaved }) {
+function WithdrawDialog({ max, note, onClose, onSaved }) {
   const [amount, setAmount] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -208,6 +213,7 @@ function WithdrawDialog({ max, onClose, onSaved }) {
         <Typography variant="body2" color="text.secondary">
           The amount is paid with the next monthly payout, together with that month's profit. You can cancel until then.
         </Typography>
+        {note && <Alert severity="info">{note}</Alert>}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>

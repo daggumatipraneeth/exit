@@ -108,7 +108,7 @@ export default function MyAccount() {
                     </Box>
                     <Box sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{money(p.amount)}</Box>
                     {Number(p.amount) > 0 && (
-                      <Pill tone={p.paid_at ? 'good' : 'progress'} label={p.paid_at ? `Paid ${shortDate(p.paid_at.slice(0, 10))}` : 'Processing'} />
+                      <Pill tone={p.paid_at ? 'good' : 'progress'} label={p.paid_at ? `Paid ${shortDate(p.paid_at)}` : 'Processing'} />
                     )}
                   </Box>
                 ))}
@@ -124,7 +124,7 @@ export default function MyAccount() {
                 {a.withdrawal ? (
                   <>
                     <Typography>
-                      You asked to withdraw <strong>{money(a.withdrawal.amount)}</strong> on {shortDate(a.withdrawal.requested_at.slice(0, 10))}.
+                      You asked to withdraw <strong>{money(a.withdrawal.amount)}</strong> on {shortDate(a.withdrawal.requested_at)}.
                       It will be sent with the next monthly payout.
                     </Typography>
                     <Button variant="outlined" color="error" onClick={cancel} sx={{ justifySelf: 'start' }}>Cancel request</Button>

@@ -10,8 +10,9 @@ import { accent, ink, line, loss, navy } from '../theme';
 export const iso = (d) => d.toLocaleDateString('en-CA');
 export const today = () => iso(new Date());
 export const shift = (date, days) => { const d = new Date(`${date}T00:00`); d.setDate(d.getDate() + days); return iso(d); };
+// Takes a 'YYYY-MM-DD' day or a full timestamp (shown on its local day, not its UTC one).
 export const fmtDate = (date, opts = { weekday: 'long', day: 'numeric', month: 'long' }) =>
-  new Date(`${date}T00:00`).toLocaleDateString('en-IN', opts);
+  new Date(date.length > 10 ? date : `${date}T00:00`).toLocaleDateString('en-IN', opts);
 export const shortDate = (date) => fmtDate(date, { day: 'numeric', month: 'short', year: 'numeric' });
 export const monthName = (date) => fmtDate(date, { month: 'long', year: 'numeric' });
 export const sum = (rows, key) => rows.reduce((t, r) => t + Number(r[key]), 0);

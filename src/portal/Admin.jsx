@@ -101,7 +101,7 @@ export function Months() {
                     </Typography>
                   )}
                   {isClosed && (
-                    <Pill tone={pay?.unpaid ? 'attention' : 'good'} label={pay?.unpaid ? 'Closed, not paid' : settled ? 'Paid' : `Closed ${shortDate(closedAt[r.month].slice(0, 10))}`} />
+                    <Pill tone={pay?.unpaid ? 'attention' : 'good'} label={pay?.unpaid ? 'Closed, not paid' : settled ? 'Paid' : `Closed ${shortDate(closedAt[r.month])}`} />
                   )}
                   {isClosed && pay && <Button size="small" variant="outlined" onClick={() => download(r.month)}>Download payout file</Button>}
                   {isClosed && pay?.unpaid > 0 && <Button size="small" variant="contained" onClick={() => setConfirm({ month: r.month, pay: true })}>Mark paid</Button>}
@@ -198,7 +198,7 @@ export function Templates() {
           <Box sx={{ p: { xs: 2, md: 3 } }}><AgreementFrame html={fill(current.body)} /></Box>
           {list.length > 1 && (
             <Typography variant="body2" color="text.secondary" sx={{ px: { xs: 2, md: 3 }, pb: 2 }}>
-              Earlier versions: {list.slice(1).map((t) => `v${t.version} (${shortDate(t.created_at.slice(0, 10))})`).join(', ')}
+              Earlier versions: {list.slice(1).map((t) => `v${t.version} (${shortDate(t.created_at)})`).join(', ')}
             </Typography>
           )}
         </Panel>

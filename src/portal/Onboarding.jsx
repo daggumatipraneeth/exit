@@ -405,7 +405,7 @@ export function Documents({ customer, docs, edit, onChanged }) {
                     <span key={v.path}>
                       {i > 0 && ', '}
                       <Link component="button" type="button" sx={{ fontSize: 'inherit', verticalAlign: 'baseline' }} onClick={() => openVersion(v.path)}>
-                        {shortDate(v.uploaded_at.slice(0, 10))}
+                        {shortDate(v.uploaded_at)}
                       </Link>
                     </span>
                   ))}
@@ -525,10 +525,10 @@ export function OnboardingSteps({ customer: c, profile, capital, agreements, onE
           </Step>
           <Step done={!!signed} title="Customer signs the agreement">
             {signed ? (
-              <Typography variant="body2" color="text.secondary">Signed by {signed.signer_name} on {shortDate(signed.signed_at.slice(0, 10))}.</Typography>
+              <Typography variant="body2" color="text.secondary">Signed by {signed.signer_name} on {shortDate(signed.signed_at)}.</Typography>
             ) : link ? (
               <>
-                <Typography variant="body2" color="text.secondary">Send this link to the customer. It works until {shortDate(pending.token_expires_at.slice(0, 10))}.</Typography>
+                <Typography variant="body2" color="text.secondary">Send this link to the customer. It works until {shortDate(pending.token_expires_at)}.</Typography>
                 <Box sx={{ mt: 1, p: 1.25, bgcolor: '#F8FAFC', border: `1px solid ${line}`, borderRadius: 1.5, fontSize: 13, overflowWrap: 'anywhere' }}>{link}</Box>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
                   <Button size="small" variant="contained" color="success" startIcon={<WhatsAppIcon />} href={wa} target="_blank" rel="noreferrer">Send on WhatsApp</Button>
@@ -540,7 +540,7 @@ export function OnboardingSteps({ customer: c, profile, capital, agreements, onE
               <>
                 <Typography variant="body2" color="text.secondary">
                   {lastSigned
-                    ? `Signed earlier on ${shortDate(lastSigned.signed_at.slice(0, 10))}, before the application was reopened. Create a new link so the customer signs again.`
+                    ? `Signed earlier on ${shortDate(lastSigned.signed_at)}, before the application was reopened. Create a new link so the customer signs again.`
                     : 'When the steps above are done, create a link for the customer to read and sign on their phone.'}
                 </Typography>
                 {edit && <Button size="small" variant="contained" onClick={createLink} disabled={!c.pan || !bankDone || !capital.length} sx={{ mt: 1 }}>Create signing link</Button>}

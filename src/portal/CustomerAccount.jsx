@@ -79,7 +79,7 @@ export function CustomerPayouts({ customer: c }) {
       {error && <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>}
       {open && (
         <Alert severity="warning" sx={{ m: 2 }} action={<Button color="inherit" size="small" onClick={cancel}>Cancel it</Button>}>
-          Withdrawal of {money(open.amount)} requested on {shortDate(open.requested_at.slice(0, 10))}. It is paid at the next month close.
+          Withdrawal of {money(open.amount)} requested on {shortDate(open.requested_at)}. It is paid at the next month close.
         </Alert>
       )}
       {rows.length === 0 ? (

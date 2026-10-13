@@ -164,7 +164,7 @@ export default function Customer({ profile, id }) {
               <Box sx={{ gridColumn: '1 / -1' }}><Field label="Email">{c.email}</Field></Box>
               <Box sx={{ gridColumn: '1 / -1' }}><Field label="Address">{c.address}</Field></Box>
               {staff && <Field label="Partner">{c.franchisees.name}</Field>}
-              <Field label="Customer since">{shortDate(c.created_at.slice(0, 10))}</Field>
+              <Field label="Customer since">{shortDate(c.created_at)}</Field>
             </Box>
           </Panel>
 
@@ -200,7 +200,7 @@ export default function Customer({ profile, id }) {
           {signed && (
             <Panel title="Agreement" action={<Button size="small" onClick={() => setDialog('agreement')}>View</Button>}>
               <Typography variant="body2" color="text.secondary" sx={{ px: { xs: 2, md: 3 }, py: 2 }}>
-                Signed by {signed.signer_name} on {shortDate(signed.signed_at.slice(0, 10))}.
+                Signed by {signed.signer_name} on {shortDate(signed.signed_at)}.
               </Typography>
             </Panel>
           )}

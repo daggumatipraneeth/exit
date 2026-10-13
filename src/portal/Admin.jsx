@@ -54,7 +54,7 @@ export function Months() {
   async function download(month) {
     const { data, error } = await supabase.rpc('payout_file', { p_month: month });
     if (error) return setError(errText(error));
-    const missing = downloadPayoutCsv(data, `exit-payouts-${month.slice(0, 7)}.csv`);
+    const missing = await downloadPayoutCsv(data, `exit-payouts-${month.slice(0, 7)}.csv`);
     if (missing.length) setError(`No bank details for: ${missing.join(', ')}. Add them on each customer's page, then download again.`);
   }
 

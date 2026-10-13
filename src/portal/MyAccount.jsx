@@ -6,7 +6,7 @@ import { money } from '../finance';
 import { line } from '../theme';
 import { fmtDate, shortDate, monthName, Signed, Panel, Field, Pill, Figures, PageTitle, StatusChip, errText, tableHead, phoneText } from './ui';
 import { PasswordPanel } from './Account';
-import { Heatmap } from './MonthView';
+import Heatmap from './Heatmap';
 
 const pad = { px: { xs: 2, md: 3 } };
 

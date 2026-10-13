@@ -2,7 +2,7 @@ import { Box, Container, Typography, Button, Stack, Chip } from '@mui/material';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import VerifiedIcon from '@mui/icons-material/VerifiedUser';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import { m, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import MarketCanvas from '../components/MarketCanvas';
 import Stats from './Stats';
 import { accent, accentSoft, ink, bg, navy } from '../theme';
@@ -28,7 +28,7 @@ function PortfolioCard() {
   return (
     <Box sx={{ perspective: 1200 }} onMouseMove={move} onMouseLeave={leave}>
       <Box
-        component={motion.div}
+        component={m.div}
         style={{ rotateX: rx, rotateY: ry }}
         initial={{ opacity: 0, y: 60, scale: 0.94 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -65,11 +65,11 @@ function PortfolioCard() {
               <stop offset="1" stopColor={accent} stopOpacity="0" />
             </linearGradient>
           </defs>
-          <motion.path
+          <m.path
             d="M0 64 L30 58 L60 62 L90 48 L120 52 L150 38 L180 42 L210 26 L240 30 L270 14 L300 8 L300 80 L0 80Z"
             fill="url(#spark)" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2, duration: 1 }}
           />
-          <motion.path
+          <m.path
             d="M0 64 L30 58 L60 62 L90 48 L120 52 L150 38 L180 42 L210 26 L240 30 L270 14 L300 8"
             fill="none" stroke={accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
             initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: 1.1, duration: 1.8, ease }}
@@ -78,7 +78,7 @@ function PortfolioCard() {
 
         <Box sx={{ display: 'flex', height: 8, borderRadius: 99, overflow: 'hidden', mt: 3, bgcolor: 'rgba(255,255,255,.08)' }}>
           {alloc.map(([k, v, c], i) => (
-            <Box key={k} component={motion.div} initial={{ width: 0 }} animate={{ width: `${v}%` }} transition={{ delay: 1.4 + i * 0.15, duration: 1, ease }}
+            <Box key={k} component={m.div} initial={{ width: 0 }} animate={{ width: `${v}%` }} transition={{ delay: 1.4 + i * 0.15, duration: 1, ease }}
               sx={{ bgcolor: c }} />
           ))}
         </Box>
@@ -94,7 +94,7 @@ function PortfolioCard() {
       </Box>
 
       <Box
-        component={motion.div}
+        component={m.div}
         initial={{ opacity: 0, x: -30 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 1.2, duration: 0.6, ease }}
@@ -128,7 +128,7 @@ export default function Hero() {
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.15fr .85fr' }, gap: { xs: 8, md: 6 }, alignItems: 'center', flex: 1, pb: { xs: 8, md: 6 } }}>
           <Box>
             <Chip
-              component={motion.div}
+              component={m.div}
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease }}
               icon={<Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'success.main', ml: '10px !important', boxShadow: '0 0 0 4px rgba(15,157,107,.18)' }} />}
               label={company.sebiRegistered ? 'SEBI-registered advisory · Guntur & Hyderabad' : 'Guntur & Hyderabad'}
@@ -142,7 +142,7 @@ export default function Hero() {
                     return (
                       <Box key={w} component="span" sx={{ display: 'inline-block', overflow: 'hidden', verticalAlign: 'top', mr: '0.22em', pb: '0.08em' }}>
                         <Box
-                          component={motion.span}
+                          component={m.span}
                           initial={{ y: '110%' }} animate={{ y: 0 }} transition={{ duration: 0.7, delay: d, ease }}
                           sx={{ display: 'inline-block', ...(highlight.has(w) && { color: accent, background: `linear-gradient(100deg, ${accent}, #0B7A53 60%, ${accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }) }}
                         >
@@ -155,14 +155,14 @@ export default function Hero() {
               ))}
             </Typography>
             <Typography
-              component={motion.p}
+              component={m.p}
               initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.6, ease }}
               sx={{ mt: 3, maxWidth: 540, color: 'text.secondary', fontSize: { xs: '1.05rem', md: '1.2rem' }, lineHeight: 1.7 }}
             >
               Research-backed stock advisory, mutual fund planning and complete wealth management — from people who know your city, your goals and your family.
             </Typography>
             <Stack
-              component={motion.div}
+              component={m.div}
               initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6, duration: 0.6, ease }}
               direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 5 }}
             >

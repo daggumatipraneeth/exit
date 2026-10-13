@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Box, Typography } from '@mui/material';
-import { animate, motion, useInView } from 'framer-motion';
+import { animate, m, useInView } from 'framer-motion';
 import { stats } from '../config';
 
 function CountUp({ value, prefix = '', suffix = '' }) {
@@ -20,7 +20,7 @@ function CountUp({ value, prefix = '', suffix = '' }) {
 export default function Stats() {
   return (
     <Box
-      component={motion.div}
+      component={m.div}
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.8, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}

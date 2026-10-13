@@ -19,18 +19,16 @@ export default function Customer({ profile, id }) {
   const [dialog, setDialog] = useState(null); // 'edit' | 'capital' | 'agreement' | 'bank'
 
   function load() {
-    supabase.from('customers')
-      .select('id, franchisee_id, full_name, phone, email, dob, address, cap_pct, plan, bank_holder, bank_ifsc, bank_last4, status, reject_reason, created_at, franchisees(name), capital_movements(id, kind, amount, received_at, effective_from), customer_documents(kind, path, mime, uploaded_at), agreements(id, sign_token, token_expires_at, signed_at, signer_name, template_version)')
-      .eq('id', id)
-      .maybeSingle()
-      .then(async ({ data, error }) => {
-        if (error) return setError(error.message);
-        if (!data) return setError('This customer does not exist or is not yours.');
-        // PAN and Aadhaar are encrypted; this function decrypts them only for permitted viewers.
-        const { data: pii } = await supabase.rpc('customer_pii', { p_customer: id });
-        const { data: t } = await supabase.from('agreement_templates').select('version').order('version', { ascending: false }).limit(1).maybeSingle();
-        setC({ ...data, pan: pii?.[0]?.pan ?? null, aadhaar_last4: pii?.[0]?.aadhaar_last4 ?? null, latestVersion: t?.version });
-      });
+    // In parallel: the customer, their decrypted PAN/Aadhaar (only for permitted viewers) and the latest agreement version.
+    Promise.all([
+      supabase.from('customers').select('id, franchisee_id, full_name, phone, email, dob, address, cap_pct, plan, bank_holder, bank_ifsc, bank_last4, status, reject_reason, created_at, franchisees(name), capital_movements(id, kind, amount, received_at, effective_from), customer_documents(kind, path, mime, uploaded_at), agreements(id, sign_token, token_expires_at, signed_at, signer_name, template_version)').eq('id', id).maybeSingle(),
+      supabase.rpc('customer_pii', { p_customer: id }),
+      supabase.from('agreement_templates').select('version').order('version', { ascending: false }).limit(1).maybeSingle(),
+    ]).then(([{ data, error }, { data: pii }, { data: t }]) => {
+      if (error) return setError(error.message);
+      if (!data) return setError('This customer does not exist or is not yours.');
+      setC({ ...data, pan: pii?.[0]?.pan ?? null, aadhaar_last4: pii?.[0]?.aadhaar_last4 ?? null, latestVersion: t?.version });
+    });
   }
   useEffect(load, [id]);
   const reload = () => { setDialog(null); load(); };

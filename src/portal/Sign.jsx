@@ -5,6 +5,9 @@ import { company } from '../config';
 import { ink, line } from '../theme';
 import { errText } from './ui';
 
+// Same rule as the database: case, spacing and punctuation don't count.
+const sameName = (a, b) => { const n = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim(); return n(a) === n(b); };
+
 // Agreement HTML in a sandboxed frame (no scripts), grown to its content height so the page scrolls, not the frame.
 export function AgreementFrame({ html }) {
   const ref = useRef();
@@ -108,6 +111,7 @@ export default function Sign({ token }) {
     window.scrollTo(0, 0);
   }
 
+  const nameWrong = !!a && name.trim().length >= 3 && !sameName(name, a.customer);
   let body;
   if (a === undefined) body = <Box sx={{ textAlign: 'center', py: 8 }}><CircularProgress aria-label="Loading" /></Box>;
   else if (!a) body = <Alert severity="error">This signing link is not valid. Check that you opened the full link your partner sent.</Alert>;
@@ -136,9 +140,12 @@ export default function Sign({ token }) {
           label="I have read this agreement, I agree to its terms, and the KYC documents I gave are mine and true."
           sx={{ alignItems: 'flex-start', '& .MuiCheckbox-root': { pt: 0.25 } }}
         />
-        <TextField label="Your full name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" helperText={`As on your PAN card: ${a.customer}`} />
+        <TextField
+          label="Your full name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name"
+          error={nameWrong} helperText={nameWrong ? `Type your name exactly as on your PAN card: ${a.customer}` : `As on your PAN card: ${a.customer}`}
+        />
         <SignaturePad onChange={setSignature} />
-        <Button variant="contained" size="large" disabled={busy || !agree || name.trim().length < 3 || !signature} onClick={sign}>
+        <Button variant="contained" size="large" disabled={busy || !agree || !sameName(name, a.customer) || !signature} onClick={sign}>
           Sign agreement
         </Button>
         <Typography variant="body2" color="text.secondary">

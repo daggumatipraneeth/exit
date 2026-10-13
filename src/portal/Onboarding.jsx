@@ -469,12 +469,14 @@ function Step({ done, title, children }) {
 // The onboarding checklist shown until the customer is active.
 export function OnboardingSteps({ customer: c, profile, capital, agreements, onEdit, onCapital, onBank, onChanged }) {
   const [msg, setMsg] = useState(null);
+  const [rejecting, setRejecting] = useState(false);
   const [copied, setCopied] = useState(false);
   const edit = canEdit(profile, c);
   const isAdmin = profile.role === 'admin';
   const bankDone = !!c.bank_last4;
   const lastSigned = latestSigned(agreements);
-  // After a rejection is reopened the customer signs again, so an older signature doesn't count.
+  // After a rejection is reopened, or the terms change after signing, the customer signs again,
+  // so an older signature doesn't count.
   const signed = ['pending_approval', 'active'].includes(c.status) ? lastSigned : null;
   const pending = agreements.find((a) => !a.signed_at && new Date(a.token_expires_at) > new Date());
   const link = pending && `${window.location.href.split('#')[0]}#/sign/${pending.sign_token}`;
@@ -486,8 +488,8 @@ export function OnboardingSteps({ customer: c, profile, capital, agreements, onE
     if (error) return setMsg(['error', errText(error)]);
     onChanged();
   }
-  async function setStatus(status) {
-    const { error } = await supabase.from('customers').update({ status }).eq('id', c.id);
+  async function setStatus(status, reject_reason) {
+    const { error } = await supabase.from('customers').update({ status, ...(reject_reason && { reject_reason }) }).eq('id', c.id);
     if (error) return setMsg(['error', errText(error)]);
     onChanged();
   }
@@ -503,7 +505,7 @@ export function OnboardingSteps({ customer: c, profile, capital, agreements, onE
         {msg && <Alert severity={msg[0]} sx={{ mt: 2 }}>{msg[1]}</Alert>}
         {c.status === 'rejected' && (
           <Alert severity="error" sx={{ mt: 2 }} action={profile.role !== 'franchisee' && <Button color="inherit" size="small" onClick={() => setStatus('draft')}>Reopen</Button>}>
-            Exit rejected this application.
+            Exit rejected this application{c.reject_reason ? `: ${c.reject_reason}` : '.'}
           </Alert>
         )}
         <Box component="ol" sx={{ listStyle: 'none', m: 0, p: 0 }}>
@@ -542,7 +544,7 @@ export function OnboardingSteps({ customer: c, profile, capital, agreements, onE
                   {c.status === 'rejected'
                     ? 'Exit has to reopen the application before the customer can sign again.'
                     : lastSigned
-                    ? `Signed earlier on ${shortDate(lastSigned.signed_at)}, before the application was reopened. Create a new link so the customer signs again.`
+                    ? `Signed earlier on ${shortDate(lastSigned.signed_at)}, but the application was reopened or its terms changed since. Create a new link so the customer signs again.`
                     : 'When the steps above are done, create a link for the customer to read and sign on their phone.'}
                 </Typography>
                 {edit && c.status !== 'rejected' && <Button size="small" variant="contained" onClick={createLink} disabled={!c.pan || !bankDone || !capital.length} sx={{ mt: 1 }}>Create signing link</Button>}
@@ -555,7 +557,7 @@ export function OnboardingSteps({ customer: c, profile, capital, agreements, onE
                 <Typography variant="body2" color="text.secondary">Check the documents and the signed agreement, then approve.</Typography>
                 <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
                   <Button size="small" variant="contained" onClick={() => setStatus('active')}>Approve customer</Button>
-                  <Button size="small" color="error" variant="outlined" onClick={() => setStatus('rejected')}>Reject</Button>
+                  <Button size="small" color="error" variant="outlined" onClick={() => setRejecting(true)}>Reject</Button>
                 </Box>
               </>
             ) : (
@@ -566,6 +568,27 @@ export function OnboardingSteps({ customer: c, profile, capital, agreements, onE
           </Step>
         </Box>
       </Box>
+      {rejecting && <RejectDialog customer={c} onClose={() => setRejecting(false)} onReject={(reason) => { setRejecting(false); setStatus('rejected', reason); }} />}
     </Panel>
+  );
+}
+
+// The partner sees the reason on the customer page, so they know what to fix.
+function RejectDialog({ customer, onClose, onReject }) {
+  const [reason, setReason] = useState('');
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>Reject {customer.full_name}?</DialogTitle>
+      <DialogContent>
+        <TextField
+          label="Reason" required multiline minRows={2} fullWidth autoFocus value={reason} onChange={(e) => setReason(e.target.value)}
+          helperText="The partner sees this, e.g. 'PAN photo is unreadable, upload a clearer one.'" sx={{ mt: 1 }}
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button color="error" variant="contained" disabled={!reason.trim()} onClick={() => onReject(reason.trim())}>Reject application</Button>
+      </DialogActions>
+    </Dialog>
   );
 }

@@ -19,7 +19,7 @@ export default function Customer({ profile, id }) {
 
   function load() {
     supabase.from('customers')
-      .select('id, franchisee_id, full_name, phone, email, dob, address, cap_pct, plan, bank_holder, bank_ifsc, bank_last4, status, created_at, franchisees(name), customer_capital(effective_from, amount), customer_documents(kind, path, mime, uploaded_at), agreements(id, sign_token, token_expires_at, signed_at, signer_name)')
+      .select('id, franchisee_id, full_name, phone, email, dob, address, cap_pct, plan, bank_holder, bank_ifsc, bank_last4, status, reject_reason, created_at, franchisees(name), customer_capital(effective_from, amount), customer_documents(kind, path, mime, uploaded_at), agreements(id, sign_token, token_expires_at, signed_at, signer_name)')
       .eq('id', id)
       .maybeSingle()
       .then(async ({ data, error }) => {

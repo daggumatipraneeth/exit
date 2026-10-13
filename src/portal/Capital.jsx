@@ -193,7 +193,7 @@ export function EmergencyPanel({ customer: c, isAdmin, onChanged }) {
             </Alert>
             {figures && <Breakdown f={figures} />}
             {figures?.blocked && <Typography variant="body2" color="error">{figures.blocked}.</Typography>}
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ display: 'grid', gap: 1, '& > button': { whiteSpace: 'nowrap' } }}>
               {isAdmin && <Button variant="contained" color="error" disabled={!!figures?.blocked} onClick={() => setConfirming(true)}>Pay out now</Button>}
               <Button onClick={() => call('cancel_emergency_exit', { p_customer: c.id })}>Cancel request</Button>
             </Box>
@@ -204,9 +204,9 @@ export function EmergencyPanel({ customer: c, isAdmin, onChanged }) {
               Pays the customer straight away and closes the account. Profit share: capital plus this month's result so far, less any
               loss carried. Fixed plan: capital in full, nothing for the part-month.
             </Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button variant="outlined" color="error" onClick={() => setAsking(true)} sx={{ justifySelf: 'start' }}>Request emergency exit</Button>
-              {isAdmin && <Button color="error" onClick={() => setConfirming(true)}>Pay out now</Button>}
+            <Box sx={{ display: 'grid', gap: 1, '& > button': { whiteSpace: 'nowrap' } }}>
+              <Button variant="outlined" color="error" onClick={() => setAsking(true)}>Request emergency exit</Button>
+              {isAdmin && <Button variant="outlined" color="error" onClick={() => setConfirming(true)}>Pay out now</Button>}
             </Box>
           </>
         )}

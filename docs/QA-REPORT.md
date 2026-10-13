@@ -257,3 +257,50 @@ Run on a freshly reset DB, with all 22 migrations and the seed applied cleanly:
 Notes:
 - `customers.test.sql` fails while QA data with closed 2026 months is in the DB ("Reopen later months first"). The tests assume no later closed months, so run them on a reset DB.
 - The final reset wiped the QA scenario data. Replaying sections A–G above recreates it.
+
+## Phase 3: pro-rated deposits, emergency exit, month-end auto close (13 Oct 2026)
+
+### Rules implemented
+| Rule | How |
+|---|---|
+| Capital | A ledger of movements (`capital_movements`); never edited, only undone in open months |
+| Cut-off | Received before 12:00 IST counts from the next day; from 12:00, from the day after (`effective_date`) |
+| Bucket | cap % × (capital on the 1st + Σ later deposits × days left ÷ days in month), rounded once (`day_cap`, `month_cap`) |
+| Daily split | Each day's result shared by each customer's capital that day |
+| Emergency exit | Variable: capital + month result + carried loss, floored at 0. Fixed: capital. The partner's paid days become final |
+| Month close | Allowed from the last day (IST). `pg_cron` closes at 23:30 IST on the last day unless already closed by hand |
+
+### Hand-worked checks (`supabase/tests/deposits.test.sql`, all passing)
+| Case | Expected | System |
+|---|---|---|
+| ₹1L on the 1st + ₹50k received 15 Sep 11:30 (30-day month) | 6,000 + 6% × 50,000 × 15/30 = **7,500** | 7,500.00 |
+| Same, received 12:30 (starts the 17th, 14 days) | 6,000 + 1,400 = **7,400** | 7,400.00 |
+| 31-day month, starts the 16th (16 days) | 6% × (1,00,000 + 50,000 × 16/31) = **7,548.39** | 7,548.39 |
+| New customer, ₹28,000 received 10 Feb (Feb 2025, starts the 11th) | 6% × 28,000 × 18/28 = **1,080** | 1,080.00 |
+| Cut-off edges | 11:59:59 → next day; 12:00:00 → day after; last day 13:00 → the 2nd | as expected |
+| Live preview (Anil, 13 Oct 11:30, ₹50k) | Starts 14 Oct; 6% × 50,000 × 18/31 = **₹1,741.94** | shown in the Add money dialog |
+
+### Verification
+- **pgTAP:** 232/232 across 18 files. New: `deposits`, `emergency`, `closing`, `invariants`.
+- **`check_books()`:** an invariant query covering:
+  - credits = partner-day totals; net = credits + overflow; overflow = partner + Exit
+  - no credit beyond the bucket; running bucket levels
+  - capital ≥ 0 on every date
+  - settlement and emergency formulas; nobody paid twice
+- **Fuzz** (`scripts/fuzz-payouts.mjs`): random scenarios run through the real SQL against an independent simulator, in exact integer-paise BigInt arithmetic. The scenarios mix deposits around the cut-off and month ends, profit and loss days, partial and full withdrawals, a month close, emergency exits, entries after an exit, and cap % changes.
+  - **1,000 scenarios, 83,185 rows compared, 0 mismatches.** `check_books()` was clean after each.
+  - **The harness itself was tested:** a deliberately broken simulator (cut-off at 13:00, or splitting by capital on the 1st) fails 20–22 of 30 scenarios.
+- **Bug found by the fuzz test (fixed):** splitting leftover paise compared remainders computed by rounded division. Two customers with exactly equal remainders (4/7 paisa) could see a hair's difference, and the paisa went to the smaller holder, against the tie rule (largest remainder, then larger capital). The split now uses exact integer `div`/`mod`. Only ever one paisa between two customers; totals were always right.
+- **Browser end to end:**
+  - Add money: the preview, then Undo with a confirmation.
+  - Emergency exit:
+    1. The customer requests it in the app (estimate ₹2,55,922.16).
+    2. The admin is blocked until September is closed.
+    3. The admin pays out ₹2,55,922.16 (= 2,50,000 + 5,922.16).
+    4. The payout file and Mark paid work, and the customer sees "Emergency exit, Paid", with the account closed.
+  - Agreement v2:
+    - It fills plan, bank, partner phone and capital, with no `{{…}}` left.
+    - An active customer shows "out of date", gets a new link, signs, and stays Active.
+  - Legal pages: Terms, Privacy and Risk at 375 px, with footer, contact-consent and SIP-risk links.
+
+Legal review points are in `docs/LEGAL-REVIEW.md`.

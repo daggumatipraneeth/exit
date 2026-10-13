@@ -11,7 +11,7 @@ import { accent, navy } from '../theme';
 export default function Offices() {
   return (
     <Box id="offices" component="section" sx={{ py: { xs: 10, md: 16 }, scrollMarginTop: 64 }}>
-      <Container maxWidth="lg">
+      <Container maxWidth={false} sx={{ px: { xs: 2.5, md: 6, lg: 10 } }}>
         <SectionHeading overline="Visit us" title="Two cities. One standard of care." subtitle="Walk in for a coffee and a conversation about your money — no appointment needed." />
         <Box sx={{ display: 'grid', gap: 4, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
           {offices.map((o, i) => (

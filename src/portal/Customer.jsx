@@ -4,7 +4,8 @@ import { supabase } from './supabase';
 import { money } from '../finance';
 import { ink, line } from '../theme';
 import { today, fmtDate, shortDate, monthName, sum, Signed, Panel, Field, CapMeter, StatusChip, Figures, BackLink, tableHead } from './ui';
-import { OnboardingSteps, Documents, EditDetailsDialog, CapitalDialog, AgreementDialog, canEdit, latestSigned } from './Onboarding';
+import { OnboardingSteps, Documents, EditDetailsDialog, CapitalDialog, AgreementDialog, BankDialog, canEdit, latestSigned } from './Onboarding';
+import { CustomerLogin, CustomerPayouts } from './CustomerAccount';
 
 const cols = { xs: '1fr auto', md: '1.2fr 1fr 1fr' };
 
@@ -14,11 +15,11 @@ export default function Customer({ profile, id }) {
   const [month, setMonth] = useState(today().slice(0, 7));
   const [days, setDays] = useState(null);
   const [error, setError] = useState('');
-  const [dialog, setDialog] = useState(null); // 'edit' | 'capital' | 'agreement'
+  const [dialog, setDialog] = useState(null); // 'edit' | 'capital' | 'agreement' | 'bank'
 
   function load() {
     supabase.from('customers')
-      .select('id, franchisee_id, full_name, phone, email, dob, address, cap_pct, status, created_at, franchisees(name), customer_capital(effective_from, amount), customer_documents(kind, path, mime, uploaded_at), agreements(id, sign_token, token_expires_at, signed_at, signer_name)')
+      .select('id, franchisee_id, full_name, phone, email, dob, address, cap_pct, plan, bank_holder, bank_ifsc, bank_last4, status, created_at, franchisees(name), customer_capital(effective_from, amount), customer_documents(kind, path, mime, uploaded_at), agreements(id, sign_token, token_expires_at, signed_at, signer_name)')
       .eq('id', id)
       .maybeSingle()
       .then(async ({ data, error }) => {
@@ -71,8 +72,8 @@ export default function Customer({ profile, id }) {
           {!active && (
             <>
               <OnboardingSteps
-                customer={c} profile={profile} capital={capital} docs={c.customer_documents} agreements={c.agreements}
-                onEdit={() => setDialog('edit')} onCapital={() => setDialog('capital')} onChanged={load}
+                customer={c} profile={profile} capital={capital} agreements={c.agreements}
+                onEdit={() => setDialog('edit')} onCapital={() => setDialog('capital')} onBank={() => setDialog('bank')} onChanged={load}
               />
               {documents}
             </>
@@ -148,6 +149,7 @@ export default function Customer({ profile, id }) {
               </>
             )}
           </Panel>
+          <CustomerPayouts customer={c} />
           {documents}
           </>}
         </Box>
@@ -166,11 +168,20 @@ export default function Customer({ profile, id }) {
             </Box>
           </Panel>
 
+          <Panel title="Bank account" action={edit && <Button size="small" onClick={() => setDialog('bank')}>{c.bank_last4 ? 'Change' : 'Add'}</Button>}>
+            <Typography sx={{ px: { xs: 2, md: 3 }, py: 2 }} color={c.bank_last4 ? 'text.primary' : 'error'}>
+              {c.bank_last4 ? `${c.bank_holder} · XXXX ${c.bank_last4} · ${c.bank_ifsc}` : 'Missing. Payouts need a bank account.'}
+            </Typography>
+          </Panel>
+
+          {active && <CustomerLogin customer={c} />}
+
           <Panel title="Capital and cap" action={edit && <Button size="small" onClick={() => setDialog('capital')}>Change</Button>}>
             <Box sx={{ px: { xs: 2, md: 3 }, py: 2.5, display: 'grid', gap: 2 }}>
               <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
                 <Field label="Current capital">{capital[0] && money(capital[0].amount)}</Field>
                 <Field label="Monthly cap">{`${Number(c.cap_pct)}% of capital`}</Field>
+                <Field label="Plan">{c.plan === 'fixed' ? 'Fixed monthly payout' : 'Profit share'}</Field>
               </Box>
               {capital.length > 0 && (
                 <Box>
@@ -199,6 +210,7 @@ export default function Customer({ profile, id }) {
       {dialog === 'edit' && <EditDetailsDialog customer={c} profile={profile} onClose={() => setDialog(null)} onSaved={reload} />}
       {dialog === 'capital' && <CapitalDialog customer={c} onClose={() => setDialog(null)} onSaved={reload} />}
       {dialog === 'agreement' && <AgreementDialog customerId={c.id} onClose={() => setDialog(null)} />}
+      {dialog === 'bank' && <BankDialog customer={c} onClose={() => setDialog(null)} onSaved={reload} />}
     </>
   );
 }

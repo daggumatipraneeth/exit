@@ -4,9 +4,9 @@ The landing page (`index.html`) is unchanged. The portal is a second page, `port
 [Supabase](https://supabase.com): Postgres, logins, private file storage and one server function.
 
 - **Partners** see each day's results for their customers, onboard new customers, and send signing links.
-- **Exit staff** enter daily results (by hand or CSV), and see every partner and customer.
+- **Exit staff** enter daily results, and see every partner and customer.
 - **Exit admins** also approve customers, manage partners and logins, close months, edit the agreement, and see the activity log.
-- **Customers** never log in. They open a signing link, read the agreement and sign on their phone.
+- **Customers** sign the agreement from a link on their phone. Once approved, their partner can give them a login (mobile number + password) to a one-page view of their daily profit/loss, payouts, account details and withdrawal requests. They never see their cap %, bucket or whether the cap is reached.
 
 All money maths runs inside the database (`supabase/migrations/*_calc.sql`). The browser only displays results.
 
@@ -18,6 +18,16 @@ Each day Exit enters **one profit/loss figure per partner**, after broker charge
 2. **Customer buckets.** Each customer has a monthly bucket of cap % × capital (default 6%). The partner's amount is shared among the customers in proportion to their capital until the buckets are full. If one bucket fills early, its extra goes to the customers who still have room.
 3. **Profit share.** Once every bucket is full, the rest is split by the partner's profit share, for example 70% to the partner and 30% to Exit. Partners see both figures.
 4. **Losses.** A loss comes out of the customers' buckets in proportion to their capital. Partner income already earned is kept. Later profit refills the buckets before the partner earns again.
+
+### Month close and payouts
+
+At month end an admin closes the month (Months page). That works out each customer's payout:
+
+- **Variable plan** (default): the month's result, after recovering any loss carried from earlier months. A negative balance is carried forward; nothing is paid.
+- **Fixed plan**: the bucket size (cap % × capital) every month, whatever the result. Exit absorbs any shortfall.
+- **Withdrawals**: an open request is paid too, capped at capital less any carried loss. Capital drops by that amount from the 1st of next month; withdrawing everything closes the account.
+
+Then **Download payout file** (CSV for the bank's bulk payment: beneficiary, account, IFSC, amount), and **Mark paid** once the bank confirms. A month can be reopened only until it's marked paid. Money comes in from, and goes back to, the customer's registered bank account only; PAN and bank details are required; Aadhaar and KYC photos are optional for now.
 
 Buckets reset on the 1st of each month. Amounts are rounded to whole paise so every split adds up exactly. The hidden charge and profit share are copied onto each day when it's first entered, so changing them later only affects new days.
 
@@ -46,6 +56,7 @@ Test logins all use the password `password123`:
 | admin@exit.local | Exit admin |
 | staff@exit.local | Exit staff |
 | ravi@exit.local, priya@exit.local | Partners |
+| mobile `9848010001` | Customer (Anil Varma) |
 
 Other local addresses:
 
@@ -54,7 +65,7 @@ Other local addresses:
 Other commands:
 
 ```bash
-npm run db:test         # 65 database tests: payouts, security, onboarding, record keeping, encryption
+npm run db:test         # 134 database tests: payouts, settlements, security, onboarding, record keeping, encryption
 npm run db:reset        # wipe and reload test data
 node src/finance.check.js
 ```
@@ -97,6 +108,7 @@ node src/finance.check.js
 6. **Connect the website** (GitHub → Settings → Secrets and variables → Actions → Variables). Add these two values from Dashboard → Project Settings → API:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY` (the publishable or anon key, never the service key)
+   - `VITE_SEBI_REGISTERED`: leave unset until SEBI registration is granted. Set it to `true` (and fill in the numbers in `src/config.js`) to show the registration chip, the "Regulated" pillar, the footer numbers and the SEBI disclaimer.
 
    The next push to `main` deploys the portal. Without these variables the portal page says it isn't set up yet, and the landing page still works.
 

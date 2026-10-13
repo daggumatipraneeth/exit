@@ -62,7 +62,7 @@ export default function SipCalculator() {
 
   return (
     <Box id="calculator" component="section" sx={{ py: { xs: 10, md: 16 }, scrollMarginTop: 64 }}>
-      <Container maxWidth="lg">
+      <Container maxWidth={false} sx={{ px: { xs: 2.5, md: 6, lg: 10 } }}>
         <SectionHeading overline="Plan your future" title="See what discipline can do" subtitle="Move the sliders to see how a steady SIP or a one-time investment could grow over time." />
         <Reveal>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '5fr 7fr' }, borderRadius: 5, overflow: 'hidden', bgcolor: '#fff', border: '1px solid rgba(18,40,74,.08)', boxShadow: '0 40px 80px -50px rgba(18,40,74,.45)' }}>

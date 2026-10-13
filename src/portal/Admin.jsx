@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Box, Typography, Button, Alert, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, Stack, InputAdornment,
 } from '@mui/material';
+import Papa from 'papaparse';
 import { supabase, fetchAll } from './supabase';
 import { money } from '../finance';
 import { line } from '../theme';
@@ -12,7 +13,8 @@ import { AgreementFrame } from './Sign';
 export function Months() {
   const [rows, setRows] = useState(null);
   const [closed, setClosed] = useState([]);
-  const [confirm, setConfirm] = useState(null); // { month, close }
+  const [paid, setPaid] = useState({}); // month → { total, count, unpaid }
+  const [confirm, setConfirm] = useState(null); // { month, close } or { month, pay }
   const [error, setError] = useState('');
   const thisMonth = `${today().slice(0, 7)}-01`;
 
@@ -20,8 +22,15 @@ export function Months() {
     Promise.all([
       supabase.from('month_totals').select('*').order('month', { ascending: false }),
       supabase.from('closed_months').select('month, closed_at'),
-    ]).then(([d, c]) => {
-      if (d.error || c.error) return setError(errText(d.error ?? c.error));
+      fetchAll((o) => supabase.from('settlements').select('month, payout_total, paid_at', o).gt('payout_total', 0).order('month').order('customer_id')),
+    ]).then(([d, c, s]) => {
+      if (d.error || c.error || s.error) return setError(errText(d.error ?? c.error ?? s.error));
+      const by = {};
+      for (const r of s.data) {
+        const m = (by[r.month] ??= { total: 0, count: 0, unpaid: 0 });
+        m.total += Number(r.payout_total); m.count += 1; if (!r.paid_at) m.unpaid += 1;
+      }
+      setPaid(by);
       setRows(d.data.map((r) => ({ month: r.month, days: r.trading_days, customers: r.to_customers, partners: r.partner_income, exit: r.exit_earned })));
       setClosed(c.data);
     });
@@ -29,31 +38,47 @@ export function Months() {
   useEffect(load, []);
 
   async function apply() {
-    const { month, close } = confirm;
-    const { error } = close
-      ? await supabase.from('closed_months').insert({ month })
-      : await supabase.from('closed_months').delete().eq('month', month);
+    const { month, close, pay } = confirm;
+    const { error } = await supabase.rpc(pay ? 'mark_paid' : close ? 'close_month' : 'reopen_month', { p_month: month });
     setConfirm(null);
     if (error) return setError(errText(error));
     load();
   }
 
-  if (error) return <Alert severity="error">{error}</Alert>;
-  if (!rows) return null;
+  // The bank's bulk-payment file: one row per customer being paid that month.
+  async function download(month) {
+    const { data, error } = await supabase.rpc('payout_file', { p_month: month });
+    if (error) return setError(errText(error));
+    const missing = data.filter((r) => !r.account_number).map((r) => r.customer);
+    const csv = Papa.unparse({
+      fields: ['Beneficiary name', 'Account number', 'IFSC', 'Amount', 'Narration', 'Customer', 'Partner'],
+      data: data.map((r) => [r.beneficiary_name, r.account_number, r.ifsc, Number(r.amount).toFixed(2), r.narration, r.customer, r.partner]),
+    });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = `exit-payouts-${month.slice(0, 7)}.csv`; a.click(); URL.revokeObjectURL(a.href);
+    if (missing.length) setError(`No bank details for: ${missing.join(', ')}. Add them on each customer's page, then download again.`);
+  }
+
+  if (!rows) return error ? <Alert severity="error">{error}</Alert> : null;
   const closedAt = Object.fromEntries(closed.map((c) => [c.month, c.closed_at]));
 
   return (
     <>
       <PageTitle>Months</PageTitle>
       <Typography color="text.secondary" sx={{ mb: 3, maxWidth: '65ch' }}>
-        Close a month once its figures are final and payouts are made. A closed month can't be edited, and later changes to capital
-        or cap don't touch it.
+        Once a month's figures are final: <strong>Close month</strong> (works out every customer's payout and withdrawal),
+        <strong> Download payout file</strong> and send it to the bank, then <strong>Mark paid</strong> once the bank confirms.
+        A closed month can't be edited. It can be reopened only until it is marked paid.
       </Typography>
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
       <Panel>
         {rows.length === 0 && <Typography color="text.secondary" sx={{ p: 4, textAlign: 'center' }}>No results entered yet.</Typography>}
         <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
           {rows.map((r) => {
             const isClosed = !!closedAt[r.month];
+            const pay = paid[r.month];
+            const settled = isClosed && pay && !pay.unpaid;
             return (
               <Box
                 component="li"
@@ -70,8 +95,17 @@ export function Months() {
                 </Box>
                 <Pairs items={[['To customers', <Signed value={r.customers} />], ['Partners', <Signed value={r.partners} signed={false} />], ['Exit earned', money(r.exit)]]} />
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', justifyContent: 'flex-end', borderTop: { xs: `1px solid ${line}`, md: 'none' }, pt: { xs: 1.5, md: 0 } }}>
-                  {isClosed && <Pill tone="good" label={`Closed ${shortDate(closedAt[r.month].slice(0, 10))}`} />}
-                  {!isClosed && r.month === thisMonth ? <Pill tone="progress" label="In progress" /> : (
+                  {isClosed && pay && (
+                    <Typography variant="body2" color="text.secondary" sx={{ width: 1, textAlign: { md: 'right' } }}>
+                      {money(pay.total)} to {pay.count} customer{pay.count === 1 ? '' : 's'}
+                    </Typography>
+                  )}
+                  {isClosed && (
+                    <Pill tone={pay?.unpaid ? 'attention' : 'good'} label={pay?.unpaid ? 'Closed, not paid' : settled ? 'Paid' : `Closed ${shortDate(closedAt[r.month].slice(0, 10))}`} />
+                  )}
+                  {isClosed && pay && <Button size="small" variant="outlined" onClick={() => download(r.month)}>Download payout file</Button>}
+                  {isClosed && pay?.unpaid > 0 && <Button size="small" variant="contained" onClick={() => setConfirm({ month: r.month, pay: true })}>Mark paid</Button>}
+                  {settled ? null : !isClosed && r.month === thisMonth ? <Pill tone="progress" label="In progress" /> : (
                     <Button size="small" variant={isClosed ? 'text' : 'outlined'} onClick={() => setConfirm({ month: r.month, close: !isClosed })}>
                       {isClosed ? 'Reopen' : 'Close month'}
                     </Button>
@@ -85,17 +119,19 @@ export function Months() {
 
       {confirm && (
         <Dialog open onClose={() => setConfirm(null)}>
-          <DialogTitle>{confirm.close ? 'Close' : 'Reopen'} {monthName(confirm.month)}?</DialogTitle>
+          <DialogTitle>{confirm.pay ? 'Mark payouts paid for' : confirm.close ? 'Close' : 'Reopen'} {monthName(confirm.month)}?</DialogTitle>
           <DialogContent>
             <Typography>
-              {confirm.close
-                ? 'Entries for this month will be locked. Partners keep seeing the final figures.'
-                : 'Staff will be able to change entries for this month again, and its payouts can change.'}
+              {confirm.pay
+                ? 'Do this only after the bank confirms the transfers. Customers will see their payout as paid, and the month can no longer be reopened.'
+                : confirm.close
+                  ? "Entries are locked and each customer's payout is worked out, including any withdrawal requests. Customers see it as processing."
+                  : 'The payouts for this month are removed, withdrawals go back to pending, and staff can change entries again.'}
             </Typography>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setConfirm(null)}>Cancel</Button>
-            <Button variant="contained" onClick={apply}>{confirm.close ? 'Close month' : 'Reopen month'}</Button>
+            <Button variant="contained" onClick={apply}>{confirm.pay ? 'Mark paid' : confirm.close ? 'Close month' : 'Reopen month'}</Button>
           </DialogActions>
         </Dialog>
       )}
@@ -176,13 +212,15 @@ export function Templates() {
 const tableNames = {
   customers: 'Customer', daily_entries: 'Daily entry', franchisee_terms: 'Hidden charge', customer_capital: 'Capital', customer_documents: 'KYC document',
   agreements: 'Agreement', franchisees: 'Partner', profiles: 'Login', closed_months: 'Month', agreement_templates: 'Agreement template',
-  consultation_requests: 'Call-back request',
+  consultation_requests: 'Call-back request', settlements: 'Payout', withdrawal_requests: 'Withdrawal request',
 };
 const verbs = { INSERT: 'added', UPDATE: 'changed', DELETE: 'removed', PASSWORD: 'password reset' };
 const quiet = new Set(['entered_at', 'uploaded_at', 'created_at', 'rendered_html_enc', 'signature_png', 'html_sha256', 'body', 'sign_token', 'pan_hash',
   'handled_at', 'handled_by', 'source_ip', 'path', 'mime', 'note', 'uploaded_by']);
 // Encrypted values are never shown; a change is reported by name only.
-const secret = { pan_enc: 'PAN updated', aadhaar_enc: 'Aadhaar updated' };
+const secret = { pan_enc: 'PAN updated', aadhaar_enc: 'Aadhaar updated', bank_account_enc: 'Bank account updated' };
+// Timestamps in the log are ISO strings; show them the way the rest of the page does.
+const readable = (v) => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v) ? new Date(v).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : v);
 const PAGE = 50;
 
 export function Activity() {
@@ -226,7 +264,7 @@ export function Activity() {
       detail = Object.keys(r.new).filter((k) => !quiet.has(k) && JSON.stringify(r.new[k]) !== JSON.stringify(r.old[k]))
         .map((k) => {
           if (secret[k]) return secret[k];
-          const show = (v) => (v == null ? '–' : k === 'franchisee_id' ? names.partners[v] ?? 'a removed partner' : v);
+          const show = (v) => (v == null ? '–' : k === 'franchisee_id' ? names.partners[v] ?? 'a removed partner' : readable(v));
           return `${k === 'franchisee_id' ? (r.table_name === 'consultation_requests' ? 'allocated to' : 'partner') : k.replace(/_/g, ' ')}: ${show(r.old[k])} → ${show(r.new[k])}`;
         }).join('; ');
     } else if (r.table_name === 'daily_entries') {
@@ -246,8 +284,11 @@ export function Activity() {
         action={
           <TextField
             select size="small" value={table} onChange={(e) => setTable(e.target.value)}
-            sx={{ minWidth: 220, bgcolor: '#fff', '& .MuiOutlinedInput-root': { height: 40 } }}
-            slotProps={{ htmlInput: { 'aria-label': 'Show' }, input: { startAdornment: <InputAdornment position="start">Show</InputAdornment> } }}
+            sx={{ width: { xs: 150, sm: 'auto' }, minWidth: { sm: 220 }, bgcolor: '#fff', '& .MuiOutlinedInput-root': { height: 40 } }}
+            slotProps={{
+              htmlInput: { 'aria-label': 'Show' },
+              input: { startAdornment: <InputAdornment position="start" sx={{ display: { xs: 'none', sm: 'flex' } }}>Show</InputAdornment> },
+            }}
           >
             <MenuItem value="all">Everything</MenuItem>
             {Object.entries(tableNames).map(([k, v]) => <MenuItem key={k} value={k}>{v}</MenuItem>)}
@@ -262,23 +303,35 @@ export function Activity() {
         <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
           {rows.map((r) => {
             const d = describe(r);
+            const by = r.actor ? names.people[r.actor] ?? 'Unknown user' : 'System or customer';
+            // Phones: what happened on one line, then when and who; details cut to a single line.
+            const oneLine = { whiteSpace: { xs: 'nowrap', md: 'normal' }, overflow: { xs: 'hidden', md: 'visible' }, textOverflow: 'ellipsis' };
             return (
               <Box
                 component="li"
                 key={r.id}
                 sx={{
-                  display: 'grid', gap: { xs: 0.25, md: 3 }, px: { xs: 2, md: 3 }, py: 1.5,
-                  gridTemplateColumns: { xs: '1fr', md: '11rem 1fr 10rem' }, '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` },
+                  display: 'grid', gap: { xs: 0, md: 3 }, px: { xs: 2, md: 3 }, py: { xs: 1, md: 1.5 },
+                  gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '11rem 1fr 10rem' }, '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` },
                 }}
               >
-                <Typography variant="body2" color="text.secondary">{new Date(r.at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</Typography>
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography variant="body2"><strong>{d.what}</strong>{d.who && `: ${d.who}`}</Typography>
-                  {d.detail && <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>{d.detail}</Typography>}
-                </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ textAlign: { md: 'right' } }}>
-                  {r.actor ? names.people[r.actor] ?? 'Unknown user' : 'System or customer'}
+                <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
+                  {new Date(r.at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
                 </Typography>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="body2" sx={oneLine}>
+                    <strong>{d.what}</strong>{d.who && `: ${d.who}`}
+                  </Typography>
+                  {d.detail && (
+                    <Typography variant="body2" color="text.secondary" sx={{ ...oneLine, overflowWrap: { md: 'anywhere' } }}>
+                      {d.detail}
+                    </Typography>
+                  )}
+                  <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'block', md: 'none' }, ...oneLine }}>
+                    {new Date(r.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })} · {by}
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' }, textAlign: 'right' }}>{by}</Typography>
               </Box>
             );
           })}

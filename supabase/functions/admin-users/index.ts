@@ -1,8 +1,11 @@
-// Admin-only login management. The browser can't do these itself because they need the service-role key.
+// Login management. The browser can't do these itself because they need the service-role key.
+// Admin only, except customer_login, which staff and the customer's own partner may also use.
 //   { action: 'create', email, password, full_name, role, franchisee_id?, office? }  → office: staff tied to one office's requests
 //   { action: 'set_password', user_id, password }      → the admin shares the new temporary password
 //   { action: 'delete_login', user_id }
 //   { action: 'delete_partner', franchisee_id }       → only a partner with no customers and no results
+//   { action: 'customer_login', customer_id, password } → creates the customer's login, or resets its password.
+//     Customers sign in with their 10-digit mobile number, stored as the email <mobile>@customer.exit.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const cors = {
@@ -23,9 +26,10 @@ Deno.serve(async (req) => {
   });
   const { data: { user: me } } = await caller.auth.getUser();
   const { data: role } = await caller.rpc('my_role');
-  if (!me || role !== 'admin') return json({ error: 'Only an admin can manage logins.' }, 403);
-
   const body = await req.json().catch(() => ({}));
+  const customerAction = body.action === 'customer_login' && ['admin', 'employee', 'franchisee'].includes(role);
+  if (!me || (role !== 'admin' && !customerAction)) return json({ error: 'Only an admin can manage logins.' }, 403);
+
   const passwordOk = (p: unknown) => typeof p === 'string' && p.length >= 8;
 
   // Removes a login: the profile first as the caller (so the activity log records who), then the account.
@@ -112,6 +116,38 @@ Deno.serve(async (req) => {
       const partner = terms.error ? terms : await caller.from('franchisees').delete().eq('id', franchisee_id).select('id');
       if (partner.error) return json({ error: partner.error.message }, 400);
       return json({ ok: true });
+    }
+
+    case 'customer_login': {
+      const { customer_id, password } = body;
+      if (!passwordOk(password)) return json({ error: 'Password must be at least 8 characters.' }, 400);
+      // Row-level security: the caller only gets the customer back if they may see them.
+      const { data: customer } = await caller.from('customers').select('phone, status').eq('id', customer_id).maybeSingle();
+      if (!customer) return json({ error: 'Customer not found.' }, 404);
+      const { data: existing } = await caller.rpc('customer_login_id', { p_customer: customer_id });
+      if (existing) {
+        const { error } = await admin.auth.admin.updateUserById(existing, { password });
+        if (error) return json({ error: error.message }, 400);
+        await admin.from('audit_log').insert({ actor: me.id, table_name: 'profiles', op: 'PASSWORD', new: { id: existing, customer_id } });
+        return json({ id: existing, reset: true });
+      }
+      if (customer.status !== 'active') return json({ error: 'Logins are for approved customers only.' }, 400);
+      const mobile = customer.phone.replace(/\D/g, '').replace(/^(91|0)(?=\d{10}$)/, '');
+      if (!/^[6-9]\d{9}$/.test(mobile)) return json({ error: "The customer's mobile number isn't a valid 10-digit Indian number. Ask Exit staff to correct it." }, 400);
+      const email = `${mobile}@customer.exit`;
+      let { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
+      if (error && /already/i.test(error.message)) {
+        const stray = await strayLogin(email);
+        if (!stray) return json({ error: 'Another login already uses this mobile number.' }, 400);
+        ({ data, error } = await admin.auth.admin.updateUserById(stray, { password, email_confirm: true }));
+      }
+      if (error) return json({ error: error.message }, 400);
+      const { error: linkError } = await caller.rpc('link_customer_login', { p_user: data.user.id, p_customer: customer_id });
+      if (linkError) {
+        await admin.auth.admin.deleteUser(data.user.id);
+        return json({ error: linkError.message }, 400);
+      }
+      return json({ id: data.user.id, mobile });
     }
 
     default:

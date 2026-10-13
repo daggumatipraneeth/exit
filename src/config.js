@@ -9,6 +9,8 @@ export const company = {
   sebiReg: 'INZ000000000', // STUB — SEBI registration no.
   amfiArn: 'ARN-000000', // STUB — AMFI ARN
   cin: 'U00000AP0000PTC000000', // STUB
+  // Off until SEBI registration is granted: hides every registration claim on the site.
+  sebiRegistered: import.meta.env.VITE_SEBI_REGISTERED === 'true',
 };
 
 export const offices = [

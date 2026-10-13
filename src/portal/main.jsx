@@ -7,7 +7,8 @@ import PortalApp from './PortalApp';
 const theme = createTheme(base, {
   palette: { background: { default: page }, error: { main: loss } },
   components: {
-    MuiCssBaseline: { styleOverrides: { body: { fontFeatureSettings: '"tnum"' } } },
+    // Always reserve the scrollbar's space so every page lines up, long or short.
+    MuiCssBaseline: { styleOverrides: { html: { scrollbarGutter: 'stable' }, body: { fontFeatureSettings: '"tnum"' } } },
     // One height per size, matching the inputs beside them: 40px, and 32px for size="small".
     MuiButton: {
       styleOverrides: {

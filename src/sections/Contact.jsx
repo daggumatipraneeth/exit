@@ -62,7 +62,7 @@ export default function Contact() {
 
   return (
     <Box id="contact" component="section" sx={{ py: { xs: 10, md: 16 }, bgcolor: '#F7F9F8', scrollMarginTop: 64 }}>
-      <Container maxWidth="lg">
+      <Container maxWidth={false} sx={{ px: { xs: 2.5, md: 6, lg: 10 } }}>
         <Reveal>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '5fr 7fr' }, borderRadius: 5, overflow: 'hidden', boxShadow: '0 50px 100px -50px rgba(18,40,74,.5)' }}>
             <Box sx={{ position: 'relative', p: { xs: 4, md: 6 }, color: '#fff', background: `linear-gradient(160deg, ${navy}, ${ink})`, overflow: 'hidden' }}>

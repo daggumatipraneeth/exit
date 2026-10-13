@@ -1,16 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Box, Typography, Button, Alert, TextField, IconButton, InputAdornment } from '@mui/material';
-import ChevronLeft from '@mui/icons-material/ChevronLeft';
-import ChevronRight from '@mui/icons-material/ChevronRight';
-import UploadIcon from '@mui/icons-material/UploadFile';
-import DownloadIcon from '@mui/icons-material/Download';
-import Papa from 'papaparse';
+import { Box, Typography, Button, Alert, TextField, InputAdornment } from '@mui/material';
 import { supabase } from './supabase';
 import { money, splitByWeight } from '../finance';
-import { ink, line, loss } from '../theme';
-import { today, shift, fmtDate, Panel, PageTitle, Signed, FilterChips, errText, tableHead, tableRow } from './ui';
+import { line, loss } from '../theme';
+import { today, fmtDate, Panel, PageTitle, DayNav, Signed, errText, tableHead, tableRow } from './ui';
 
-const csvColumns = ['date', 'partner', 'amount'];
 const cols = { xs: '1fr', md: '1.3fr 1fr 1.6fr' };
 
 // "1,20,000" / "₹ -500" / "" → number, null when blank, NaN when not a number.
@@ -201,119 +195,8 @@ function HandEntry({ date, partners, closed }) {
   );
 }
 
-function CsvUpload({ date, partners }) {
-  const [rows, setRows] = useState(null);
-  const [fileName, setFileName] = useState('');
-  const [msg, setMsg] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const byName = useMemo(() => Object.fromEntries(partners.map((p) => [p.name.trim().toLowerCase(), p])), [partners]);
-
-  function template() {
-    const csv = Papa.unparse({ fields: csvColumns, data: partners.map((p) => [date, p.name, '']) });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-    a.download = `exit-daily-${date}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  }
-
-  function read(e) {
-    const file = e.target.files[0];
-    e.target.value = '';
-    if (!file) return;
-    setFileName(file.name);
-    setMsg(null);
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: 'greedy',
-      transformHeader: (h) => h.trim().toLowerCase(),
-      complete: ({ data }) => {
-        const seen = new Set();
-        setRows(data.map((raw, i) => {
-          const p = byName[(raw.partner ?? '').trim().toLowerCase()];
-          const d = (raw.date ?? '').trim();
-          const amount = toAmount(raw.amount);
-          let error = null;
-          if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || Number.isNaN(new Date(d).getTime())) error = 'Date must look like 2026-10-07';
-          else if (!p) error = `No active partner named "${raw.partner ?? ''}"`;
-          else if (seen.has(`${p.id}${d}`)) error = 'Same partner and date appears twice';
-          else if (amount === null) error = 'Amount is missing';
-          else if (!Number.isFinite(amount)) error = 'Amount must be a number';
-          if (p) seen.add(`${p.id}${d}`);
-          return { line: i + 2, name: p?.name ?? raw.partner ?? '', date: d, error, entry: !error && { franchisee_id: p.id, trade_date: d, amount } };
-        }));
-      },
-      error: (err) => setMsg(['error', err.message]),
-    });
-  }
-
-  async function save() {
-    setBusy(true);
-    const good = rows.filter((r) => r.entry).map((r) => r.entry);
-    const { error } = await supabase.from('daily_entries').upsert(good, { onConflict: 'franchisee_id,trade_date' });
-    setBusy(false);
-    if (error) return setMsg(['error', `Nothing was saved: ${errText(error)}`]);
-    setMsg(['success', `Saved ${good.length} entries from ${fileName}. Customer shares are recalculated.`]);
-    setRows(null);
-  }
-
-  const bad = rows?.filter((r) => r.error) ?? [];
-  const good = rows ? rows.length - bad.length : 0;
-
-  return (
-    <>
-      {msg && <Alert severity={msg[0]} sx={{ mb: 2 }}>{msg[1]}</Alert>}
-      <Panel title="Upload a CSV file">
-        <Box sx={{ px: { xs: 2, md: 3 }, py: 2.5 }}>
-          <Typography color="text.secondary" sx={{ maxWidth: '65ch' }}>
-            One row per partner per day. Columns: <code>{csvColumns.join(', ')}</code>. Partner is the partner's name exactly as on the
-            Partners page; amount is the day's profit or loss after broker charges. Uploading a day again replaces it.
-          </Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 2.5 }}>
-            <Button variant="contained" component="label" startIcon={<UploadIcon />}>
-              Choose CSV file
-              <input type="file" accept=".csv,text/csv" hidden onChange={read} />
-            </Button>
-            <Button variant="outlined" startIcon={<DownloadIcon />} onClick={template}>Download template for {fmtDate(date, { day: 'numeric', month: 'short' })}</Button>
-          </Box>
-        </Box>
-      </Panel>
-
-      {rows && (
-        <Panel
-          title={`${fileName}: ${good} ready, ${bad.length} with problems`}
-          action={<Button variant="contained" disabled={busy || good === 0} onClick={save}>Save {good} {good === 1 ? 'entry' : 'entries'}</Button>}
-          sx={{ mt: 3 }}
-        >
-          {bad.length > 0 && <Alert severity="warning" sx={{ m: 2 }}>Rows with problems are skipped. Fix them in the file and upload it again.</Alert>}
-          <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
-            {rows.map((r) => (
-              <Box
-                component="li"
-                key={r.line}
-                sx={{
-                  display: 'grid', gridTemplateColumns: { xs: '3.5rem 1fr', md: '4rem 1.5fr 7rem 2fr' }, gap: 1.5, px: { xs: 2, md: 3 }, py: 1.25,
-                  '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` },
-                }}
-              >
-                <Typography variant="body2" color="text.secondary">Line {r.line}</Typography>
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>{r.name || '–'}</Typography>
-                <Typography variant="body2" sx={{ gridColumn: { xs: '2', md: 'auto' } }}>{r.date}</Typography>
-                <Typography variant="body2" sx={{ gridColumn: { xs: '2', md: 'auto' }, color: r.error ? loss : 'text.secondary' }}>
-                  {r.error ?? money(r.entry.amount, true)}
-                </Typography>
-              </Box>
-            ))}
-          </Box>
-        </Panel>
-      )}
-    </>
-  );
-}
-
 export default function DailyEntry() {
   const [date, setDate] = useState(today());
-  const [mode, setMode] = useState('hand');
   const [partners, setPartners] = useState(null);
   const [closed, setClosed] = useState([]);
   const [error, setError] = useState('');
@@ -335,26 +218,11 @@ export default function DailyEntry() {
 
   return (
     <>
-      <PageTitle>Daily entry</PageTitle>
-
-      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { sm: 'center' }, justifyContent: 'space-between', gap: 1.5, mb: 2.5 }}>
-        <FilterChips label="How to enter results" value={mode} onChange={setMode} options={[['hand', 'Enter by hand'], ['csv', 'Upload CSV']]} />
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, alignSelf: { xs: 'flex-start', sm: 'auto' }, ml: { xs: -1, sm: 0 } }}>
-          <IconButton aria-label="Previous day" onClick={() => setDate(shift(date, -1))}><ChevronLeft /></IconButton>
-          <Box
-            component="input" type="date" aria-label="Trading day" value={date} max={today()}
-            onChange={(e) => e.target.value && setDate(e.target.value)}
-            sx={{ font: 'inherit', fontWeight: 600, color: ink, border: `1px solid ${line}`, borderRadius: 1.5, bgcolor: '#fff', px: 1.5, height: 40 }}
-          />
-          <IconButton aria-label="Next day" disabled={date >= today()} onClick={() => setDate(shift(date, 1))}><ChevronRight /></IconButton>
-        </Box>
-      </Box>
+      <PageTitle action={<DayNav date={date} setDate={setDate} label="Trading day" />}>Daily entry</PageTitle>
 
       {isClosed && <Alert severity="info" sx={{ mb: 2 }}>{fmtDate(date, { month: 'long', year: 'numeric' })} is closed. Reopen it from Months to make changes.</Alert>}
 
-      {mode === 'hand'
-        ? <HandEntry date={date} partners={partners} closed={isClosed} />
-        : <CsvUpload date={date} partners={partners} />}
+      <HandEntry date={date} partners={partners} closed={isClosed} />
     </>
   );
 }

@@ -1,6 +1,7 @@
 -- Local dev data only. Every login uses the password: password123
 --   admin@exit.local (admin) · staff@exit.local (employee)
 --   ravi@exit.local (franchisee, Guntur) · priya@exit.local (franchisee, Hyderabad)
+--   mobile 9848010001 (customer Anil Varma, Ravi's customer)
 
 create function pg_temp.add_user(p_id uuid, p_email text) returns void language sql as $$
   insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -65,9 +66,18 @@ select id, (date_trunc('month', current_date) - interval '1 month')::date,
        (array[100000, 250000, 500000, 150000, 300000, 200000, 400000, 120000, 750000, 180000])[row_number() over (order by id)]
 from customers;
 
+-- Bank details for every seeded customer.
+update customers set bank_holder = full_name, bank_ifsc = 'SBIN0001234',
+       bank_account_enc = pii_encrypt('3000000000' || right(phone, 2)), bank_last4 = '00' || right(phone, 2);
+
 -- Seeded customers count as signed, so later edits by admin pass the approval rule.
 insert into agreements (customer_id, template_version, rendered_html_enc, signer_name, signed_at)
 select id, 1, pii_encrypt('<p>Seeded test agreement</p>'), full_name, now() from customers;
+
+-- Anil Varma's own login: mobile 9848010001.
+select pg_temp.add_user('00000000-0000-0000-0000-0000000000c1', '9848010001@customer.exit');
+insert into profiles (id, full_name, role, customer_id)
+values ('00000000-0000-0000-0000-0000000000c1', 'Anil Varma', 'customer', '20000000-0000-0000-0000-000000000001');
 
 -- One customer mid-onboarding for Ravi.
 insert into customers (franchisee_id, full_name, phone, email, status)

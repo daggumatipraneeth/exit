@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Box, Button, CircularProgress, Typography } from '@mui/material';
 import TodayIcon from '@mui/icons-material/TodayOutlined';
+import MonthIcon from '@mui/icons-material/CalendarMonthOutlined';
 import PeopleIcon from '@mui/icons-material/PeopleAltOutlined';
 import PersonIcon from '@mui/icons-material/AccountCircleOutlined';
 import EditNoteIcon from '@mui/icons-material/EditNoteOutlined';
@@ -17,10 +18,12 @@ import Customers from './Customers';
 import Customer from './Customer';
 import Account from './Account';
 import DailyEntry from './DailyEntry';
-import Partners from './Partners';
+import Partners, { PartnerDetail } from './Partners';
 import Sign from './Sign';
 import Requests from './Requests';
+import MyAccount from './MyAccount';
 import { NewCustomer } from './Onboarding';
+import MonthView from './MonthView';
 import { Months, Templates, Activity } from './Admin';
 
 const everyone = ['admin', 'employee', 'franchisee'];
@@ -30,10 +33,11 @@ const admin = ['admin'];
 // Row-level security in the database is the real guard; this only decides what each role is shown.
 const pages = [
   { path: 'today', label: 'Today', icon: TodayIcon, roles: everyone, Page: Dashboard },
+  { path: 'month', label: 'Month', icon: MonthIcon, roles: everyone, Page: MonthView },
   { path: 'entry', label: 'Daily entry', short: 'Entry', icon: EditNoteIcon, roles: staff, Page: DailyEntry },
   { path: 'customers', label: 'Customers', icon: PeopleIcon, roles: everyone, Page: Customers, Detail: Customer },
   { path: 'requests', label: 'Requests', icon: PhoneIcon, roles: everyone, Page: Requests },
-  { path: 'partners', label: 'Partners', icon: HandshakeIcon, roles: admin, Page: Partners },
+  { path: 'partners', label: 'Partners', icon: HandshakeIcon, roles: admin, Page: Partners, Detail: PartnerDetail },
   { path: 'months', label: 'Months', icon: EventIcon, roles: admin, Page: Months },
   { path: 'agreement', label: 'Agreement', icon: ArticleIcon, roles: admin, Page: Templates },
   { path: 'activity', label: 'Activity', icon: HistoryIcon, roles: admin, Page: Activity },
@@ -87,7 +91,7 @@ function Portal() {
   if (session === undefined || (session && profile === undefined)) {
     return <Centered><CircularProgress aria-label="Loading" /></Centered>;
   }
-  if (!session) return <Login />;
+  if (!session) return <Login key={path} partner={path === 'partner'} />;
   if (!profile) {
     return (
       <Centered>
@@ -100,6 +104,11 @@ function Portal() {
         </Box>
       </Centered>
     );
+  }
+
+  // Customers get one page and nothing else.
+  if (profile.role === 'customer') {
+    return <Layout profile={profile} nav={[]} current=""><MyAccount /></Layout>;
   }
 
   const nav = pages.filter((p) => p.roles.includes(profile.role));

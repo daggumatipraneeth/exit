@@ -1,19 +1,46 @@
 import { useEffect, useState } from 'react';
-import { Box, Typography, Alert, Button, TextField, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions, Stack } from '@mui/material';
+import { Box, Typography, Alert, Button, TextField, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions, Stack, Drawer, IconButton } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import CloseIcon from '@mui/icons-material/Close';
+import ChevronRight from '@mui/icons-material/ChevronRight';
 import PhoneIcon from '@mui/icons-material/PhoneOutlined';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import EmailIcon from '@mui/icons-material/MailOutlined';
 import { supabase, fetchAll } from './supabase';
 import { offices, interests } from '../config';
 import { line } from '../theme';
-import { Panel, PageTitle, FilterChips, ShowMore, PAGE_ROWS, errText, Pill, tableRow } from './ui';
+import { Panel, PageTitle, FilterChips, ShowMore, PAGE_ROWS, errText, Pill, tableRow, rowLink } from './ui';
 
 const statusLook = { new: ['New', 'attention'], contacted: ['Contacted', 'progress'], closed: ['Closed', 'neutral'] };
 const when = (t) => new Date(t).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 const whatsapp = (phone) => `https://wa.me/${phone.replace(/\D/g, '').replace(/^(\d{10})$/, '91$1')}`;
 
-function RequestRow({ r, partners, onChanged }) {
+// One line per request in the list; tapping it opens the request on the side.
+function RequestRow({ r, onOpen }) {
+  const [label, tone] = statusLook[r.status];
+  return (
+    <Box component="li" sx={{ '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` } }}>
+      <Box
+        component="button" type="button" onClick={() => onOpen(r)}
+        sx={{ ...rowLink, ...tableRow, width: 1, border: 0, bgcolor: 'transparent', font: 'inherit', textAlign: 'left', cursor: 'pointer', gridTemplateColumns: 'minmax(0, 1fr) auto', columnGap: 1.5 }}
+      >
+        <Box sx={{ minWidth: 0 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography sx={{ fontWeight: 600 }} noWrap>{r.name}</Typography>
+            <Pill label={label} tone={tone} />
+          </Box>
+          <Typography variant="body2" color="text.secondary" noWrap>
+            {[r.interest, `${r.office} office`, when(r.created_at), r.franchisees?.name && `To ${r.franchisees.name}`].filter(Boolean).join(' · ')}
+          </Typography>
+        </Box>
+        <ChevronRight sx={{ color: 'text.secondary' }} />
+      </Box>
+    </Box>
+  );
+}
+
+// Everything about one request: how to reach them, what they asked, allocation, notes and status.
+function RequestPanel({ r, partners, onClose, onChanged }) {
   const [notes, setNotes] = useState(r.notes ?? '');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -30,31 +57,28 @@ function RequestRow({ r, partners, onChanged }) {
 
   const [label, tone] = statusLook[r.status];
   return (
-    <Box component="li" sx={{ ...tableRow, py: { xs: 1.5, md: 1.5 }, '&:not(:last-of-type)': { borderBottom: `1px solid ${line}` } }}>
-      {/* Who and what on one line; how to reach them on the right (below on phones). */}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1.5, rowGap: 0.5 }}>
-        <Typography sx={{ fontWeight: 600 }}>{r.name}</Typography>
+    <Drawer anchor="right" open onClose={onClose} slotProps={{ paper: { sx: { width: { xs: '100%', sm: 460 } } } }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2.5, py: 1.5, borderBottom: `1px solid ${line}` }}>
+        <Typography variant="h6" component="h2" sx={{ flex: 1, minWidth: 0 }} noWrap>{r.name}</Typography>
         <Pill label={label} tone={tone} />
-        <Typography variant="body2" color="text.secondary" sx={{ flex: '1 1 260px' }}>
-          {r.interest} · {r.office} office · {when(r.created_at)}
-        </Typography>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 2, '& .MuiButton-root.MuiButton-sizeSmall': { px: 0, py: 0.25, minWidth: 0 }, '& .MuiButton-startIcon': { ml: 0 } }}>
-          <Button size="small" startIcon={<PhoneIcon />} href={`tel:${r.phone}`}>{r.phone}</Button>
-          <Button size="small" startIcon={<WhatsAppIcon />} href={whatsapp(r.phone)} target="_blank" rel="noreferrer">WhatsApp</Button>
-          {r.email && <Button size="small" startIcon={<EmailIcon />} href={`mailto:${r.email}`} sx={{ textTransform: 'none' }}>{r.email}</Button>}
-        </Box>
+        <IconButton aria-label="Close" onClick={onClose}><CloseIcon /></IconButton>
       </Box>
-      {r.message && <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{r.message}</Typography>}
-      {error && <Alert severity="error" sx={{ mt: 1 }}>{error}</Alert>}
-      {/* Everything you can do, in one row of equal-height controls. */}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mt: 1.25 }}>
+      <Stack spacing={2.5} sx={{ p: 2.5 }}>
+        {error && <Alert severity="error">{error}</Alert>}
+        <Box>
+          <Typography variant="body2" color="text.secondary">{r.interest} · {r.office} office · {when(r.created_at)}</Typography>
+          {r.message && <Typography sx={{ mt: 1, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{r.message}</Typography>}
+        </Box>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+          <Button variant="outlined" startIcon={<PhoneIcon />} href={`tel:${r.phone}`}>{r.phone}</Button>
+          <Button variant="outlined" startIcon={<WhatsAppIcon />} href={whatsapp(r.phone)} target="_blank" rel="noreferrer">WhatsApp</Button>
+          {r.email && <Button variant="outlined" startIcon={<EmailIcon />} href={`mailto:${r.email}`} sx={{ textTransform: 'none' }}>{r.email}</Button>}
+        </Box>
         {partners && (
           <TextField
-            select size="small" value={r.franchisee_id ?? ''} sx={{ width: { xs: '100%', sm: 260 } }}
-            slotProps={{ select: {
-              displayEmpty: true, inputProps: { 'aria-label': `Allocate ${r.name} to a partner` },
-              renderValue: (v) => (v ? `To ${partners.find((p) => p.id === v)?.name}` : 'Not allocated'),
-            } }}
+            select label="Allocated to" value={r.franchisee_id ?? ''} disabled={busy}
+            slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
+            helperText="The partner sees this request on their Requests page."
             onChange={(e) => update({ franchisee_id: e.target.value || null })}
           >
             <MenuItem value="">Not allocated</MenuItem>
@@ -62,15 +86,17 @@ function RequestRow({ r, partners, onChanged }) {
           </TextField>
         )}
         <TextField
-          size="small" placeholder="Notes, e.g. called, meeting on Monday" value={notes} onChange={(e) => setNotes(e.target.value)}
-          sx={{ flex: '1 1 240px' }} slotProps={{ htmlInput: { 'aria-label': `Notes for ${r.name}`, maxLength: 1000 } }}
+          label="Notes" multiline minRows={2} placeholder="e.g. Called, meeting on Monday" value={notes} onChange={(e) => setNotes(e.target.value)}
+          slotProps={{ htmlInput: { maxLength: 1000 } }}
         />
-        {notes !== (r.notes ?? '') && <Button variant="contained" disabled={busy} onClick={() => update({ notes })}>Save note</Button>}
-        {r.status === 'new' && <Button variant="contained" disabled={busy} onClick={() => update({ status: 'contacted', notes })}>Mark contacted</Button>}
-        {r.status !== 'closed' && <Button disabled={busy} onClick={() => update({ status: 'closed', notes })}>Close</Button>}
-        {r.status === 'closed' && <Button disabled={busy} onClick={() => update({ status: 'contacted' })}>Reopen</Button>}
-      </Box>
-    </Box>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+          {notes !== (r.notes ?? '') && <Button variant="contained" disabled={busy} onClick={() => update({ notes })}>Save note</Button>}
+          {r.status === 'new' && <Button variant="contained" disabled={busy} onClick={() => update({ status: 'contacted', notes })}>Mark contacted</Button>}
+          {r.status !== 'closed' && <Button variant="outlined" disabled={busy} onClick={() => update({ status: 'closed', notes })}>Close request</Button>}
+          {r.status === 'closed' && <Button variant="outlined" disabled={busy} onClick={() => update({ status: 'contacted' })}>Reopen</Button>}
+        </Box>
+      </Stack>
+    </Drawer>
   );
 }
 
@@ -128,6 +154,7 @@ export default function Requests({ profile }) {
   const allOffices = isStaff && (profile.role === 'admin' || !profile.office);
   const [partners, setPartners] = useState(null);
   const [adding, setAdding] = useState(false);
+  const [openId, setOpenId] = useState(null);
   const [rows, setRows] = useState(null);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('new');
@@ -174,10 +201,15 @@ export default function Requests({ profile }) {
           </Typography>
         )}
         <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
-          {list.slice(0, limit).map((r) => <RequestRow key={`${r.id}${r.status}${r.notes}`} r={r} partners={partners} onChanged={load} />)}
+          {list.slice(0, limit).map((r) => <RequestRow key={r.id} r={r} onOpen={(x) => setOpenId(x.id)} />)}
         </Box>
         <ShowMore shown={limit} total={list.length} onMore={() => setLimit(limit + PAGE_ROWS)} />
       </Panel>
+      {/* Reads the request from the latest list, so it shows each change straight after saving. */}
+      {openId && rows.some((r) => r.id === openId) && (() => {
+        const r = rows.find((x) => x.id === openId);
+        return <RequestPanel key={r.id} r={r} partners={partners} onClose={() => setOpenId(null)} onChanged={load} />;
+      })()}
       {adding && (
         <AddRequestDialog
           partners={partners} office={allOffices ? null : profile.office}

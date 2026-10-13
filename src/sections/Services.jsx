@@ -66,7 +66,7 @@ function ServiceCard({ Icon, title, text }) {
 export default function Services() {
   return (
     <Box id="services" component="section" sx={{ py: { xs: 10, md: 16 }, scrollMarginTop: 64 }}>
-      <Container maxWidth="lg">
+      <Container maxWidth={false} sx={{ px: { xs: 2.5, md: 6, lg: 10 } }}>
         <SectionHeading
           overline="What we do"
           title="Every financial decision, under one trusted roof"

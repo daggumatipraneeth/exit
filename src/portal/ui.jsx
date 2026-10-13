@@ -1,8 +1,10 @@
 // Small pieces shared by portal pages.
-import { Box, Typography, Chip, Button, Link } from '@mui/material';
+import { Box, Typography, Chip, Button, Link, IconButton } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ChevronLeft from '@mui/icons-material/ChevronLeft';
+import ChevronRight from '@mui/icons-material/ChevronRight';
 import { money } from '../finance';
-import { accent, line, loss, navy } from '../theme';
+import { accent, ink, line, loss, navy } from '../theme';
 
 // Dates travel as 'YYYY-MM-DD' strings in local time.
 export const iso = (d) => d.toLocaleDateString('en-CA');
@@ -78,6 +80,7 @@ const statusLook = {
   pending_approval: ['Pending approval', 'attention'],
   active: ['Active', 'good'],
   rejected: ['Rejected', 'bad'],
+  closed: ['Closed', 'neutral'],
 };
 export function StatusChip({ status }) {
   const [label, tone] = statusLook[status];
@@ -158,7 +161,6 @@ export const tableRow = { px: { xs: 2, md: 3 }, py: { xs: 1.5, md: 1.25 } };
 export const rowLink = {
   display: 'grid', alignItems: 'center', color: 'inherit', textDecoration: 'none',
   '&:hover': { bgcolor: '#F8FAFC' },
-  '&:focus-visible': { outline: `2px solid ${accent}`, outlineOffset: -2 },
 };
 
 export function PageTitle({ children, action }) {
@@ -172,10 +174,31 @@ export function PageTitle({ children, action }) {
   );
 }
 
+// ‹ day › picker that sits beside a page title. Phones show a short date ("12 Oct") with the native
+// date input laid invisibly over it, so a tap still opens the phone's calendar.
+export function DayNav({ date, setDate, label = 'Choose a day' }) {
+  const field = { font: 'inherit', fontWeight: 600, color: ink, border: `1px solid ${line}`, borderRadius: 1.5, bgcolor: '#fff', px: 1.5, height: 40 };
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, mr: { xs: -1, sm: 0 } }}>
+      <IconButton aria-label="Previous day" onClick={() => setDate(shift(date, -1))}><ChevronLeft /></IconButton>
+      <Box sx={{ position: 'relative' }}>
+        <Box aria-hidden sx={{ ...field, display: { xs: 'flex', sm: 'none' }, alignItems: 'center', whiteSpace: 'nowrap' }}>
+          {fmtDate(date, { day: 'numeric', month: 'short' })}
+        </Box>
+        <Box
+          component="input" type="date" aria-label={label} value={date} max={today()}
+          onChange={(e) => e.target.value && setDate(e.target.value)}
+          sx={{ ...field, position: { xs: 'absolute', sm: 'static' }, inset: 0, width: { xs: 1, sm: 'auto' }, opacity: { xs: 0, sm: 1 } }}
+        />
+      </Box>
+      <IconButton aria-label="Next day" disabled={date >= today()} onClick={() => setDate(shift(date, 1))}><ChevronRight /></IconButton>
+    </Box>
+  );
+}
+
 // Supabase errors carry the Postgres message; show just that.
 export const errText = (e) => e?.message ?? String(e);
 
-// Centered column for form pages, so they don't hang off the left on wide screens.
 // "← All customers" style link above a page title.
 export function BackLink({ href, children }) {
   return (
@@ -183,10 +206,6 @@ export function BackLink({ href, children }) {
       <ArrowBackIcon fontSize="small" /> {children}
     </Link>
   );
-}
-
-export function FormPage({ children, width = 880 }) {
-  return <Box sx={{ maxWidth: width, mx: 'auto' }}>{children}</Box>;
 }
 
 // Pill filters: selected is filled navy, others outlined on the page background.

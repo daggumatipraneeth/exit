@@ -45,6 +45,8 @@ export default responsiveFontSizes(
           html: { scrollBehavior: 'smooth' },
           body: { overflowX: 'hidden' },
           '::selection': { background: accentSoft, color: ink },
+          // No focus outline anywhere (requested); MUI's own focus styles (input borders, button highlight) still show.
+          '*:focus, *:focus-visible': { outline: 'none' },
           '@media (prefers-reduced-motion: reduce)': {
             html: { scrollBehavior: 'auto' },
             '*': { animationDuration: '0.01ms !important', transitionDuration: '0.01ms !important' },

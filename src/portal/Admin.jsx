@@ -275,7 +275,8 @@ export function Activity() {
       detail = row.kind?.replace(/_/g, ' ');
     }
     if (r.table_name === 'closed_months') return { what: r.op === 'DELETE' ? 'Month reopened' : 'Month closed', who: monthName(row.month), detail: '' };
-    return { what: `${tableNames[r.table_name] ?? r.table_name} ${verbs[r.op]}`, who, detail };
+    const verb = r.op === 'PASSWORD' && r.actor === row.id ? 'password changed' : verbs[r.op]; // their own, vs reset by Exit
+    return { what: `${tableNames[r.table_name] ?? r.table_name} ${verb}`, who, detail };
   }, [names]);
 
   return (

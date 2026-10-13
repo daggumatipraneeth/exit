@@ -16,7 +16,7 @@ import Layout from './Layout';
 import Dashboard from './Dashboard';
 import Customers from './Customers';
 import Customer from './Customer';
-import Account from './Account';
+import Account, { PasswordPanel } from './Account';
 import DailyEntry from './DailyEntry';
 import Partners, { PartnerDetail } from './Partners';
 import Sign from './Sign';
@@ -104,6 +104,11 @@ function Portal() {
         </Box>
       </Centered>
     );
+  }
+
+  // A temporary password from Exit is replaced before anything else.
+  if (session.user.app_metadata?.must_change_password) {
+    return <Centered><Box sx={{ width: '100%', maxWidth: 440 }}><PasswordPanel email={session.user.email} temporary /></Box></Centered>;
   }
 
   // Customers get one page and nothing else.

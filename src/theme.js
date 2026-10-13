@@ -44,6 +44,9 @@ export default responsiveFontSizes(
         styleOverrides: {
           html: { scrollBehavior: 'smooth' },
           body: { overflowX: 'hidden' },
+          // iOS Safari gives date/month inputs a minimum width of their own and ignores width: 100%, so they can
+          // stick out of their box and make the whole page pan sideways.
+          'input[type="date"], input[type="month"]': { minWidth: 0, maxWidth: '100%', WebkitAppearance: 'none' },
           '::selection': { background: accentSoft, color: ink },
           // No focus outline anywhere (requested); MUI's own focus styles (input borders, button highlight) still show.
           '*:focus, *:focus-visible': { outline: 'none' },

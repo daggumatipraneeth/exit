@@ -3,7 +3,7 @@ import { Box, Typography, Alert, Button } from '@mui/material';
 import { supabase } from './supabase';
 import { money } from '../finance';
 import { ink, line } from '../theme';
-import { today, fmtDate, shortDate, monthName, sum, Signed, Panel, Field, CapMeter, StatusChip, Figures, BackLink, tableHead, phoneText } from './ui';
+import { today, pickerField, fmtDate, shortDate, monthName, sum, Signed, Panel, Field, CapMeter, StatusChip, Figures, BackLink, tableHead, phoneText } from './ui';
 import { OnboardingSteps, Documents, EditDetailsDialog, CapitalDialog, AgreementDialog, BankDialog, canEdit, latestSigned } from './Onboarding';
 import { CustomerLogin, CustomerPayouts } from './CustomerAccount';
 
@@ -105,7 +105,7 @@ export default function Customer({ profile, id }) {
                 value={month}
                 max={today().slice(0, 7)}
                 onChange={(e) => e.target.value && setMonth(e.target.value)}
-                sx={{ font: 'inherit', color: ink, border: `1px solid ${line}`, borderRadius: 1.5, bgcolor: '#fff', px: 1.25, py: 0.5, minHeight: 36 }}
+                sx={{ ...pickerField, fontWeight: 500, height: 36 }}
               />
             }
           >

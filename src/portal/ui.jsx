@@ -137,6 +137,13 @@ export function InfoTip({ text, label }) {
   );
 }
 
+// A label with its (i): the icon is glued to the last word, so a long label wraps with it instead of leaving it alone on a line.
+function Labelled({ label, info }) {
+  if (!info) return label;
+  const cut = label.lastIndexOf(' ') + 1;
+  return <>{label.slice(0, cut)}<Box component="span" sx={{ whiteSpace: 'nowrap' }}>{label.slice(cut)}<InfoTip text={info} label={label} /></Box></>;
+}
+
 export function Figures({ items }) {
   return (
     <Box
@@ -154,7 +161,7 @@ export function Figures({ items }) {
             display: { xs: 'grid', sm: 'block' }, gridTemplateColumns: '1fr auto', alignItems: 'baseline', columnGap: 2,
           }}
         >
-          <Typography variant="body2" color="text.secondary">{label}{info && <InfoTip text={info} label={label} />}</Typography>
+          <Typography variant="body2" color="text.secondary"><Labelled label={label} info={info} /></Typography>
           <Typography component="div" sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem', md: '1.75rem' }, fontWeight: 700, letterSpacing: '-0.02em', mt: { sm: 0.25 }, textAlign: { xs: 'right', sm: 'left' } }}>
             {value}
           </Typography>
@@ -202,15 +209,17 @@ export function PageTitle({ children, action }) {
 
 // ‹ day › picker that sits beside a page title. Phones show a short date ("12 Oct") with the native
 // date input laid invisibly over it, so a tap still opens the phone's calendar.
-// The native date and month pickers. At least 16px, or iPhones zoom in when one is tapped and the page then pans about.
+// The native date and month pickers. At least 16px, or iPhones zoom in when one is tapped. The wrapper (pickerBox)
+// clips the invisible picker laid over the label on phones, so it can never poke past the screen edge (see theme.js).
 export const pickerField = { font: 'inherit', fontSize: 16, fontWeight: 600, color: ink, border: `1px solid ${line}`, borderRadius: 1.5, bgcolor: '#fff', px: 1.5, height: 40 };
+export const pickerBox = { position: 'relative', overflow: { xs: 'hidden', sm: 'visible' }, borderRadius: 1.5 };
 
 export function DayNav({ date, setDate, label = 'Choose a day' }) {
   const field = pickerField;
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, mr: { xs: -1, sm: 0 } }}>
       <IconButton aria-label="Previous day" onClick={() => setDate(shift(date, -1))}><ChevronLeft /></IconButton>
-      <Box sx={{ position: 'relative' }}>
+      <Box sx={pickerBox}>
         <Box aria-hidden sx={{ ...field, display: { xs: 'flex', sm: 'none' }, alignItems: 'center', whiteSpace: 'nowrap' }}>
           {fmtDate(date, { day: 'numeric', month: 'short' })}
         </Box>

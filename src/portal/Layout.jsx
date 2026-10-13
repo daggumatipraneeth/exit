@@ -105,7 +105,8 @@ export default function Layout({ profile, nav, current, children }) {
         </Container>
       </AppBar>
 
-      <Container maxWidth="xl" component="main" sx={{ py: { xs: 3, md: 5 } }}>
+      {/* clip: nothing on a page can widen it past the screen (iPhones would let the whole page pan sideways). */}
+      <Container maxWidth="xl" component="main" sx={{ py: { xs: 3, md: 5 }, overflowX: 'clip' }}>
         {children}
       </Container>
 

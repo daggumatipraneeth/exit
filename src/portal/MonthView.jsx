@@ -8,7 +8,7 @@ import { supabase, fetchAll } from './supabase';
 import { money } from '../finance';
 import { accent, ink, line, loss } from '../theme';
 import {
-  today, pickerField, fmtDate, monthName, sum, tone, Signed, Panel, PageTitle, Figures, Pairs, Pill, CapMeter, ShowMore, PAGE_ROWS,
+  today, pickerField, pickerBox, fmtDate, monthName, sum, tone, Signed, Panel, PageTitle, Figures, Pairs, Pill, CapMeter, ShowMore, PAGE_ROWS,
   rowLink, tableHead, tableRow,
 } from './ui';
 import { hiddenCharge } from './Dashboard';
@@ -49,7 +49,7 @@ function MonthNav({ month, setMonth }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, mr: { xs: -1, sm: 0 } }}>
       <IconButton aria-label="Previous month" onClick={() => setMonth(shiftMonth(month, -1))}><ChevronLeft /></IconButton>
-      <Box sx={{ position: 'relative' }}>
+      <Box sx={pickerBox}>
         <Box aria-hidden sx={{ ...field, display: { xs: 'flex', sm: 'none' }, alignItems: 'center', whiteSpace: 'nowrap' }}>
           {fmtDate(month, { month: 'short', year: 'numeric' })}
         </Box>

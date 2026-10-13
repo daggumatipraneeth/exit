@@ -11,7 +11,7 @@ insert into customers (id, franchisee_id, full_name, phone, status) values
   ('c9200000-0000-0000-0000-000000000001', 'f9200000-0000-0000-0000-000000000001', 'Signed One', '9700000021', 'pending_approval'),
   ('c9200000-0000-0000-0000-000000000002', 'f9200000-0000-0000-0000-000000000001', 'Signed Two', '9700000022', 'pending_approval'),
   ('c9200000-0000-0000-0000-000000000003', 'f9200000-0000-0000-0000-000000000001', 'Signed Three', '9700000023', 'pending_approval');
-insert into customer_capital values
+insert into capital_movements (customer_id, effective_from, amount) values
   ('c9200000-0000-0000-0000-000000000001', '2020-01-01', 100000), ('c9200000-0000-0000-0000-000000000002', '2020-01-01', 100000),
   ('c9200000-0000-0000-0000-000000000003', '2020-01-01', 100000);
 insert into agreements (customer_id, template_version, signed_at) values
@@ -33,7 +33,7 @@ select is((select reject_reason from customers where id = 'c9200000-0000-0000-00
 -- After signing, a change to the plan or capital sends the customer back to sign again.
 update customers set plan = 'fixed' where id = 'c9200000-0000-0000-0000-000000000002';
 select is((select status from customers where id = 'c9200000-0000-0000-0000-000000000002'), 'draft'::customer_status, 'plan change after signing: sign again');
-insert into customer_capital values ('c9200000-0000-0000-0000-000000000003', '2020-02-01', 150000);
+insert into capital_movements (customer_id, received_at, amount) values ('c9200000-0000-0000-0000-000000000003', '2020-01-31 10:00+05:30', 50000);
 select is((select status from customers where id = 'c9200000-0000-0000-0000-000000000003'), 'draft'::customer_status, 'capital change after signing: sign again');
 
 -- Saving without a real change, and changes once active, leave the status alone.
@@ -41,7 +41,7 @@ update customers set status = 'pending_approval' where id = 'c9200000-0000-0000-
 update customers set plan = 'fixed', address = 'New address' where id = 'c9200000-0000-0000-0000-000000000002';
 select is((select status from customers where id = 'c9200000-0000-0000-0000-000000000002'), 'pending_approval'::customer_status, 'no term change: still awaiting approval');
 select lives_ok($$update customers set status = 'active' where id = 'c9200000-0000-0000-0000-000000000002'$$, 'admin approves');
-insert into customer_capital values ('c9200000-0000-0000-0000-000000000002', '2020-03-01', 200000);
+insert into capital_movements (customer_id, received_at, amount) values ('c9200000-0000-0000-0000-000000000002', '2020-02-29 10:00+05:30', 100000);
 select is((select status from customers where id = 'c9200000-0000-0000-0000-000000000002'), 'active'::customer_status, 'top-up of an active customer stays active');
 update customers set plan = 'variable' where id = 'c9200000-0000-0000-0000-000000000002';
 select is((select status from customers where id = 'c9200000-0000-0000-0000-000000000002'), 'active'::customer_status, 'plan change of an active customer stays active');

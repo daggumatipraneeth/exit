@@ -20,7 +20,7 @@ select throws_like($$select create_signing_link('c1000000-0000-0000-0000-0000000
 
 -- Aadhaar and the KYC photos are optional.
 select set_customer_pii('c1000000-0000-0000-0000-000000000001', 'ABCDE9999Z', null);
-insert into customer_capital values ('c1000000-0000-0000-0000-000000000001', '2026-01-01', 250000);
+insert into capital_movements (customer_id, received_at, amount) values ('c1000000-0000-0000-0000-000000000001', '2025-12-31 10:00+05:30', 250000);
 select set_customer_bank('c1000000-0000-0000-0000-000000000001', 'Sita Devi', '1234 5678 9012', 'sbin0001234');
 
 select lives_ok($$select create_signing_link('c1000000-0000-0000-0000-000000000001')$$, 'partner creates link once PAN, capital and bank are in');

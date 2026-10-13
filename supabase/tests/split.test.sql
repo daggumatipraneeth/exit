@@ -9,9 +9,9 @@ insert into customers (id, franchisee_id, full_name, phone, status) values
   ('c6000000-0000-0000-0000-000000000002', 'f6000000-0000-0000-0000-000000000001', 'A2 starts later', '2', 'active'),
   ('c6000000-0000-0000-0000-000000000003', 'f6000000-0000-0000-0000-000000000002', 'B1', '3', 'active'),
   ('c6000000-0000-0000-0000-000000000004', 'f6000000-0000-0000-0000-000000000002', 'B2 inactive', '4', 'rejected');
-insert into customer_capital values
+insert into capital_movements (customer_id, effective_from, amount) values
   ('c6000000-0000-0000-0000-000000000001', '2030-01-01', 100000),
-  ('c6000000-0000-0000-0000-000000000001', '2030-03-20', 999999), -- a mid-month change counts from next month, as payouts do
+  ('c6000000-0000-0000-0000-000000000001', '2030-03-20', 899999), -- a top-up counts from its own start day, as payouts do
   ('c6000000-0000-0000-0000-000000000002', '2030-03-15', 50000),
   ('c6000000-0000-0000-0000-000000000003', '2030-01-01', 300000),
   ('c6000000-0000-0000-0000-000000000004', '2030-01-01', 700000);
@@ -19,7 +19,7 @@ insert into customer_capital values
 select results_eq($$select capital from partner_capital_on('2030-03-10') where franchisee_id = 'f6000000-0000-0000-0000-000000000001'$$,
   $$values (100000::numeric)$$, 'a customer counts only from their start day');
 select results_eq($$select capital from partner_capital_on('2030-03-25') where franchisee_id = 'f6000000-0000-0000-0000-000000000001'$$,
-  $$values (150000::numeric)$$, 'capital as payouts count it: start-of-month amount, plus customers who have started');
+  $$values (1049999::numeric)$$, 'capital as payouts count it: everything in effect that day');
 select results_eq($$select capital from partner_capital_on('2030-03-25') where franchisee_id = 'f6000000-0000-0000-0000-000000000002'$$,
   $$values (300000::numeric)$$, 'inactive customers are left out');
 

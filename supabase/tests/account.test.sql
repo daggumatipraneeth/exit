@@ -8,7 +8,7 @@ insert into franchisees (id, name) values ('f9300000-0000-0000-0000-000000000001
 insert into franchisee_terms values ('f9300000-0000-0000-0000-000000000001', 0);
 insert into customers (id, franchisee_id, full_name, phone, status) values
   ('c9300000-0000-0000-0000-000000000001', 'f9300000-0000-0000-0000-000000000001', 'Loss Lata', '9700000031', 'active');
-insert into customer_capital values ('c9300000-0000-0000-0000-000000000001', '2019-01-01', 100000);
+insert into capital_movements (customer_id, effective_from, amount) values ('c9300000-0000-0000-0000-000000000001', '2019-01-01', 100000);
 insert into auth.users (id, email) values ('a9300000-0000-0000-0000-000000000001', '9700000031@customer.exit');
 insert into profiles (id, full_name, role, customer_id) values
   ('a9300000-0000-0000-0000-000000000001', 'Loss Lata', 'customer', 'c9300000-0000-0000-0000-000000000001');

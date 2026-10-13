@@ -13,7 +13,7 @@ insert into auth.users (id, email) values
 insert into customers (id, franchisee_id, full_name, phone, plan, status) values
   ('c3000000-0000-0000-0000-00000000000a', 'f3000000-0000-0000-0000-000000000001', 'Vani Variable', '9000000099', 'variable', 'active'),
   ('c3000000-0000-0000-0000-00000000000b', 'f3000000-0000-0000-0000-000000000001', 'Fani Fixed', '9000000098', 'fixed', 'active');
-insert into customer_capital values
+insert into capital_movements (customer_id, effective_from, amount) values
   ('c3000000-0000-0000-0000-00000000000a', '2021-01-01', 100000),
   ('c3000000-0000-0000-0000-00000000000b', '2021-01-01', 100000);
 insert into agreements (customer_id, template_version, signed_at) values
@@ -79,7 +79,7 @@ select results_eq(
   $$values ('variable', 1000.00, 50000.00, false, 51000.00), ('fixed', 6000.00, 100000.00, true, 106000.00)$$,
   'March pays profit plus withdrawals');
 select results_eq(
-  $$select (select amount from customer_capital where customer_id = 'c3000000-0000-0000-0000-00000000000a' and effective_from = '2021-04-01'),
+  $$select capital_on('c3000000-0000-0000-0000-00000000000a', '2021-04-01'),
            (select status::text from customers where id = 'c3000000-0000-0000-0000-00000000000b')$$,
   $$values (50000.00, 'closed')$$,
   'partial withdrawal lowers capital from next month; full withdrawal closes the account');

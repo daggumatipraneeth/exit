@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Container, Typography, Slider, ToggleButton, ToggleButtonGroup, Stack, Button } from '@mui/material';
+import { Box, Container, Typography, Slider, ToggleButton, ToggleButtonGroup, Stack, Button, Link } from '@mui/material';
 import Reveal from '../components/Reveal';
 import SectionHeading from '../components/SectionHeading';
 import { sipValue, lumpValue, inr } from '../finance';
@@ -79,7 +79,7 @@ export default function SipCalculator() {
               <Field label="Time period" value={years} display={`${years} yrs`} min={1} max={40} onChange={(_, v) => setYears(v)} aria-label="Years" />
               <Field label="Expected return (p.a.)" value={rate} display={`${rate}%`} min={1} max={30} step={0.5} onChange={(_, v) => setRate(v)} aria-label="Expected return" />
               <Typography variant="caption" color="text.secondary">
-                For illustration only. Returns are not guaranteed; mutual fund investments are subject to market risks.
+                For illustration only. Returns are not guaranteed; mutual fund investments are subject to market risks. <Link href="#/risk">Read the risk disclosure</Link>.
               </Typography>
             </Stack>
 

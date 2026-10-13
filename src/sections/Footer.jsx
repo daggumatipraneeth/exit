@@ -43,7 +43,12 @@ export default function Footer() {
           {company.sebiRegistered && ' Registration granted by SEBI and certification from NISM in no way guarantee performance of the intermediary or provide any assurance of returns to investors.'}
           {' '}Past performance is not indicative of future returns. Portfolio figures and projections shown on this site are illustrative.
         </Typography>
-        <Typography variant="caption" component="p" sx={{ mt: 3, color: 'rgba(255,255,255,.4)' }}>
+        <Stack direction="row" sx={{ mt: 3, gap: 3, flexWrap: 'wrap', fontSize: 13 }}>
+          <Link href="#/terms" color="inherit" underline="hover">Terms of use</Link>
+          <Link href="#/privacy" color="inherit" underline="hover">Privacy policy</Link>
+          <Link href="#/risk" color="inherit" underline="hover">Risk disclosure</Link>
+        </Stack>
+        <Typography variant="caption" component="p" sx={{ mt: 2, color: 'rgba(255,255,255,.4)' }}>
           © {new Date().getFullYear()} {company.name}. All rights reserved.
         </Typography>
       </Container>

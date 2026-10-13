@@ -91,7 +91,7 @@ select results_eq(
 -- Reopen undoes it all while unpaid; once paid it can't be reopened.
 select lives_ok($$select reopen_month('2021-03-01')$$, 'admin reopens unpaid March');
 select results_eq(
-  $$select (select amount from customer_capital where customer_id = 'c3000000-0000-0000-0000-00000000000a' and effective_from = '2021-04-01'),
+  $$select capital_for_month('c3000000-0000-0000-0000-00000000000a', '2021-04-01'),
            (select status::text from customers where id = 'c3000000-0000-0000-0000-00000000000b'),
            (select count(*) from withdrawal_requests where status = 'open' and customer_id::text like 'c3%')$$,
   $$values (100000.00, 'active', 2::bigint)$$,

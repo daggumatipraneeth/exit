@@ -29,8 +29,8 @@ select is(current_capital('c4000000-0000-0000-0000-000000000001'), 130000.00, 'c
 select lives_ok($$select reopen_month('2020-01-01')$$, 'January reopens');
 select results_eq(
   $$select effective_from, amount from customer_capital where customer_id = 'c4000000-0000-0000-0000-000000000001' order by 1$$,
-  $$values ('2020-01-01'::date, 100000.00), ('2020-02-01', 100000.00), ('2020-02-10', 150000.00)$$,
-  'reopening puts the withdrawal back on every later row');
+  $$values ('2020-01-01'::date, 100000.00), ('2020-02-10', 150000.00)$$,
+  'reopening puts the withdrawal back on every later row and drops the row the close added');
 
 select * from finish();
 rollback;

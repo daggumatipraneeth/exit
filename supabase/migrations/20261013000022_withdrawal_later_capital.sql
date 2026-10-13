@@ -1,6 +1,7 @@
 -- A partial withdrawal lowers capital from the 1st of next month. Capital rows are running totals, so any
 -- row already entered for a later date (a top-up recorded before the month was closed) must drop by the same
--- amount, or the withdrawn money reappears from that date. Reopening a month puts it back on all of them.
+-- amount, or the withdrawn money reappears from that date. Reopening a month puts it back on all of them,
+-- and drops the row the close added on the 1st, so the customer's deposit history shows no phantom deposit.
 create or replace function close_month(p_month date) returns void
 language plpgsql security definer set search_path = public as $$
 declare
@@ -85,6 +86,10 @@ begin
       update customers set status = 'active' where id = st.customer_id;
     else
       update customer_capital set amount = amount + st.withdrawal where customer_id = st.customer_id and effective_from >= nxt;
+      -- The close added a row on the 1st; once restored it repeats the amount before it, so drop it.
+      delete from customer_capital k where k.customer_id = st.customer_id and k.effective_from = nxt
+        and k.amount = (select amount from customer_capital p where p.customer_id = st.customer_id and p.effective_from < nxt
+                         order by effective_from desc limit 1);
     end if;
   end loop;
   update withdrawal_requests set status = 'open', settled_month = null where status = 'settled' and settled_month = m;

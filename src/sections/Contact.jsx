@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { Box, Container, Typography, TextField, MenuItem, Button, Stack, Alert, Link } from '@mui/material';
-import SendIcon from '@mui/icons-material/Send';
-import MailIcon from '@mui/icons-material/MailOutlined';
+import { Box, Container, Typography, TextField, MenuItem, Button, Stack, Alert, IconButton, Tooltip, Link } from '@mui/material';
+import CopyIcon from '@mui/icons-material/ContentCopy';
+import CheckIcon from '@mui/icons-material/Check';
 import PhoneIcon from '@mui/icons-material/PhoneOutlined';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
-import Reveal from '../components/Reveal';
 import { company, offices, interests } from '../config';
-import { accentBright, accentSoft, ink, navy } from '../theme';
+import { accent, ink, mist } from '../theme';
 
 const empty = { name: '', phone: '', email: '', interest: interests[1], city: offices[0].city, message: '', website: '' };
 
@@ -23,6 +22,38 @@ async function sendRequest(f) {
   if (r.ok) return null;
   const body = await r.json().catch(() => ({}));
   return body.message ?? "Couldn't send your request. Please call us or use WhatsApp.";
+}
+
+const tel = `tel:${company.phone.replace(/\s/g, '')}`;
+
+// The one place the site lists how to reach us: a single number for calls and WhatsApp, plus email.
+function Reach() {
+  const [copied, setCopied] = useState(false);
+  const copy = () => navigator.clipboard?.writeText(company.phone).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1800); });
+  return (
+    <Box sx={{ mt: { xs: 4, md: 5 }, p: { xs: 2.5, md: 3.5 }, borderRadius: 6, bgcolor: '#fff', boxShadow: '0 30px 60px -40px rgba(10,24,48,.4)' }}>
+      <Typography color="text.secondary">Call or WhatsApp, for every office</Typography>
+      <Stack direction="row" sx={{ alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+        <Typography component="a" href={tel} sx={{ color: ink, textDecoration: 'none', fontWeight: 600, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums', fontSize: 'clamp(28px, 8vw, 40px)', whiteSpace: 'nowrap' }}>
+          {company.phone}
+        </Typography>
+        <Tooltip title={copied ? 'Copied' : 'Copy number'}>
+          <IconButton onClick={copy} aria-label="Copy phone number" sx={{ color: copied ? accent : 'text.secondary' }}>
+            {copied ? <CheckIcon fontSize="small" /> : <CopyIcon fontSize="small" />}
+          </IconButton>
+        </Tooltip>
+      </Stack>
+      <Stack direction="row" spacing={1.5} sx={{ mt: 2.5 }}>
+        <Button variant="contained" href={tel} startIcon={<PhoneIcon />} sx={{ flex: { xs: 1, sm: 'none' } }}>Call</Button>
+        <Button variant="outlined" href={`https://wa.me/${company.whatsapp}`} target="_blank" rel="noopener noreferrer" startIcon={<WhatsAppIcon sx={{ color: '#128C4B' }} />}
+          sx={{ flex: { xs: 1, sm: 'none' }, borderColor: 'rgba(18,40,74,.25)' }}>WhatsApp</Button>
+      </Stack>
+      <Typography color="text.secondary" sx={{ mt: 3 }}>
+        Or email{' '}
+        <Box component="a" href={`mailto:${company.email}`} sx={{ color: ink, fontWeight: 600, textUnderlineOffset: 3 }}>{company.email}</Box>
+      </Typography>
+    </Box>
+  );
 }
 
 export default function Contact() {
@@ -61,57 +92,45 @@ export default function Contact() {
   const err = (k) => ({ error: touched && !!errors[k], helperText: touched && errors[k] });
 
   return (
-    <Box id="contact" component="section" sx={{ py: { xs: 10, md: 16 }, bgcolor: '#F7F9F8', scrollMarginTop: 64 }}>
-      <Container maxWidth={false} sx={{ px: { xs: 2.5, md: 6, lg: 10 } }}>
-        <Reveal>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '5fr 7fr' }, borderRadius: 5, overflow: 'hidden', boxShadow: '0 50px 100px -50px rgba(18,40,74,.5)' }}>
-            <Box sx={{ position: 'relative', p: { xs: 4, md: 6 }, color: '#fff', background: `linear-gradient(160deg, ${navy}, ${ink})`, overflow: 'hidden' }}>
-              <Box sx={{ position: 'absolute', bottom: -120, right: -120, width: 320, height: 320, borderRadius: '50%', border: `1px solid ${accentBright}44` }} />
-              <Box sx={{ position: 'absolute', bottom: -60, right: -60, width: 200, height: 200, borderRadius: '50%', border: `1px solid ${accentBright}66` }} />
-              <Typography variant="overline" sx={{ color: accentBright }}>Let's talk</Typography>
-              <Typography variant="h3" sx={{ mt: 1, fontSize: { xs: 32, md: 42 } }}>Your first consultation is on us.</Typography>
-              <Typography sx={{ mt: 2, color: 'rgba(255,255,255,.7)', lineHeight: 1.8 }}>
-                Share a few details and an advisor from your nearest office will call you within one working day.
-              </Typography>
-              <Stack spacing={2.5} sx={{ mt: 5, position: 'relative' }}>
-                {[[PhoneIcon, company.phone, `tel:${company.phone.replace(/\s/g, '')}`], [MailIcon, company.email, `mailto:${company.email}`], [WhatsAppIcon, 'Chat on WhatsApp', `https://wa.me/${company.whatsapp}`]].map(([Icon, t, href]) => (
-                  <Stack key={t} component="a" href={href} target={href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer" direction="row" spacing={2}
-                    sx={{ alignItems: "center", color: '#fff', textDecoration: 'none', '&:hover span': { color: accentSoft } }}>
-                    <Box sx={{ width: 44, height: 44, borderRadius: '50%', display: 'grid', placeItems: 'center', border: '1px solid rgba(255,255,255,.15)' }}><Icon fontSize="small" /></Box>
-                    <Box component="span" sx={{ transition: 'color .3s' }}>{t}</Box>
-                  </Stack>
-                ))}
-              </Stack>
-            </Box>
-
-            <Box component="form" noValidate onSubmit={submit} sx={{ p: { xs: 3, md: 6 }, bgcolor: '#fff' }}>
-              <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' } }}>
-                <TextField label="Full name" required value={f.name} onChange={set('name')} {...err('name')} />
-                <TextField label="Phone" required type="tel" value={f.phone} onChange={set('phone')} {...err('phone')} />
-                <TextField label="Email" type="email" value={f.email} onChange={set('email')} {...err('email')} />
-                <TextField select label="Preferred office" value={f.city} onChange={set('city')}>
-                  {offices.map((o) => <MenuItem key={o.city} value={o.city}>{o.city}</MenuItem>)}
-                </TextField>
-                <TextField select label="I'm interested in" value={f.interest} onChange={set('interest')} sx={{ gridColumn: { sm: '1 / -1' } }}>
-                  {interests.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
-                </TextField>
-                <TextField label="Message (optional)" multiline minRows={4} value={f.message} onChange={set('message')} sx={{ gridColumn: { sm: '1 / -1' } }} />
-                {/* Hidden from people; bots that fill every field get silently ignored. */}
-                <Box component="input" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" value={f.website} onChange={set('website')}
-                  sx={{ position: 'absolute', left: -9999, width: 1, height: 1, opacity: 0 }} />
-              </Box>
-              {sendError && <Alert severity="error" sx={{ mt: 3 }}>{sendError}</Alert>}
-              {sent === 'email' && <Alert severity="success" sx={{ mt: 3 }}>Your email app should now be open with your request — just hit send. Prefer WhatsApp? Use the green button.</Alert>}
-              {sent && sent !== 'email' && <Alert severity="success" sx={{ mt: 3 }}>Thank you, we've received your request. Our {sent} office will call you within one working day.</Alert>}
-              <Button type="submit" size="large" variant="contained" endIcon={<SendIcon />} disabled={sending} sx={{ mt: 4, py: 1.6, px: 5 }}>
-                {sending ? 'Sending…' : 'Request a call back'}
-              </Button>
-              <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 2 }}>
-                By sending this you agree that Exit may use these details to contact you about your enquiry, as set out in our <Link href="#/privacy">Privacy policy</Link>.
-              </Typography>
-            </Box>
+    <Box id="contact" component="section" sx={{ py: { xs: 10, md: 16 }, bgcolor: mist, scrollMarginTop: 64 }}>
+      <Container maxWidth="xl">
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '5fr 7fr' }, gap: { xs: 6, md: 10 } }}>
+          <Box>
+            <Typography variant="h2" sx={{ fontSize: { xs: '2.1rem', sm: '2.6rem', md: '3.25rem' } }}>Your first consultation is free.</Typography>
+            <Typography color="text.secondary" sx={{ mt: 2, lineHeight: 1.7, fontSize: { md: '1.15rem' } }}>
+              Leave your details and an advisor from your nearest office will call you within one working day.
+            </Typography>
+            <Reach />
           </Box>
-        </Reveal>
+
+          <Box component="form" noValidate onSubmit={submit} sx={{ p: { xs: 3, md: 5 }, bgcolor: '#fff', borderRadius: 6, boxShadow: '0 30px 60px -40px rgba(10,24,48,.4)' }}>
+            <Typography variant="h3" sx={{ fontSize: { xs: 22, md: 26 }, mb: 3 }}>Ask for a call back</Typography>
+            <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' } }}>
+              <TextField label="Full name" required value={f.name} onChange={set('name')} {...err('name')} />
+              <TextField label="Phone" required type="tel" value={f.phone} onChange={set('phone')} {...err('phone')} />
+              <TextField label="Email" type="email" value={f.email} onChange={set('email')} {...err('email')} />
+              <TextField select label="Nearest office" value={f.city} onChange={set('city')}>
+                {offices.map((o) => <MenuItem key={o.city} value={o.city}>{o.city}</MenuItem>)}
+              </TextField>
+              <TextField select label="I'm interested in" value={f.interest} onChange={set('interest')} sx={{ gridColumn: { sm: '1 / -1' } }}>
+                {interests.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
+              </TextField>
+              <TextField label="Message (optional)" multiline minRows={3} value={f.message} onChange={set('message')} sx={{ gridColumn: { sm: '1 / -1' } }} />
+              {/* Hidden from people; bots that fill every field get silently ignored. */}
+              <Box component="input" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" value={f.website} onChange={set('website')}
+                sx={{ position: 'absolute', left: -9999, width: 1, height: 1, opacity: 0 }} />
+            </Box>
+            {sendError && <Alert severity="error" sx={{ mt: 3 }}>{sendError}</Alert>}
+            {sent === 'email' && <Alert severity="success" sx={{ mt: 3 }}>Your email app should now be open with your request — just hit send. Prefer WhatsApp? Use the green button.</Alert>}
+            {sent && sent !== 'email' && <Alert severity="success" sx={{ mt: 3 }}>Thank you, we've received your request. Our {sent} office will call you within one working day.</Alert>}
+            <Button type="submit" size="large" variant="contained" disabled={sending} sx={{ mt: 3, width: { xs: '100%', sm: 'auto' } }}>
+              {sending ? 'Sending…' : 'Request a call back'}
+            </Button>
+            <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 2 }}>
+              By sending this you agree that Exit may use these details to contact you about your enquiry, as set out in our <Link href="#/privacy">Privacy policy</Link>.
+            </Typography>
+          </Box>
+        </Box>
       </Container>
     </Box>
   );

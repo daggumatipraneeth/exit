@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>Exit QR Poster</title>
+  <link rel="icon" href="media/Exit.ico" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <!-- Printable A5 poster for the offices. Open /qr.html and print (Save as PDF, A5, no margins, background graphics on). -->
+  <style>
+    @page { size: A5; margin: 0; }
+    :root { --navy: #12284A; --ink: #0A1830; --accent: #0F9D6B; --soft: #A7E3C9; --bright: #34D399; }
+    * { box-sizing: border-box; margin: 0; }
+    body { font-family: Inter, system-ui, sans-serif; background: #E9EEF3; color: var(--ink); display: grid; place-items: center; min-height: 100vh; padding: 24px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .poster { width: 148mm; height: 210mm; background: #fff; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 30px 60px -30px rgba(10,24,48,.4); }
+    header { padding: 12mm 12mm 7mm; text-align: center; background: radial-gradient(80% 70% at 85% 0%, #A7E3C966, transparent 70%), radial-gradient(70% 60% at 0% 100%, #D9E2F0, transparent 70%); }
+    header img { height: 18mm; }
+    header h1 { font-size: 15pt; font-weight: 700; letter-spacing: -0.02em; margin-top: 4mm; }
+    header p { font-size: 10.5pt; color: #4A5670; margin-top: 1.5mm; }
+    main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3mm; padding: 6mm 0; }
+    .qr { position: relative; width: 70mm; height: 70mm; margin-bottom: 4mm; padding: 5mm; border-radius: 6mm; background: #fff; border: 0.6mm solid var(--navy);
+          box-shadow: 0 0 0 2.5mm #fff, 0 0 0 3.1mm var(--accent); }
+    .qr > img { width: 100%; height: 100%; display: block; }
+    .qr .logo { position: absolute; left: 50%; top: 50%; width: 15mm; height: 15mm; transform: translate(-50%, -50%); background: #fff; border-radius: 3.5mm; display: grid; place-items: center; }
+    .qr .logo img { width: 11.5mm; }
+    .cta { font-size: 17pt; font-weight: 800; letter-spacing: -0.02em; }
+    .url { font-size: 11pt; color: var(--accent); font-weight: 600; }
+    footer { background: linear-gradient(160deg, var(--navy), var(--ink)); color: #fff; padding: 7mm 10mm 8mm; text-align: center; }
+    .phone { font-size: 20pt; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+    .ways { font-size: 9.5pt; color: var(--bright); font-weight: 600; margin-top: 1mm; }
+    .meta { font-size: 8.5pt; color: rgba(255,255,255,.7); margin-top: 3mm; line-height: 1.6; }
+    .legal { font-size: 6.5pt; color: rgba(255,255,255,.45); margin-top: 2.5mm; }
+    @media print { body { background: none; padding: 0; display: block; min-height: 0; } .poster { box-shadow: none; } }
+  </style>
+</head>
+<body>
+  <div class="poster">
+    <header>
+      <img src="media/Exit512.png" alt="Exit" />
+      <h1>Exit Stock Broker Private Limited</h1>
+      <p>Build wealth with clarity. Exit with confidence.</p>
+    </header>
+    <main>
+      <div class="qr">
+        <img src="media/qr-exitstocks.svg" alt="QR code for exitstocks.com" />
+        <div class="logo"><img src="media/Exit256.png" alt="" /></div>
+      </div>
+      <div class="cta">Scan to visit our website</div>
+      <div class="url">exitstocks.com</div>
+    </main>
+    <footer>
+      <div class="phone">+91 99890 29916</div>
+      <div class="ways">Call or WhatsApp</div>
+      <div class="meta">contact@exitstocks.com<br />Guntur · Ongole · Hyderabad · Nellore (opening soon)</div>
+      <div class="legal">Investments in securities market are subject to market risks. Read all related documents carefully before investing.</div>
+    </footer>
+  </div>
+</body>
+</html>

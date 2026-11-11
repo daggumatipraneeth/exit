@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { AppBar, Toolbar, Box, Button, IconButton, Drawer, List, ListItemButton, ListItemText, Container, useScrollTrigger } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
-import { accent, ink } from '../theme';
+import { ink } from '../theme';
 
 export const links = [
   ['Services', '#services'],
   ['Why Exit', '#why'],
   ['SIP Calculator', '#calculator'],
-  ['Risk Profile', '#risk'],
+  ['Risk Check', '#risk'],
   ['Offices', '#offices'],
 ];
 
@@ -20,36 +20,20 @@ export default function Nav() {
     <AppBar
       elevation={0}
       sx={{
-        top: 0,
-        bgcolor: scrolled ? '#fff' : 'transparent', // no backdrop blur: it re-blurs every scroll frame on phones
-        borderBottom: '1px solid',
-        borderColor: scrolled ? 'rgba(18,40,74,.08)' : 'transparent',
+        top: 0, color: ink, bgcolor: scrolled ? '#fff' : 'transparent',
+        borderBottom: '1px solid', borderColor: scrolled ? 'rgba(18,40,74,.1)' : 'transparent',
         transition: 'background-color .3s ease, border-color .3s ease',
-        color: ink,
       }}
     >
-      <Container maxWidth={false} sx={{ px: { xs: 2.5, md: 6, lg: 10 } }}>
+      <Container maxWidth="xl">
         <Toolbar disableGutters sx={{ height: { xs: 64, md: 76 } }}>
           <Box component="a" href="#top" sx={{ display: 'flex' }} aria-label="Exit home">
-            <Box component="img" src="media/Exit256.png" alt="Exit" sx={{ height: { xs: 36, md: 42 } }} />
+            <Box component="img" src="media/Exit256.png" alt="Exit" sx={{ height: { xs: 34, md: 40 } }} />
           </Box>
           <Box sx={{ flex: 1 }} />
           <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 0.5, mr: 2 }}>
             {links.map(([label, href]) => (
-              <Button
-                key={href}
-                href={href}
-                color="inherit"
-                sx={{
-                  position: 'relative', fontWeight: 500, px: 1.6,
-                  '&::after': {
-                    content: '""', position: 'absolute', left: 16, right: 16, bottom: 8, height: '1px',
-                    bgcolor: accent, transform: 'scaleX(0)', transformOrigin: 'right', transition: 'transform .35s ease',
-                  },
-                  '&:hover': { bgcolor: 'transparent' },
-                  '&:hover::after': { transform: 'scaleX(1)', transformOrigin: 'left' },
-                }}
-              >
+              <Button key={href} href={href} color="inherit" sx={{ fontWeight: 500, px: 1.5, '&:hover': { bgcolor: 'rgba(18,40,74,.05)' } }}>
                 {label}
               </Button>
             ))}
@@ -57,42 +41,29 @@ export default function Nav() {
           <Button color="inherit" href="portal.html" sx={{ display: { xs: 'none', sm: 'inline-flex' }, mr: 1, fontWeight: 500 }}>
             Login
           </Button>
-          <Button variant="contained" href="#contact" sx={{ display: { xs: 'none', sm: 'inline-flex' } }}>
+          <Button variant="contained" href="#contact" sx={{ display: { xs: 'none', sm: 'inline-flex' }, py: 1 }}>
             Book consultation
           </Button>
-          <IconButton sx={{ display: { md: 'none' }, ml: 1 }} onClick={() => setOpen(true)} aria-label="Open menu">
+          <IconButton sx={{ display: { md: 'none' }, ml: 1, color: ink }} onClick={() => setOpen(true)} aria-label="Open menu">
             <MenuIcon />
           </IconButton>
         </Toolbar>
       </Container>
-      {/* Scroll progress along the header's bottom edge: native scroll-driven animation, off the main thread. Hidden where unsupported. */}
-      <Box
-        aria-hidden
-        sx={{
-          display: 'none', position: 'absolute', left: 0, right: 0, bottom: -1, height: 3, bgcolor: accent, transformOrigin: '0 50%',
-          '@supports (animation-timeline: scroll())': { display: 'block', animation: 'grow linear both', animationTimeline: 'scroll(root)' },
-          '@keyframes grow': { from: { transform: 'scaleX(0)' }, to: { transform: 'scaleX(1)' } },
-        }}
-      />
 
-      <Drawer anchor="right" open={open} onClose={() => setOpen(false)} slotProps={{ paper: { sx: { width: '82vw', maxWidth: 340, bgcolor: ink, color: '#fff' } } }}>
+      <Drawer anchor="right" open={open} onClose={() => setOpen(false)} slotProps={{ paper: { sx: { width: '82vw', maxWidth: 340, display: 'flex', flexDirection: 'column' } } }}>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1.5 }}>
-          <IconButton onClick={() => setOpen(false)} sx={{ color: '#fff' }} aria-label="Close menu"><CloseIcon /></IconButton>
+          <IconButton onClick={() => setOpen(false)} aria-label="Close menu"><CloseIcon /></IconButton>
         </Box>
         <List sx={{ px: 2 }}>
           {[...links, ['Contact', '#contact']].map(([label, href]) => (
-            <ListItemButton key={href} component="a" href={href} onClick={() => setOpen(false)} sx={{ borderBottom: '1px solid rgba(255,255,255,.08)', py: 2 }}>
-              <ListItemText primary={label} slotProps={{ primary: { sx: { fontSize: 22 } } }} />
+            <ListItemButton key={href} component="a" href={href} onClick={() => setOpen(false)} sx={{ borderBottom: '1px solid rgba(18,40,74,.1)', py: 2 }}>
+              <ListItemText primary={label} slotProps={{ primary: { sx: { fontSize: 20, fontWeight: 500, color: ink } } }} />
             </ListItemButton>
           ))}
         </List>
         <Box sx={{ p: 3, mt: 'auto' }}>
-          <Button fullWidth variant="contained" color="secondary" href="#contact" onClick={() => setOpen(false)}>
-            Book consultation
-          </Button>
-          <Button fullWidth variant="outlined" href="portal.html" sx={{ mt: 1.5, color: '#fff', borderColor: 'rgba(255,255,255,.5)', '&:hover': { borderColor: '#fff' } }}>
-            Login
-          </Button>
+          <Button fullWidth variant="contained" href="#contact" onClick={() => setOpen(false)}>Book consultation</Button>
+          <Button fullWidth variant="outlined" href="portal.html" sx={{ mt: 1.5, borderColor: 'rgba(18,40,74,.25)' }}>Login</Button>
         </Box>
       </Drawer>
     </AppBar>
